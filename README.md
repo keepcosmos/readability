@@ -1,6 +1,6 @@
 # Readability
 
-**TODO: Add description**
+Port of arc90's readability project to Elixir
 
 ## Installation
 
@@ -17,4 +17,3 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
         def application do
           [applications: [:readability]]
         end
-
