@@ -1,4 +1,7 @@
 defmodule Readability.Mixfile do
+  @moduledoc """
+  """
+
   use Mix.Project
 
   def project do
@@ -15,7 +18,8 @@ defmodule Readability.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger,
-                    :floki
+                    :floki,
+                    :httpoison
                    ]]
   end
 
@@ -29,6 +33,10 @@ defmodule Readability.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:floki, "~> 0.8.0"}]
+    [{:floki, "~> 0.8.0"},
+     {:httpoison, "~> 0.8.0"},
+     {:credo, "~> 0.3", only: [:dev, :test]},
+     {:dialyxir, "~> 0.3", only: [:dev]}
+    ]
   end
 end

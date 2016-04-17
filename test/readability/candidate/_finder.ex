@@ -1,8 +1,11 @@
-defmodule Readability.ContentFinderTest do
+defmodule Readability.Candidate.FinderTest.A do
   use ExUnit.Case, async: true
 
-  doctest Readability.ContentFinder
+  doctest Readability.Candidate.Finder
 
+  alias Readability.Candidate.Finder
+  alias Readability.Candidate.MisusedTrasformer
+  alias Readability.Candidate.UnlikelyCandidatesRemover
 
   @unlikey_sample """
   <html>
@@ -19,7 +22,7 @@ defmodule Readability.ContentFinderTest do
     expected = {"html", [], [ {"body", [], [ {"article", [{"class", "community"}], ["ARTICLE"]} ]} ]}
     result = @unlikey_sample
              |> Readability.parse
-             |> Readability.ContentFinder.remove_unlikely_candidates
+             |> UnlikelyCandidatesRemover.remove
     assert expected == result
   end
 
@@ -53,9 +56,18 @@ defmodule Readability.ContentFinderTest do
 
     result = @misused_sample
              |> Readability.parse
-             |> Readability.ContentFinder.transform_misused_divs_into_paragraphs
+             |> MisusedTrasformer.transform
     assert expected == result
   end
+
+  @candidate_sample [{"div",
+                      [],
+                      [{"p", [], ["12345678901234567890123456"]},
+                       {"p", [], ["12345678901234567890123456"]}
+                      ]
+                    },{"div"
+
+                      }]
 
 
   def read_html(name) do
