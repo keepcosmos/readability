@@ -456,38 +456,6 @@ module Readability
       @best_candidate = select_best_candidate(@candidates)
     end
 
-    # 가망없는 후보자를 제거한다. (명확한 후보자는 제외하고 제거한다.)
-    def remove_unlikely_candidates!
-      @html.css("*").each do |elem|
-        str = "#{elem[:class]}#{elem[:id]}"
-        if str =~ REGEXES[:unlikelyCandidatesRe] && str !~ REGEXES[:okMaybeItsACandidateRe] && (elem.name.downcase != 'html') && (elem.name.downcase != 'body')
-          debug("Removing unlikely candidate - #{str}")
-          elem.remove
-        end
-      end
-    end
-
-    # 잘못 사용되고 있는 DIV를 p로 변환한다.
-    def transform_misused_divs_into_paragraphs!
-      @html.css("*").each do |elem|
-        if elem.name.downcase == "div"
-          # transform <div>s that do not contain other block elements into <p>s
-          if elem.inner_html !~ REGEXES[:divToPElementsRe]
-            debug("Altering div(##{elem[:id]}.#{elem[:class]}) to p");
-            elem.name = "p"
-          end
-        else
-          # wrap text nodes in p tags
-#          elem.children.each do |child|
-#            if child.text?
-#              debug("wrapping text node with a p")
-#              child.swap("<p>#{child.text}</p>")
-#            end
-#          end
-        end
-      end
-    end
-
     # 가능노드에 점수를 매긴다.
     def score_paragraphs(min_text_length)
       candidates = {}
