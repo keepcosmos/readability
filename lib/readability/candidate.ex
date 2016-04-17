@@ -1,5 +1,5 @@
 defmodule Readability.Candidate do
-  defstruct html_tree: [], score: 0
+  defstruct html_tree: {}, score: 0
 
   alias Floki.SelectorTokenizer
   alias Floki.SelectorParser
