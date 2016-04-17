@@ -8,6 +8,12 @@ defmodule Readability.TitleFinder do
 
   @type html_tree :: tuple | list
 
+  @doc """
+  Find proper title
+  """
+
+  @spec title(html_tree) :: binary
+
   def title(html_tree) do
     maybe_title = tag_title(html_tree)
     if length(String.split(maybe_title, " ")) <= 4 do

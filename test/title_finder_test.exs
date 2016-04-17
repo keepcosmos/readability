@@ -1,7 +1,7 @@
 defmodule Readability.TitleFinderTest do
   use ExUnit.Case, async: true
 
-  doctest Readability
+  doctest Readability.TitleFinder
 
   @html """
   <html>
