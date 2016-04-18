@@ -4,8 +4,9 @@ defmodule Readability.Candidate do
   alias Floki.SelectorTokenizer
   alias Floki.SelectorParser
   alias Floki.Selector
+  import Readability, only: [default_options: 0]
 
-  @type html_tree :: tuple |list
+  @type html_tree :: tuple | list
 
   @doc """
   Check html_tree can be candidate.
@@ -17,6 +18,7 @@ defmodule Readability.Candidate do
     candidates_selector
     |> Enum.any?(fn(selector) ->
          Selector.match?(html_tree, selector)
+         && (html_tree |> Floki.text |> String.length) >= default_options[:min_text_length]
        end)
   end
 

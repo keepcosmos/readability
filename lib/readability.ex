@@ -36,5 +36,5 @@ defmodule Readability do
   def parse(raw_html), do: Floki.parse(raw_html)
 
   def regexes, do: @regexes
-  def default_options,do: @default_options
+  def default_options, do: @default_options
 end

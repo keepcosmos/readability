@@ -16,9 +16,9 @@ defmodule Readability.Scoring do
   Score html tree
   """
 
-  @spec score_html_tree(html_tree) :: number
+  @spec score(html_tree) :: number
 
-  def score_html_tree(html_tree) do
+  def score(html_tree) do
     score = score_node(html_tree)
     score = score + score_child_content(html_tree) + score_grand_child_content(html_tree)
     score * (1 - calc_link_density(html_tree))
@@ -27,7 +27,7 @@ defmodule Readability.Scoring do
   defp score_child_content({_, _, child_tree}) do
     child_tree
     |> Enum.filter(fn(tree) ->
-         is_tuple(tree) && elem(tree, 0) =~ ~r/^p$|^td$/
+         is_tuple(tree) && Candidate.match?(tree)
        end)
     |> score_content
   end
@@ -38,7 +38,7 @@ defmodule Readability.Scoring do
                                fn(tree) -> elem(tree, 2) end)
             |> List.flatten
             |> Enum.filter(fn(tree) ->
-                 is_tuple(tree) && elem(tree, 0) =~ ~r/^p$|^td$/
+                 is_tuple(tree) && Candidate.match?(tree)
                end)
             |> score_content
     score / 2
@@ -75,8 +75,15 @@ defmodule Readability.Scoring do
   end
 
   defp calc_link_density(html_tree) do
-    link_length = html_tree |> Floki.find("a") |> Floki.text |> String.legnth
-    text_length = html_tree |> Floki.text |> String.length
+    link_length = html_tree
+                  |> Floki.find("a")
+                  |> Floki.text
+                  |> String.length
+
+    text_length = html_tree
+                  |> Floki.text
+                  |> String.length
+
     link_length / text_length
   end
 end
