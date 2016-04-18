@@ -19,9 +19,9 @@ defmodule Readability.Scoring do
   @spec score(html_tree) :: number
 
   def score(html_tree) do
-    score = score_node(html_tree)
-    score = score + score_child_content(html_tree) + score_grand_child_content(html_tree)
-    score * (1 - calc_link_density(html_tree))
+    result = score_node(html_tree)
+    result = result + score_child_content(html_tree) + score_grand_child_content(html_tree)
+    result * (1 - calc_link_density(html_tree))
   end
 
   defp score_child_content({_, _, child_tree}) do
@@ -33,7 +33,7 @@ defmodule Readability.Scoring do
   end
 
   defp score_grand_child_content({_, _, child_tree}) do
-    score = child_tree
+    result = child_tree
             |> Enum.filter_map(fn(tree) -> is_tuple(tree) end,
                                fn(tree) -> elem(tree, 2) end)
             |> List.flatten
@@ -41,20 +41,20 @@ defmodule Readability.Scoring do
                  is_tuple(tree) && Candidate.match?(tree)
                end)
             |> score_content
-    score / 2
+    result / 2
   end
 
   defp score_content(html_tree) do
-    score = 1
+    result = 1
     inner_text = html_tree |> Floki.text
-    split_score = String.split(",") |> length
+    split_score = String.length(String.split(","))
     length_score = [(String.length(inner_text) / 100), 3] |> Enum.min
     score + split_score + length_score
   end
 
   defp score_node(tag, attrs) do
-    score = class_weight(attrs)
-    score + (@element_scores[tag] || 0)
+    result = class_weight(attrs)
+    result + (@element_scores[tag] || 0)
   end
   defp score_node([h|t]), do: score_node(h) + score_node(t)
   defp score_node({tag, attrs, _}), do: score_node(tag, attrs)

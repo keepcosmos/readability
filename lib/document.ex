@@ -1,4 +1,7 @@
 defmodule Readability.Document do
+  @moduledoc """
+  """
+  
   def html do
     page
     |> String.replace(@regexes[:replaceBrsRe], "</p><p>")

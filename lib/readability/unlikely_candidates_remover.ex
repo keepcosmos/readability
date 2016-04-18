@@ -20,9 +20,10 @@ defmodule Readability.UnlikelyCandidatesRemover do
     end
   end
   def remove({tag, attrs, inner_tree}) do
-    cond do
-      unlikely_candidate?(tag, attrs) -> nil
-      true -> {tag, attrs, remove(inner_tree)}
+    if unlikely_candidate?(tag, attrs) do
+      nil
+    else
+      {tag, attrs, remove(inner_tree)}
     end
   end
   defp unlikely_candidate?(tag, attrs) do

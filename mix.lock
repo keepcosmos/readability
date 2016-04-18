@@ -1,2 +1,4 @@
-%{"floki": {:hex, :floki, "0.8.0"},
+%{"bunt": {:hex, :bunt, "0.1.5"},
+  "credo": {:hex, :credo, "0.3.12"},
+  "floki": {:hex, :floki, "0.8.0"},
   "mochiweb_html": {:hex, :mochiweb_html, "2.13.0"}}

@@ -29,6 +29,8 @@ defmodule Readability.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:floki, "~> 0.8.0"}]
+    [{:floki, "~> 0.8.0"},
+     {:credo, "~> 0.3", only: [:dev, :test]}
+    ]
   end
 end

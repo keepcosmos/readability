@@ -53,7 +53,7 @@ defmodule Readability.TitleFinder do
 
   @spec h_tag_title(html_tree, String.t) :: binary
 
-  def h_tag_title(html_tree, selector \\@h_tag_selector) do
+  def h_tag_title(html_tree, selector \\ @h_tag_selector) do
     html_tree
     |> Floki.find(selector)
     |> hd
