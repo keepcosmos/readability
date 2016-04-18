@@ -5,19 +5,26 @@ defmodule Readability.Candidate do
   alias Floki.SelectorParser
   alias Floki.Selector
 
-  def candidates_selector do
-    ["p", "td"]
-    |> Enum.map(fn(s) ->
-      tokens = SelectorTokenizer.tokenize(s)
+  @type html_tree :: tuple |list
 
-      SelectorParser.parse(tokens)
-    end)
-  end
+  @doc """
+  Check html_tree can be candidate.
+  """
+
+  @spec match?(html_tree) :: boolean
 
   def match?(html_tree) do
     candidates_selector
     |> Enum.any?(fn(selector) ->
          Selector.match?(html_tree, selector)
+       end)
+  end
+
+  defp candidates_selector do
+    ["p", "td"]
+    |> Enum.map(fn(s) ->
+         tokens = SelectorTokenizer.tokenize(s)
+         SelectorParser.parse(tokens)
        end)
   end
 end
