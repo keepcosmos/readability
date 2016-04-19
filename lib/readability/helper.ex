@@ -10,7 +10,6 @@ defmodule Readability.Helper do
   """
 
   @spec change_tag(html_tree, String.t, String.t) :: html_tree
-
   def change_tag({tag_name, attrs, inner_tree}, tag_name, tag) do
     {tag, attrs, change_tag(inner_tree, tag_name, tag)}
   end
@@ -22,4 +21,21 @@ defmodule Readability.Helper do
   end
   def change_tag([], selector, tag), do: []
   def change_tag(content, selector, tag) when is_binary(content), do: content
+
+  def remove_tag([], _), do: []
+  def remove_tag([h|t], fun) do
+    node = remove_tag(h, fun)
+    if is_nil(node) do
+      remove_tag(t, fun)
+    else
+      [node|remove_tag(t, fun)]
+    end
+  end
+  def remove_tag({tag, attrs, inner_tree} = html_tree, fun) do
+    if fun.(html_tree) do
+      nil
+    else
+      {tag, attrs, remove_tag(inner_tree, fun)}
+    end
+  end
 end

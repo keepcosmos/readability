@@ -26,20 +26,15 @@ defmodule Readability.Candidate.Scoring do
 
   def calc_children_content_score({_, _, children_tree}) do
     children_tree
-    |> Enum.filter(fn(tree) ->
-         is_tuple(tree) && Candidate.match?(tree)
-       end)
+    |> Enum.filter(&(is_tuple(&1) && Candidate.match?(&1)))
     |> calc_content_score
   end
 
   def calc_grand_children_content_score({_, _, children_tree}) do
     score = children_tree
-            |> Enum.filter_map(fn(tree) -> is_tuple(tree) end,
-                               fn(tree) -> elem(tree, 2) end)
+            |> Enum.filter_map(&is_tuple(&1), &elem(&1, 2))
             |> List.flatten
-            |> Enum.filter(fn(tree) ->
-                 is_tuple(tree) && Candidate.match?(tree)
-               end)
+            |> Enum.filter(&(is_tuple(&1) && Candidate.match?(&1)))
             |> calc_content_score
     score / 2
   end

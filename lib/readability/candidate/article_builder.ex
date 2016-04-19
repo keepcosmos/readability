@@ -32,9 +32,7 @@ defmodule Readability.ArticleBuilder do
          || candidate.score >= score_threshold
          || append?(candidate)
        end,
-       fn(candidate) ->
-         to_article_tag(candidate.html_tree)
-       end)
+       fn(candidate) -> to_article_tag(candidate.html_tree) end)
   end
 
   defp append?(%Candidate{html_tree: html_tree}) when elem(html_tree, 0) == "p" do

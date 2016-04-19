@@ -32,21 +32,6 @@ defmodule Readability.Candidate.BuilderTest do
   </div>
   """
 
-  test "abc" do
-    a = [1, 2, [3, 4, [5], 6, 7, [8, 9]]]
-    IO.inspect abc(a)
-  end
-
-  def abc([]), do: []
-  def abc([h|t]) do
-    [abc(h)|abc(t)]
-  end
-  def abc(h) do
-    IO.inspect h
-    h*2
-  end
-
-
   test "build candidate" do
     candidates = Builder.build(parse(@sample))
     expected = parse(@sample) |> Floki.find(".candidate") |> length

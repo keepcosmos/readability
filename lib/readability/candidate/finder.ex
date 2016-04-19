@@ -33,8 +33,6 @@ defmodule Readability.Candidate.Finder do
   def find_best_candidate([]), do: nil
   def find_best_candidate(candidates) do
     candidates
-    |> Enum.max_by(fn(candidate) ->
-        candidate.score
-       end)
+    |> Enum.max_by(fn(candidate) -> candidate.score end)
   end
 end
