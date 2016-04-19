@@ -1,4 +1,11 @@
 %{"bunt": {:hex, :bunt, "0.1.5"},
+  "certifi": {:hex, :certifi, "0.4.0"},
   "credo": {:hex, :credo, "0.3.12"},
   "floki": {:hex, :floki, "0.8.0"},
-  "mochiweb_html": {:hex, :mochiweb_html, "2.13.0"}}
+  "hackney": {:hex, :hackney, "1.6.0"},
+  "httpoison": {:hex, :httpoison, "0.8.3"},
+  "idna": {:hex, :idna, "1.2.0"},
+  "metrics": {:hex, :metrics, "1.0.1"},
+  "mimerl": {:hex, :mimerl, "1.0.2"},
+  "mochiweb_html": {:hex, :mochiweb_html, "2.13.0"},
+  "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.0"}}

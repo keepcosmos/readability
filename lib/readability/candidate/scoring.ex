@@ -1,4 +1,4 @@
-defmodule Readability.Scoring do
+defmodule Readability.Candidate.Scoring do
   @moduledoc """
   """
 
@@ -16,52 +16,55 @@ defmodule Readability.Scoring do
   Score html tree
   """
 
-  @spec score(html_tree) :: number
+  @spec calc_score(html_tree) :: number
 
-  def score(html_tree) do
-    result = score_node(html_tree)
-    result = result + score_child_content(html_tree) + score_grand_child_content(html_tree)
-    result * (1 - calc_link_density(html_tree))
+  def calc_score(html_tree) do
+    score = calc_node_score(html_tree)
+    score = score + calc_children_content_score(html_tree) + calc_grand_children_content_score(html_tree)
+    score * (1 - calc_link_density(html_tree))
   end
 
-  defp score_child_content({_, _, child_tree}) do
-    child_tree
+  def calc_children_content_score({_, _, children_tree}) do
+    children_tree
     |> Enum.filter(fn(tree) ->
          is_tuple(tree) && Candidate.match?(tree)
        end)
-    |> score_content
+    |> calc_content_score
   end
 
-  defp score_grand_child_content({_, _, child_tree}) do
-    result = child_tree
+  def calc_grand_children_content_score({_, _, children_tree}) do
+    score = children_tree
             |> Enum.filter_map(fn(tree) -> is_tuple(tree) end,
                                fn(tree) -> elem(tree, 2) end)
             |> List.flatten
             |> Enum.filter(fn(tree) ->
                  is_tuple(tree) && Candidate.match?(tree)
                end)
-            |> score_content
-    result / 2
+            |> calc_content_score
+    score / 2
   end
 
-  defp score_content(html_tree) do
-    result = 1
+  def calc_content_score(html_tree) do
+    score = 1
     inner_text = html_tree |> Floki.text
-    split_score = String.length(String.split(","))
+    split_score = inner_text
+                  |> String.split(",")
+                  |> length
+
     length_score = [(String.length(inner_text) / 100), 3] |> Enum.min
     score + split_score + length_score
   end
 
-  defp score_node(tag, attrs) do
-    result = class_weight(attrs)
-    result + (@element_scores[tag] || 0)
+  def calc_node_score(tag, attrs) do
+    score = class_weight(attrs)
+    score + (@element_scores[tag] || 0)
   end
-  defp score_node([h|t]), do: score_node(h) + score_node(t)
-  defp score_node({tag, attrs, _}), do: score_node(tag, attrs)
-  defp score_node([]), do: 0
+  def calc_node_score([h|t]), do: calc_node_score(h) + calc_node_score(t)
+  def calc_node_score({tag, attrs, _}), do: calc_node_score(tag, attrs)
+  def calc_node_score([]), do: 0
 
 
-  defp class_weight(attrs) do
+  def class_weight(attrs) do
     weight = 0
     class = attrs |> List.keyfind("class", 0, {"", ""}) |> elem(1)
     id = attrs |> List.keyfind("id", 0, {"", ""}) |> elem(1)
@@ -74,7 +77,7 @@ defmodule Readability.Scoring do
     weight
   end
 
-  defp calc_link_density(html_tree) do
+  def calc_link_density(html_tree) do
     link_length = html_tree
                   |> Floki.find("a")
                   |> Floki.text
@@ -83,7 +86,10 @@ defmodule Readability.Scoring do
     text_length = html_tree
                   |> Floki.text
                   |> String.length
-
-    link_length / text_length
+    if text_length == 0 do
+      0
+    else
+      link_length / text_length
+    end
   end
 end

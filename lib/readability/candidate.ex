@@ -2,7 +2,7 @@ defmodule Readability.Candidate do
   @moduledoc """
   """
 
-  defstruct html_tree: {}, score: 0
+  defstruct html_tree: {}, score: 0, tree_depth: 0
 
   alias Floki.SelectorTokenizer
   alias Floki.SelectorParser

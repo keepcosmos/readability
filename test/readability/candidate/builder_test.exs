@@ -1,7 +1,7 @@
-defmodule Readability.CandidateBuilderTest do
+defmodule Readability.Candidate.BuilderTest do
   use ExUnit.Case, async: true
   import Readability, only: [parse: 1]
-  alias Readability.CandidateBuilder
+  alias Readability.Candidate.Builder
 
   doctest Readability
 
@@ -32,8 +32,23 @@ defmodule Readability.CandidateBuilderTest do
   </div>
   """
 
+  test "abc" do
+    a = [1, 2, [3, 4, [5], 6, 7, [8, 9]]]
+    IO.inspect abc(a)
+  end
+
+  def abc([]), do: []
+  def abc([h|t]) do
+    [abc(h)|abc(t)]
+  end
+  def abc(h) do
+    IO.inspect h
+    h*2
+  end
+
+
   test "build candidate" do
-    candidates = CandidateBuilder.build(parse(@sample))
+    candidates = Builder.build(parse(@sample))
     expected = parse(@sample) |> Floki.find(".candidate") |> length
     assert length(candidates) == expected
 
@@ -48,7 +63,6 @@ defmodule Readability.CandidateBuilderTest do
   end
 
   test "sample" do
-    candidates = CandidateBuilder.build(parse(@sample))
-    IO.inspect candidates
+    candidates = Builder.build(parse(@sample))
   end
 end

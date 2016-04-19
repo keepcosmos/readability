@@ -1,4 +1,4 @@
-defmodule Readability.UnlikelyCandidatesRemover do
+defmodule Readability.Candidate.UnlikelyCandidatesRemover do
   @moduledoc """
   Remove unlikely candidates
   """

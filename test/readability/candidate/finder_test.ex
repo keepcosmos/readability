@@ -1,11 +1,11 @@
-defmodule Readability.CandidateFinderTest do
+defmodule Readability.Candidate.FinderTest do
   use ExUnit.Case, async: true
 
-  doctest Readability.CandidateFinder
+  doctest Readability.Candidate.Finder
 
-  alias Readability.CandidateFinder
-  alias Readability.MisusedTrasformer
-  alias Readability.UnlikelyCandidatesRemover
+  alias Readability.Candidate.Finder
+  alias Readability.Candidate.MisusedTrasformer
+  alias Readability.Candidate.UnlikelyCandidatesRemover
 
   @unlikey_sample """
   <html>
