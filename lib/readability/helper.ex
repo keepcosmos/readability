@@ -1,6 +1,6 @@
 defmodule Readability.Helper do
   @moduledoc """
-  Utilities
+  Helpers for parsing, updating, removing html tree
   """
 
   @type html_tree :: tuple | list
@@ -10,18 +10,19 @@ defmodule Readability.Helper do
   """
 
   @spec change_tag(html_tree, String.t, String.t) :: html_tree
+  def change_tag(content, _, _) when is_binary(content), do: content
+  def change_tag([], _, _), do: []
+  def change_tag([h|t], selector, tag) do
+    [change_tag(h, selector, tag)|change_tag(t, selector, tag)]
+  end
   def change_tag({tag_name, attrs, inner_tree}, tag_name, tag) do
     {tag, attrs, change_tag(inner_tree, tag_name, tag)}
   end
   def change_tag({tag_name, attrs, html_tree}, selector, tag) do
     {tag_name, attrs, change_tag(html_tree, selector, tag)}
   end
-  def change_tag([h|t], selector, tag) do
-    [change_tag(h, selector, tag)|change_tag(t, selector, tag)]
-  end
-  def change_tag([], selector, tag), do: []
-  def change_tag(content, selector, tag) when is_binary(content), do: content
 
+  def remove_tag(content, _) when is_binary(content), do: content
   def remove_tag([], _), do: []
   def remove_tag([h|t], fun) do
     node = remove_tag(h, fun)

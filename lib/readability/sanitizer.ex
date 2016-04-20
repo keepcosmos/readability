@@ -11,7 +11,6 @@ defmodule Readability.Sanitizer do
   @spec sanitize(html_tree, [Candidate.t], list) :: html_tree
   def sanitize(html_tree, candidates, opts \\ []) do
     html_tree
-    |> clean_headline_tag
     |> Helper.remove_tag(&clean_headline_tag?(&1))
     |> Helper.remove_tag(&clean_unlikely_tag?(&1))
     |> Helper.remove_tag(&clean_empty_p?(&1))

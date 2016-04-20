@@ -17,11 +17,11 @@ defmodule Readability do
                     whitelist: nil
                    ]
 
-  @regexes [unlikelyCandidatesRe: ~r/combx|comment|community|disqus|extra|foot|header|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
-            okMaybeItsACandidateRe: ~r/and|article|body|column|main|shadow/i,
+  @regexes [unlikely_candidate: ~r/combx|comment|community|disqus|extra|foot|header|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
+            ok_maybe_its_a_candidate: ~r/and|article|body|column|main|shadow/i,
             positiveRe: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i,
             negativeRe: ~r/combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i,
-            divToPElementsRe: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
+            div_to_p_elements: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
             replaceBrsRe: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
             replaceFontsRe: ~r/<(\/?)font[^>]*>/i,
             trimRe: ~r/^\s+|\s+$/,

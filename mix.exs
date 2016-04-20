@@ -34,7 +34,8 @@ defmodule Readability.Mixfile do
   defp deps do
     [{:floki, "~> 0.8.0"},
      {:httpoison, "~> 0.8.0"},
-     {:credo, "~> 0.3", only: [:dev, :test]}
+     {:credo, "~> 0.3", only: [:dev, :test]},
+     {:dialyxir, "~> 0.3", only: [:dev]}
     ]
   end
 end
