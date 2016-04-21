@@ -37,8 +37,7 @@ defmodule Readability.Candidate.Cleaner do
 
   defp unlikely_tree?({tag, attrs, _}) do
     idclass_str = attrs
-                  |> Enum.filter_map(fn(attr) -> elem(attr, 0) =~ ~r/id|class/i end,
-                                     fn(attr) -> elem(attr, 1) end)
+                  |> Enum.filter_map(&(elem(&1, 0)  =~ ~r/id|class/i), &(elem(&1, 1)))
                   |> Enum.join("")
     str = tag <> idclass_str
 

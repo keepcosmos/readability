@@ -3,8 +3,7 @@ defmodule Readability.Candidate.Finder do
   Find canidate
   """
 
-  alias Readability.Candidate.MisusedTrasformer
-  alias Readability.Candidate.UnlikelyCandidatesRemover
+  alias Readability.Candidate.Cleaner
   alias Readability.Candidate.Builder
 
 

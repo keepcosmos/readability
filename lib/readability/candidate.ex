@@ -12,11 +12,9 @@ defmodule Readability.Candidate do
   @type html_tree :: tuple | list
 
   @doc """
-  Check html_tree can be candidate.
+  Check html_tree can be candidate or not.
   """
-
   @spec match?(html_tree) :: boolean
-
   def match?(html_tree) do
     candidates_selector
     |> Enum.any?(fn(selector) ->
