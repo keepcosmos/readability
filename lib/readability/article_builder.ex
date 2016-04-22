@@ -1,38 +1,40 @@
 defmodule Readability.ArticleBuilder do
   @moduledoc """
+  build article by candidates
   """
 
-  alias Readability.Candidate
-  alias Readability.Candidate.Finder
-  alias Readability.Candidate.Scoring
   alias Readability.Sanitizer
+  alias Readability.Candidate
+  alias Readability.CandidateBuilder
+  alias Readability.Candidate.Scoring
 
   @type html_tree :: tuple | list
 
-  @spec build(html_tree) :: html_tree
-  def build(html_tree) do
-    article_trees = find_article_trees(html_tree)
+  @spec build(binary) :: html_tree
+  def build(html_str) do
+    html_tree = html_str
+                |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
+                |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
+                |> String.replace(Readability.regexes[:normalize], " ")
+                |> Floki.parse
+
+    candidates = CandidateBuilder.build(html_tree)
+    best_candidate = CandidateBuilder.find_best_candidate(candidates) || %Candidate{html_tree: html_tree}
+    article_trees = find_article_trees(best_candidate, candidates)
     article = {"div", [], article_trees}
-    Sanitizer.sanitize(article)
+    Sanitizer.sanitize(article, candidates)
   end
 
-  def find_article_trees(html_tree) do
-    candidates = Finder.find_cadidates(html_tree)
-    best_candidate = Finder.find_best_candidate(candidates)
-                     || %Candidate{html_tree: html_tree}
-
+  defp find_article_trees(best_candidate, candidates) do
     score_threshold = [10, best_candidate * 0.2] |> Enum.max
 
     candidates
-    |> Enum.filter(fn(candidate) ->
-         candidate.tree_depth == best_candidate.tree_depth
-       end)
+    |> Enum.filter(&(&1.tree_depth == best_candidate.tree_depth))
     |> Enum.filter_map(fn(candidate) ->
          candidate == best_candidate
          || candidate.score >= score_threshold
          || append?(candidate)
-       end,
-       fn(candidate) -> to_article_tag(candidate.html_tree) end)
+       end, &(to_article_tag(&1.html_tree)))
   end
 
   defp append?(%Candidate{html_tree: html_tree}) when elem(html_tree, 0) == "p" do

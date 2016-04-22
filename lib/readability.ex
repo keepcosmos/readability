@@ -3,6 +3,7 @@ defmodule Readability do
   """
 
   alias Readability.TitleFinder
+  alias Readability.ArticleBuilder
 
   @default_options [retry_length: 250,
                     min_text_length: 25,
@@ -19,15 +20,13 @@ defmodule Readability do
 
   @regexes [unlikely_candidate: ~r/combx|comment|community|disqus|extra|foot|header|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
             ok_maybe_its_a_candidate: ~r/and|article|body|column|main|shadow/i,
-            positiveRe: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i,
-            negativeRe: ~r/combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i,
+            positive: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i,
+            negative: ~r/hidden|^hid|combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i,
             div_to_p_elements: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
-            replaceBrsRe: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
-            replaceFontsRe: ~r/<(\/?)font[^>]*>/i,
-            trimRe: ~r/^\s+|\s+$/,
-            normalizeRe: ~r/\s{2,}/,
-            killBreaksRe: ~r/(<br\s*\/?>(\s|&nbsp;?)*){1,}/,
-            videoRe: ~r/http:\/\/(www\.)?(youtube|vimeo)\.com/i
+            replace_brs: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
+            replace_fonts: ~r/<(\/?)font[^>]*>/i,
+            normalize: ~r/\s{2,}/,
+            video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i
            ]
 
 
@@ -35,6 +34,10 @@ defmodule Readability do
 
   def title(html) when is_binary(html), do: html |> parse |> title
   def title(html_tree), do: TitleFinder.title(html_tree)
+
+  def content(html_tree) do
+    ArticleBuilder.build(html_tree)
+  end
 
   def parse(raw_html), do: Floki.parse(raw_html)
 

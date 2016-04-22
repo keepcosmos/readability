@@ -17,7 +17,7 @@ defmodule Readability.Candidate.Cleaner do
   def transform_misused_div_to_p([h|t]) do
     [transform_misused_div_to_p(h)|transform_misused_div_to_p(t)]
   end
-  def transform_misused_div_to_p({tag, attrs, inner_tree} = html_tree) do
+  def transform_misused_div_to_p({tag, attrs, inner_tree}) do
     if misused_divs?(tag, inner_tree), do: tag = "p"
     {tag, attrs, transform_misused_div_to_p(inner_tree)}
   end
