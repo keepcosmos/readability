@@ -1,4 +1,4 @@
-defmodule Readability.Candidate.BuilderTest do
+defmodule Readability.Candidate.BuilderTest.A do
   use ExUnit.Case, async: true
   import Readability, only: [parse: 1]
   alias Readability.Candidate.Builder

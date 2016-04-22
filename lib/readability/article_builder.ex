@@ -1,28 +1,70 @@
 defmodule Readability.ArticleBuilder do
   @moduledoc """
-  build article by candidates
+  build article for readability
   """
 
   alias Readability.Sanitizer
   alias Readability.Candidate
-  alias Readability.CandidateBuilder
+  alias Readability.CandidateFinder
+  alias Readability.Candidate.Cleaner
   alias Readability.Candidate.Scoring
 
   @type html_tree :: tuple | list
 
-  @spec build(binary) :: html_tree
-  def build(html_str) do
-    html_tree = html_str
-                |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
-                |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
-                |> String.replace(Readability.regexes[:normalize], " ")
-                |> Floki.parse
+  @doc """
+  Prepare the article node for display.
+  Clean out any inline styles, iframes, forms, strip extraneous <p> tags, etc.
+  """
+  @spec build(html_tree) :: html_tree
+  def build(html_tree, opts \\ Readability.default_options) do
+    html_tree = html_tree
+                |> Helper.remove_tag(fn({tag, _, _}) ->
+                     Enum.member?(["script", "style"], tag)
+                   end)
 
-    candidates = CandidateBuilder.build(html_tree)
-    best_candidate = CandidateBuilder.find_best_candidate(candidates) || %Candidate{html_tree: html_tree}
+    if opts[:remove_unlikely_candidates] do
+      html_tree = Cleaner.remove_unlikely_tree(html_tree)
+    end
+    html_tree = Cleaner.transform_misused_div_to_p(html_tree)
+
+    candidates = CandidateFinder.find(html_tree, opts)
+    article = find_article(candidates, html_tree)
+
+    result = Sanitizer.sanitize(article, candidates, opts)
+
+    if Helper.text_length(result) < opts[:retry_length] do
+      if opts = next_try_opts(opts) do
+        build(result, opts)
+      else
+        result
+      end
+    else
+      result
+    end
+  end
+
+  defp next_try_opts(opts) do
+    cond do
+      opts[:remove_unlikely_candidates] ->
+        Keyword.put(opts, :remove_unlikely_candidates, false)
+      opts[:weight_classes] ->
+        Keyword.put(opts, :weight_classes, false)
+      opts[:clean_conditionally] ->
+        Keyword.put(opts, :clean_conditionally, false)
+      true -> nil
+    end
+  end
+
+  defp find_article(candidates, html_tree) do
+    best_candidate = CandidateFinder.find_best_candidate(candidates)
+    unless best_candidate do
+      tree = html_tree
+             |> Floki.find("body")
+             |> hd
+      best_candidate = %Candidate{html_tree: tree}
+    end
     article_trees = find_article_trees(best_candidate, candidates)
-    article = {"div", [], article_trees}
-    Sanitizer.sanitize(article, candidates)
+    {"div", [], article_trees}
   end
 
   defp find_article_trees(best_candidate, candidates) do

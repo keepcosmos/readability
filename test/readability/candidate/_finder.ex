@@ -1,4 +1,4 @@
-defmodule Readability.Candidate.FinderTest do
+defmodule Readability.Candidate.FinderTest.A do
   use ExUnit.Case, async: true
 
   doctest Readability.Candidate.Finder

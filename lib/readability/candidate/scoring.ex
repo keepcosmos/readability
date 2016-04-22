@@ -15,15 +15,16 @@ defmodule Readability.Candidate.Scoring do
 
   @doc """
   Score html tree by some algorithm that check children nodes, attributes, link densities, etcs..
+  options -> weight_classes :: boolean, calculate weight class
   """
-  @spec calc_score(html_tree) :: number
-  def calc_score(html_tree) do
-    score = calc_node_score(html_tree)
+  @spec calc_score(html_tree, list) :: number
+  def calc_score(html_tree, opts \\ []) do
+    score = calc_node_score(html_tree, opts)
     score = score + calc_children_content_score(html_tree) + calc_grand_children_content_score(html_tree)
     score * (1 - calc_link_density(html_tree))
   end
 
-  def calc_content_score(html_tree) do
+  defp calc_content_score(html_tree) do
     score = 1
     inner_text = html_tree |> Floki.text
     split_score = inner_text |> String.split(",") |> length
@@ -31,13 +32,16 @@ defmodule Readability.Candidate.Scoring do
     score + split_score + length_score
   end
 
-  def calc_node_score(tag, attrs) do
-    score = class_weight(attrs)
+  defp calc_node_score(html_tree, opts \\ [])
+  defp calc_node_score({tag, attrs, _}, opts) do
+    score = 0
+    if opts[:weight_classes], do: score = score + class_weight(attrs)
     score + (@element_scores[tag] || 0)
   end
-  def calc_node_score([h|t]), do: calc_node_score(h) + calc_node_score(t)
-  def calc_node_score({tag, attrs, _}), do: calc_node_score(tag, attrs)
-  def calc_node_score([]), do: 0
+  defp calc_node_score([h|t], opts) do
+    calc_node_score(h, opts) + calc_node_score(t, opts)
+  end
+  defp calc_node_score([], _), do: 0
 
 
   def class_weight(attrs) do

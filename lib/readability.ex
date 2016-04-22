@@ -35,12 +35,31 @@ defmodule Readability do
   def title(html) when is_binary(html), do: html |> parse |> title
   def title(html_tree), do: TitleFinder.title(html_tree)
 
-  def content(html_tree) do
-    ArticleBuilder.build(html_tree)
+  @doc """
+  Using a variety of metrics (content score, classname, element types), find the content that is
+  most likely to be the stuff a user wants to read
+  """
+  @spec content(binary) :: binary
+  def content(raw_html) do
+    raw_html
+    |> parse
+    |> ArticleBuilder.build
   end
 
-  def parse(raw_html), do: Floki.parse(raw_html)
+  @doc """
+  Normalize and Parse to html tree(tuple or list)) fron binary html
+  """
+  @spec parse(binary) :: html_tree
+  def parse(raw_html) do
+    raw_html
+    |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
+    |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
+    |> String.replace(Readability.regexes[:normalize], " ")
+    |> Floki.parse
+    |> Floki.filter_out(:comment)
+  end
 
   def regexes, do: @regexes
+
   def default_options, do: @default_options
 end
