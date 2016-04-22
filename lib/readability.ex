@@ -31,6 +31,7 @@ defmodule Readability do
 
 
   @type html_tree :: tuple | list
+  @type options :: list
 
   def title(html) when is_binary(html), do: html |> parse |> title
   def title(html_tree), do: TitleFinder.title(html_tree)
@@ -39,11 +40,11 @@ defmodule Readability do
   Using a variety of metrics (content score, classname, element types), find the content that is
   most likely to be the stuff a user wants to read
   """
-  @spec content(binary) :: binary
-  def content(raw_html) do
+  @spec content(binary, options) :: binary
+  def content(raw_html, opts \\ @default_options) do
     raw_html
     |> parse
-    |> ArticleBuilder.build
+    |> ArticleBuilder.build(opts)
   end
 
   @doc """

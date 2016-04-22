@@ -1,8 +1,9 @@
 defmodule ReadabilityTest do
-  use ExUnit.Case
-  doctest Readability
+  use ExUnit.Case, async: true
 
   test "the truth" do
-    assert 1 + 1 == 2
+    %{status_code: 200, body: body} = HTTPoison.get!("http://blog.quarternotecoda.com/blog/2013/08/05/adventures-in-elixir/")
+
+    IO.inspect Readability.content(body) |> Floki.raw_html 
   end
 end

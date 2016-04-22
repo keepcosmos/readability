@@ -4,6 +4,7 @@ defmodule Readability.Sanitizer do
   "Fishy" is an algorithm based on content length, classnames, link density, number of images & embeds, etc.
   """
 
+  alias Readability.Helper
   alias Readability.Candidate
   alias Readability.Candidate.Scoring
 

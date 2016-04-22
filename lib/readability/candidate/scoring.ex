@@ -3,7 +3,6 @@ defmodule Readability.Candidate.Scoring do
   Score html tree
   """
   alias Readability.Helper
-  alias Readability.Candidate
 
   @element_scores %{"div" => 5,
                     "blockquote" => 3,
@@ -12,12 +11,13 @@ defmodule Readability.Candidate.Scoring do
                   }
 
   @type html_tree :: tuple | list
+  @type options :: list
 
   @doc """
   Score html tree by some algorithm that check children nodes, attributes, link densities, etcs..
   options -> weight_classes :: boolean, calculate weight class
   """
-  @spec calc_score(html_tree, list) :: number
+  @spec calc_score(html_tree, options) :: number
   def calc_score(html_tree, opts \\ []) do
     score = calc_node_score(html_tree, opts)
     score = score + calc_children_content_score(html_tree) + calc_grand_children_content_score(html_tree)
@@ -32,7 +32,6 @@ defmodule Readability.Candidate.Scoring do
     score + split_score + length_score
   end
 
-  defp calc_node_score(html_tree, opts \\ [])
   defp calc_node_score({tag, attrs, _}, opts) do
     score = 0
     if opts[:weight_classes], do: score = score + class_weight(attrs)
@@ -42,7 +41,6 @@ defmodule Readability.Candidate.Scoring do
     calc_node_score(h, opts) + calc_node_score(t, opts)
   end
   defp calc_node_score([], _), do: 0
-
 
   def class_weight(attrs) do
     weight = 0

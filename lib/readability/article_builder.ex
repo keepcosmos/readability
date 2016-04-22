@@ -3,6 +3,7 @@ defmodule Readability.ArticleBuilder do
   build article for readability
   """
 
+  alias Readability.Helper
   alias Readability.Sanitizer
   alias Readability.Candidate
   alias Readability.CandidateFinder
@@ -10,13 +11,14 @@ defmodule Readability.ArticleBuilder do
   alias Readability.Candidate.Scoring
 
   @type html_tree :: tuple | list
+  @type options :: list
 
   @doc """
   Prepare the article node for display.
   Clean out any inline styles, iframes, forms, strip extraneous <p> tags, etc.
   """
-  @spec build(html_tree) :: html_tree
-  def build(html_tree, opts \\ Readability.default_options) do
+  @spec build(html_tree, options) :: html_tree
+  def build(html_tree, opts) do
     origin_tree = html_tree
     html_tree = html_tree
                 |> Helper.remove_tag(fn({tag, _, _}) ->
@@ -59,9 +61,7 @@ defmodule Readability.ArticleBuilder do
   defp find_article(candidates, html_tree) do
     best_candidate = CandidateFinder.find_best_candidate(candidates)
     unless best_candidate do
-      tree = html_tree
-             |> Floki.find("body")
-             |> hd
+      tree = html_tree |> Floki.find("body") |> hd
       best_candidate = %Candidate{html_tree: tree}
     end
     article_trees = find_article_trees(best_candidate, candidates)
@@ -69,7 +69,7 @@ defmodule Readability.ArticleBuilder do
   end
 
   defp find_article_trees(best_candidate, candidates) do
-    score_threshold = [10, best_candidate * 0.2] |> Enum.max
+    score_threshold = Enum.max([10, best_candidate.score * 0.2])
 
     candidates
     |> Enum.filter(&(&1.tree_depth == best_candidate.tree_depth))

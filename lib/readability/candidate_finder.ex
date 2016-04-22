@@ -6,30 +6,32 @@ defmodule Readability.CandidateFinder do
 
   alias Readability.Helper
   alias Readability.Candidate
+  alias Readability.Candidate.Scoring
 
   @type html_tree :: tuple | list
+  @type options :: list
 
   @doc """
   Find candidates that shuld be meaningful article by analysing nodes
   """
-  @spec find(html_tree) :: [Candidate.t]
-  def find(_, tree_depth \\ 0, opts \\ [])
+  @spec find(html_tree, options, number) :: [Candidate.t]
+  def find(_, opts \\ [], tree_depth \\ 0)
   def find([], _, _), do: []
-  def find([h|t], tree_depth, opts) do
-    [find(h, tree_depth, opts) | find(t, tree_depth, opts)]
+  def find([h|t], opts, tree_depth) do
+    [find(h, opts, tree_depth) | find(t, opts, tree_depth)]
     |> List.flatten
   end
   def find(text, _, _) when is_binary(text), do: []
-  def find({tag, attrs, inner_tree}, tree_depth, opts) do
+  def find({tag, attrs, inner_tree}, opts, tree_depth) do
     html_tree = {tag, attrs, inner_tree}
     if candidate?(html_tree) do
       candidate = %Candidate{html_tree: html_tree,
                              score: Scoring.calc_score(html_tree, opts),
                              tree_depth: tree_depth}
 
-      [candidate | find(inner_tree, tree_depth + 1, opts)]
+      [candidate | find(inner_tree, opts, tree_depth + 1)]
     else
-      find(inner_tree, tree_depth + 1, opts)
+      find(inner_tree, opts, tree_depth + 1)
     end
   end
 
