@@ -17,6 +17,7 @@ defmodule Readability.ArticleBuilder do
   """
   @spec build(html_tree) :: html_tree
   def build(html_tree, opts \\ Readability.default_options) do
+    origin_tree = html_tree
     html_tree = html_tree
                 |> Helper.remove_tag(fn({tag, _, _}) ->
                      Enum.member?(["script", "style"], tag)
@@ -30,16 +31,16 @@ defmodule Readability.ArticleBuilder do
     candidates = CandidateFinder.find(html_tree, opts)
     article = find_article(candidates, html_tree)
 
-    result = Sanitizer.sanitize(article, candidates, opts)
+    html_tree = Sanitizer.sanitize(article, candidates, opts)
 
-    if Helper.text_length(result) < opts[:retry_length] do
+    if Helper.text_length(html_tree) < opts[:retry_length] do
       if opts = next_try_opts(opts) do
-        build(result, opts)
+        build(origin_tree, opts)
       else
-        result
+        html_tree
       end
     else
-      result
+      html_tree
     end
   end
 
