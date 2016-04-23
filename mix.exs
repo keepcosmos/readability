@@ -8,6 +8,8 @@ defmodule Readability.Mixfile do
     [app: :readability,
      version: "0.0.1",
      elixir: "~> 1.2",
+     description: description,
+     package: package,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps]
@@ -35,8 +37,24 @@ defmodule Readability.Mixfile do
   defp deps do
     [{:floki, "~> 0.8.0"},
      {:httpoison, "~> 0.8.0"},
+     {:earmark, "~> 0.1", only: :dev},
+     {:ex_doc, "~> 0.11", only: :dev},
      {:credo, "~> 0.3", only: [:dev, :test]},
      {:dialyxir, "~> 0.3", only: [:dev]}
     ]
+  end
+
+  defp description do
+    """
+    Readability to elixir. This project is heavily based on Arc90's project.
+    """
+  end
+
+  defp package do
+    [files: ["lib", "mix.exs", "README*", "LICENSE*", "doc"],
+     maintainers: ["Jaehyun Shin"],
+     licenses: ["Apache 2.0"],
+     links: %{"GitHub" => "https://github.com/keepcosmos/readability",
+              "Docs" => "http://https://hexdocs.pm/readability"}]
   end
 end
