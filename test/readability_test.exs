@@ -24,11 +24,11 @@ defmodule ReadabilityTest do
 
   test "readability for medium" do
     %{status_code: 200, body: body} = HTTPoison.get!("https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58#.d0xmzfd15")
-    IO.inspect Readability.content(body) |> Readability.readabl_text
+    Readability.content(body) |> Readability.readabl_text
   end
 
   test "readability for buzzfeed" do
     %{status_code: 200, body: body} = HTTPoison.get!("http://www.buzzfeed.com/salvadorhernandez/fbi-obtains-passcode-to-iphone-in-new-york-drops-case-agains#.koMMa21lj8")
-    IO.inspect Readability.content(body) |> Readability.readabl_text
+    Readability.content(body) |> Readability.readabl_text
   end
 end
