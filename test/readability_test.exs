@@ -1,12 +1,10 @@
 defmodule ReadabilityTest do
   use ExUnit.Case, async: true
 
-  @fixtures_path "./test/fixtures/"
-
   test "readability for NY Times" do
-    {:ok, nytimes} = File.read(@fixtures_path <> "nytimes.html")
+    html = TestHelper.read_fixture("nytimes.html")
     opts = [clean_conditionally: false]
-    nytimes = Readability.content(nytimes, opts)
+    nytimes = Readability.content(html, opts)
 
     nytimes_html = Readability.raw_html(nytimes)
     assert nytimes_html =~ ~r/^<div><div class=\"story-body\">/
@@ -18,17 +16,47 @@ defmodule ReadabilityTest do
   end
 
   test "readability for BBC" do
-    %{status_code: 200, body: body} = HTTPoison.get!("http://www.bbc.com/news/business-36108166")
-    Readability.content(body) |> Readability.readabl_text
+    html = TestHelper.read_fixture("bbc.html")
+    bbc = Readability.content(html)
+
+    bbc_html = Readability.raw_html(bbc)
+
+    assert bbc_html =~ ~r/^<div><div class=\"story-body__inner\" property=\"articleBody\">/
+    assert bbc_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
+
+    bbc_text = Readability.readabl_text(bbc)
+    # TODO: Remove image caption when extract only text
+    # assert bbc_text =~ ~r/^Microsoft\'s quarterly profit has missed analysts/
+    assert bbc_text =~ ~r/connected computing devices\".$/
   end
 
   test "readability for medium" do
-    %{status_code: 200, body: body} = HTTPoison.get!("https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58#.d0xmzfd15")
-    Readability.content(body) |> Readability.readabl_text
+    html = TestHelper.read_fixture("medium.html")
+    medium = Readability.content(html)
+
+    medium_html = Readability.raw_html(medium)
+
+    assert medium_html =~ ~r/^<div><div class=\"section-inner layoutSingleColumn\">/
+    assert medium_html =~ ~r/recommend button!<\/em><\/h3><\/div><\/div>$/
+
+    medium_text = Readability.readabl_text(medium)
+
+    assert medium_text =~ ~r/^Background: I’ve spent the past 6/
+    assert medium_text =~ ~r/a lot to me if you hit the recommend button!$/
   end
 
   test "readability for buzzfeed" do
-    %{status_code: 200, body: body} = HTTPoison.get!("http://www.buzzfeed.com/salvadorhernandez/fbi-obtains-passcode-to-iphone-in-new-york-drops-case-agains#.koMMa21lj8")
-    Readability.content(body) |> Readability.readabl_text
+    html = TestHelper.read_fixture("buzzfeed.html")
+    buzzfeed = Readability.content(html)
+
+    buzzfeed_html = Readability.raw_html(buzzfeed)
+
+    assert buzzfeed_html =~ ~r/^<div><div class=\"buzz_superlist_item_text\"><p>/
+    assert buzzfeed_html =~ ~r/encrypted devices.<\/p><hr\/><hr\/><hr\/><hr\/><\/div><\/div>$/
+
+    buzzfeed_text = Readability.readabl_text(buzzfeed)
+
+    assert buzzfeed_text =~ ~r/^The FBI no longer needs Apple’s help/
+    assert buzzfeed_text =~ ~r/issue of court orders and encrypted devices.$/
   end
 end

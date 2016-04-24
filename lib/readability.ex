@@ -73,11 +73,13 @@ defmodule Readability do
   """
   @spec raw_html(html_tree) :: binary
   def readabl_text(html_tree) do
+    # TODO: Remove image caption when extract only text
     tags_to_br = ~r/<\/(p|div|article|h\d)/i
     html_str = html_tree |> raw_html
     Regex.replace(tags_to_br, html_str, &("\n#{&1}"))
     |> Floki.parse
     |> Floki.text
+    |> String.strip
   end
 
   def regexes, do: @regexes

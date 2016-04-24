@@ -49,11 +49,6 @@ defmodule Readability.Candidate.CleanerTest do
 
   test "not remove body tags", %{html_tree: html_tree} do
     html_tree = Cleaner.remove_unlikely_tree(html_tree)
-    Floki.find(html_tree, "body") == []
-  end
-
-  test "not remove body tags", %{html_tree: html_tree} do
-    html_tree = Cleaner.remove_unlikely_tree(html_tree)
-    assert Floki.text(html_tree) =~ ~r/real content/
+    refute Floki.find(html_tree, "body") == []
   end
 end
