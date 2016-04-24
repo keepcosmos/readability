@@ -21,6 +21,9 @@ defmodule Readability.Helper do
     {tag_name, attrs, change_tag(html_tree, selector, tag)}
   end
 
+  @doc """
+  Remove html attributes
+  """
   @spec remove_attrs(html_tree, String.t | [String.t] | Regex.t) :: html_tree
   def remove_attrs(content, _) when is_binary(content), do: content
   def remove_attrs([], _), do: []
@@ -65,7 +68,7 @@ defmodule Readability.Helper do
   end
 
   @doc """
-  count only text length
+  Count only text length
   """
   @spec text_length(html_tree) :: number
   def text_length(html_tree) do

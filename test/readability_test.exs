@@ -4,7 +4,7 @@ defmodule ReadabilityTest do
   test "readability for NY Times" do
     html = TestHelper.read_fixture("nytimes.html")
     opts = [clean_conditionally: false]
-    nytimes = Readability.content(html, opts)
+    nytimes = Readability.article(html, opts)
 
     nytimes_html = Readability.raw_html(nytimes)
     assert nytimes_html =~ ~r/^<div><div class=\"story-body\">/
@@ -17,7 +17,7 @@ defmodule ReadabilityTest do
 
   test "readability for BBC" do
     html = TestHelper.read_fixture("bbc.html")
-    bbc = Readability.content(html)
+    bbc = Readability.article(html)
 
     bbc_html = Readability.raw_html(bbc)
 
@@ -32,7 +32,7 @@ defmodule ReadabilityTest do
 
   test "readability for medium" do
     html = TestHelper.read_fixture("medium.html")
-    medium = Readability.content(html)
+    medium = Readability.article(html)
 
     medium_html = Readability.raw_html(medium)
 
@@ -47,7 +47,7 @@ defmodule ReadabilityTest do
 
   test "readability for buzzfeed" do
     html = TestHelper.read_fixture("buzzfeed.html")
-    buzzfeed = Readability.content(html)
+    buzzfeed = Readability.article(html)
 
     buzzfeed_html = Readability.raw_html(buzzfeed)
 
@@ -58,11 +58,5 @@ defmodule ReadabilityTest do
 
     assert buzzfeed_text =~ ~r/^The FBI no longer needs Apple’s help/
     assert buzzfeed_text =~ ~r/issue of court orders and encrypted devices.$/
-  end
-
-  test "readability elixir blog" do
-    html = TestHelper.read_fixture("elixir.html")
-    html =  Readability.content(html)
-    IO.inspect Readability.readable_text(html)
   end
 end

@@ -7,17 +7,17 @@ defmodule Readability do
   ```elixir
   @type html :: binary
 
-  # extract title
+  # Extract title
   Readability.title(html)
 
-  # extract only text from content
-  content = html
-            |> Readability.content
+  # Extract only text from article
+  article = html
+            |> Readability.article
             |> Readability.readable_text
 
-  # extract content with transformed html
-  content = html
-            |> Readability.content
+  # Extract article with transformed html
+  article = html
+            |> Readability.article
             |> Readability.raw_html
   ```
   """
@@ -52,19 +52,57 @@ defmodule Readability do
   @type html_tree :: tuple | list
   @type options :: list
 
+  @doc """
+  Extract title
+
+  ## Example
+
+      iex> title = Readability.title(html_str)
+      "Some title in html"
+  """
+  @spec title(binary) :: binary
   def title(html) when is_binary(html), do: html |> parse |> title
   def title(html_tree), do: TitleFinder.title(html_tree)
 
   @doc """
   Using a variety of metrics (content score, classname, element types), find the content that is
   most likely to be the stuff a user wants to read
+
+  ## Example
+
+      iex> article_tree = Redability(html_str)
+      # returns article that is tuple
+
   """
-  @spec content(binary, options) :: binary
-  def content(raw_html, opts \\ []) do
+  @spec article(binary, options) :: html_tree
+  def article(raw_html, opts \\ []) do
     opts = Keyword.merge(@default_options, opts)
     raw_html
     |> parse
     |> ArticleBuilder.build(opts)
+  end
+
+
+  @doc """
+  return raw html binary from html_tree
+  """
+  @spec raw_html(html_tree) :: binary
+  def raw_html(html_tree) do
+    html_tree |> Floki.raw_html
+  end
+
+  @doc """
+  return only text binary from html_tree
+  """
+  @spec raw_html(html_tree) :: binary
+  def readable_text(html_tree) do
+    # TODO: Remove image caption when extract only text
+    tags_to_br = ~r/<\/(p|div|article|h\d)/i
+    html_str = html_tree |> raw_html
+    Regex.replace(tags_to_br, html_str, &("\n#{&1}"))
+    |> Floki.parse
+    |> Floki.text
+    |> String.strip
   end
 
   @doc """
@@ -78,28 +116,6 @@ defmodule Readability do
     |> String.replace(Readability.regexes[:normalize], " ")
     |> Floki.parse
     |> Floki.filter_out(:comment)
-  end
-
-  @doc """
-  return raw html binary from html tree tuple
-  """
-  @spec raw_html(html_tree) :: binary
-  def raw_html(html_tree) do
-    html_tree |> Floki.raw_html
-  end
-
-  @doc """
-  return only text binary from html tree tuple
-  """
-  @spec raw_html(html_tree) :: binary
-  def readable_text(html_tree) do
-    # TODO: Remove image caption when extract only text
-    tags_to_br = ~r/<\/(p|div|article|h\d)/i
-    html_str = html_tree |> raw_html
-    Regex.replace(tags_to_br, html_str, &("\n#{&1}"))
-    |> Floki.parse
-    |> Floki.text
-    |> String.strip
   end
 
   def regexes, do: @regexes

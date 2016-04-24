@@ -1,6 +1,6 @@
 defmodule Readability.TitleFinder do
   @moduledoc """
-  The TitleFinder engine traverse the HTML tree searching for finding title.
+  The TitleFinder engine traverses HTML tree searching for finding title.
   """
 
   @title_suffix ~r/(\-)|(\:\:)|(\|)/

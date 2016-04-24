@@ -1,6 +1,6 @@
 defmodule Readability.ArticleBuilder do
   @moduledoc """
-  build article for readability
+  Build article for readability
   """
 
   alias Readability.Helper

@@ -2,13 +2,18 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
+  @version "0.3.1"
+  @description """
+  Readability library for extracting and curating articles.
+  """
+
   use Mix.Project
 
   def project do
     [app: :readability,
-     version: "0.3.1",
+     version: @version,
      elixir: "~> 1.2",
-     description: description,
+     description: @description,
      package: package,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -40,12 +45,6 @@ defmodule Readability.Mixfile do
      {:credo, "~> 0.3", only: [:dev, :test]},
      {:dialyxir, "~> 0.3", only: [:dev]}
     ]
-  end
-
-  defp description do
-    """
-    Readability library for extracting and curating articles.
-    """
   end
 
   defp package do
