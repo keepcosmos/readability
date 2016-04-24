@@ -1,5 +1,25 @@
 defmodule Readability do
   @moduledoc """
+  Readability library for extracting & curating articles.
+
+  ## Example
+
+  ```elixir
+  @type html :: binary
+
+  # extract title
+  Readability.title(html)
+
+  # extract only text from content
+  content = html
+            |> Readability.content
+            |> Readability.readable_text
+
+  # extract content with transformed html
+  content = html
+            |> Readability.content
+            |> Readability.raw_html
+  ```
   """
 
   alias Readability.TitleFinder
@@ -40,7 +60,7 @@ defmodule Readability do
   most likely to be the stuff a user wants to read
   """
   @spec content(binary, options) :: binary
-  def content(raw_html, opts \\ @default_options) do
+  def content(raw_html, opts \\ []) do
     opts = Keyword.merge(@default_options, opts)
     raw_html
     |> parse
@@ -72,7 +92,7 @@ defmodule Readability do
   return only text binary from html tree tuple
   """
   @spec raw_html(html_tree) :: binary
-  def readabl_text(html_tree) do
+  def readable_text(html_tree) do
     # TODO: Remove image caption when extract only text
     tags_to_br = ~r/<\/(p|div|article|h\d)/i
     html_str = html_tree |> raw_html
