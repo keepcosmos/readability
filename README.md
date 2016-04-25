@@ -37,7 +37,7 @@ The example below, `html` variable is the html source from blog content "[Elixir
 Readability.title(html)
 #=> Elixir Design Goals
 
-### Extract the content with transformed html.
+### Extract the primary content with transformed html.
 html
 |> Readability.article
 |> Readability.raw_html
@@ -46,7 +46,7 @@ html
 # ...
 # ... out our sidebar for other learning resources.</p></div></div>
 
-### Extract the text only content.
+### Extract only text from the primary content.
 html
 |> Readability.article
 |> Readability.readable_text
