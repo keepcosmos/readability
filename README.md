@@ -28,8 +28,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
 ## Usage
 
-To parse document, you must prepare html string.
-The example below, `html` variable is the html source from [Elixir Design Goals](http://elixir-lang.org/blog/2013/08/08/elixir-design-goals/)
+The example below, `html` variable is the html source from blog content "[Elixir Design Goals](http://elixir-lang.org/blog/2013/08/08/elixir-design-goals/)".
 
 ### Examples
 ```elixir
