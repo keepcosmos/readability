@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.3.1"
+  @version "0.4.0"
   @description """
   Readability library for extracting and curating articles.
   """
@@ -25,7 +25,8 @@ defmodule Readability.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger,
-                    :floki
+                    :floki,
+                    :httpoison
                    ]]
   end
 
@@ -40,6 +41,7 @@ defmodule Readability.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:floki, "~> 0.8.0"},
+     {:httpoison, "~> 0.8.0"},
      {:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev},
      {:credo, "~> 0.3", only: [:dev, :test]},

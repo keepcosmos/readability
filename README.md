@@ -14,7 +14,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
     ```elixir
     def deps do
-      [{:readability, "~> 0.3"}]
+      [{:readability, "~> 0.4"}]
     end
     ```
 
@@ -28,23 +28,29 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
 ## Usage
 
-The example below, `html` variable is the html source from blog content "[Elixir Design Goals](http://elixir-lang.org/blog/2013/08/08/elixir-design-goals/)".
-
 ### Examples
 ```elixir
+### Get example page.
+%{status_code: 200, body: html} = HTTPoison.get!("https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58")
 
-### Extract the title
+### Extract the title.
 Readability.title(html)
-#=> Elixir Design Goals
+#=> "Why I’m betting on Elixir"
+
+### Extract authors.
+Readability.authors(html)
+#=> ["Ken Mazaika"]
+
 
 ### Extract the primary content with transformed html.
 html
 |> Readability.article
-|> Readability.raw_html
+|> Readability.readable_html
 #=>
-# <div><div class=\"entry-content\"><p>During the last year,
+# <div><div><p id=\"3476\"><strong><em>Background: </em></strong><em>I’ve spent...
 # ...
-# ... out our sidebar for other learning resources.</p></div></div>
+# ...button!</em></h3></div></div>
+
 
 ### Extract only text from the primary content.
 html
@@ -52,9 +58,9 @@ html
 |> Readability.readable_text
 
 #=>
-# During the last year, we have spoken at many conferences spreading the word about Elixir. We usually s.....
+# Background: I’ve spent the past 6 years building web applications in Ruby and.....
 # ...
-# ... started guide, or check out our sidebar for other learning resources.
+# ... value in this article, it would mean a lot to me if you hit the recommend button!
 ```
 
 ### Options
@@ -75,7 +81,7 @@ To run the test suite:
     $ mix test
 
 ## Todo
-* [ ] Extract authors
+* [x] Extract authors
 * [ ] Extract Images
 * [ ] Extract Videos
 * [ ] Convert relative paths into absolute paths of `img#src` and `a#href`

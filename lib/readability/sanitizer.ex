@@ -24,8 +24,7 @@ defmodule Readability.Sanitizer do
       html_tree = html_tree
                   |> Helper.remove_tag(conditionally_cleaing_fn(candidates))
     end
-
-    html_tree |> Helper.remove_attrs("style")
+    html_tree
   end
 
   defp conditionally_cleaing_fn(candidates) do

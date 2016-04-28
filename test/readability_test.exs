@@ -6,8 +6,8 @@ defmodule ReadabilityTest do
     opts = [clean_conditionally: false]
     nytimes = Readability.article(html, opts)
 
-    nytimes_html = Readability.raw_html(nytimes)
-    assert nytimes_html =~ ~r/^<div><div class=\"story-body\">/
+    nytimes_html = Readability.readable_html(nytimes)
+    assert nytimes_html =~ ~r/^<div><div><figure id=\"media-100000004245260\"><div><img src=\"https/
     assert nytimes_html =~ ~r/major priorities.<\/p><\/div><\/div>$/
 
     nytimes_text = Readability.readable_text(nytimes)
@@ -19,9 +19,9 @@ defmodule ReadabilityTest do
     html = TestHelper.read_fixture("bbc.html")
     bbc = Readability.article(html)
 
-    bbc_html = Readability.raw_html(bbc)
+    bbc_html = Readability.readable_html(bbc)
 
-    assert bbc_html =~ ~r/^<div><div class=\"story-body__inner\" property=\"articleBody\">/
+    assert bbc_html =~ ~r/^<div><div><figure><span><img alt=\"A Microsoft logo/
     assert bbc_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
 
     bbc_text = Readability.readable_text(bbc)
@@ -34,9 +34,9 @@ defmodule ReadabilityTest do
     html = TestHelper.read_fixture("medium.html")
     medium = Readability.article(html)
 
-    medium_html = Readability.raw_html(medium)
+    medium_html = Readability.readable_html(medium)
 
-    assert medium_html =~ ~r/^<div><div class=\"section-inner layoutSingleColumn\">/
+    assert medium_html =~ ~r/^<div><div><p id=\"3476\"><strong><em>Background:/
     assert medium_html =~ ~r/recommend button!<\/em><\/h3><\/div><\/div>$/
 
     medium_text = Readability.readable_text(medium)
@@ -49,9 +49,9 @@ defmodule ReadabilityTest do
     html = TestHelper.read_fixture("buzzfeed.html")
     buzzfeed = Readability.article(html)
 
-    buzzfeed_html = Readability.raw_html(buzzfeed)
+    buzzfeed_html = Readability.readable_html(buzzfeed)
 
-    assert buzzfeed_html =~ ~r/^<div><div class=\"buzz_superlist_item_text\"><p>/
+    assert buzzfeed_html =~ ~r/^<div><div><p>The FBI no longer needs Apple’s help/
     assert buzzfeed_html =~ ~r/encrypted devices.<\/p><hr\/><hr\/><hr\/><hr\/><\/div><\/div>$/
 
     buzzfeed_text = Readability.readable_text(buzzfeed)

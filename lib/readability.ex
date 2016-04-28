@@ -23,7 +23,9 @@ defmodule Readability do
   """
 
   alias Readability.TitleFinder
+  alias Readability.AuthorFinder
   alias Readability.ArticleBuilder
+  alias Readability.Helper
 
   @default_options [retry_length: 250,
                     min_text_length: 25,
@@ -46,7 +48,8 @@ defmodule Readability do
             replace_brs: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
             replace_fonts: ~r/<(\/?)font[^>]*>/i,
             normalize: ~r/\s{2,}/,
-            video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i
+            video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i,
+            protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
            ]
 
   @type html_tree :: tuple | list
@@ -60,9 +63,22 @@ defmodule Readability do
       iex> title = Readability.title(html_str)
       "Some title in html"
   """
-  @spec title(binary) :: binary
-  def title(html) when is_binary(html), do: html |> parse |> title
+  @spec title(binary | html_tree) :: binary
+  def title(html) when is_binary(html), do: html |> normalize |> title
   def title(html_tree), do: TitleFinder.title(html_tree)
+
+
+  @doc """
+  Extract authors
+
+  ## Example
+
+      iex> authors = Readability.authors(html_str)
+      ["José Valim", "chrismccord"]
+  """
+  @spec authors(binary | html_tree) :: list[binary]
+  def authors(html) when is_binary(html), do: html |> parse |> authors
+  def authors(html_tree), do: AuthorFinder.find(html_tree)
 
   @doc """
   Using a variety of metrics (content score, classname, element types), find the content that is
@@ -78,23 +94,24 @@ defmodule Readability do
   def article(raw_html, opts \\ []) do
     opts = Keyword.merge(@default_options, opts)
     raw_html
-    |> parse
+    |> normalize
     |> ArticleBuilder.build(opts)
   end
 
-
   @doc """
-  return raw html binary from html_tree
+  return attributes, tags cleaned html
   """
-  @spec raw_html(html_tree) :: binary
-  def raw_html(html_tree) do
-    html_tree |> Floki.raw_html
+  @spec readable_html(html_tree) :: binary
+  def readable_html(html_tree) do
+    html_tree
+    |> Helper.remove_attrs(regexes[:protect_attrs])
+    |> raw_html
   end
 
   @doc """
   return only text binary from html_tree
   """
-  @spec raw_html(html_tree) :: binary
+  @spec readable_text(html_tree) :: binary
   def readable_text(html_tree) do
     # TODO: Remove image caption when extract only text
     tags_to_br = ~r/<\/(p|div|article|h\d)/i
@@ -106,10 +123,18 @@ defmodule Readability do
   end
 
   @doc """
+  return raw html binary from html_tree
+  """
+  @spec raw_html(html_tree) :: binary
+  def raw_html(html_tree) do
+    html_tree |> Floki.raw_html
+  end
+
+  @doc """
   Normalize and Parse to html tree(tuple or list)) from binary html
   """
   @spec parse(binary) :: html_tree
-  def parse(raw_html) do
+  def normalize(raw_html) do
     raw_html
     |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
     |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
@@ -117,6 +142,8 @@ defmodule Readability do
     |> Floki.parse
     |> Floki.filter_out(:comment)
   end
+
+  def parse(raw_html) when is_binary(raw_html), do: Floki.parse(raw_html)
 
   def regexes, do: @regexes
 
