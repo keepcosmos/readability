@@ -10,6 +10,9 @@ defmodule Readability do
   # Extract title
   Readability.title(html)
 
+  # Extract authors.
+  Readability.authors(html)
+
   # Extract only text from article
   article = html
             |> Readability.article
