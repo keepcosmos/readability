@@ -81,12 +81,7 @@ To run the test suite:
     $ mix test
 
 ## Todo
-* [x] Extract authors
-* [ ] Extract Images
-* [ ] Extract Videos
-* [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
-* [ ] More configurable
-* [ ] Command line interface
+Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones)
 
 ## Related and Inpired Projects
 
