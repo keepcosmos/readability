@@ -81,6 +81,7 @@ To run the test suite:
     $ mix test
 
 ## Todo
+Contributions are welcome!
 Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones)
 
 ## Related and Inpired Projects
