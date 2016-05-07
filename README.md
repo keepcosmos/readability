@@ -29,50 +29,74 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 ## Usage
 
 ### Examples
-```elixir
-### Get example page.
-%{status_code: 200, body: html} = HTTPoison.get!("https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58")
 
-### Extract the title.
-Readability.title(html)
+#### Just pass url
+```elixir
+url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
+summary = Readability.summarize(url)
+
+summary.title
 #=> "Why I’m betting on Elixir"
 
-### Extract authors.
-Readability.authors(html)
+summary.authors
 #=> ["Ken Mazaika"]
 
-
-### Extract the primary content with transformed html.
-html
-|> Readability.article
-|> Readability.readable_html
+summary.article_html
 #=>
 # <div><div><p id=\"3476\"><strong><em>Background: </em></strong><em>I’ve spent...
 # ...
 # ...button!</em></h3></div></div>
 
-
-### Extract only text from the primary content.
-html
-|> Readability.article
-|> Readability.readable_text
-
+summary.article_text
 #=>
 # Background: I’ve spent the past 6 years building web applications in Ruby and.....
 # ...
 # ... value in this article, it would mean a lot to me if you hit the recommend button!
 ```
 
+#### From raw html
+
+```elixir
+### Extract the title.
+Readability.title(html)
+
+### Extract authors.
+Readability.authors(html)
+
+### Extract the primary content with transformed html.
+html
+|> Readability.article
+|> Readability.readable_html
+
+### Extract only text from the primary content.
+html
+|> Readability.article
+|> Readability.readable_text
+
+### you can extract the primary images with Floki
+html
+|> Readability.article
+|> Floki.find("img")
+|> Floki.attribute("src")
+```
+
 ### Options
 
-You may provide options(Keyword type) to `Readability.article`, including:
+If result is different with your expectation, you can add options.
 
-* retry_length \\\\ 250
+#### Example
+```elixir
+url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
+summary = Readability.summarize(url, [clean_conditionally: false])
+```
+
 * min_text_length \\\\ 25
-* remove_unlikely_candidates \\\\ true,
-* weight_classes \\\\ true,
-* clean_conditionally \\\\ true,
-* remove_empty_nodes \\\\ true,
+* remove_unlikely_candidates \\\\ true
+* weight_classes \\\\ true
+* clean_conditionally \\\\ true
+* retry_length \\\\ 250
+
+**You can find other algorithm and regex options in `readability.ex`**
 
 ## Test
 
@@ -81,10 +105,17 @@ To run the test suite:
     $ mix test
 
 ## Todo
+<<<<<<< HEAD
 
 **Contributions are welcome!**
 
 Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones)
+=======
+* [x] Extract authors
+* [x] More configurable
+* [x] Summarize function
+* [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
+>>>>>>> cb86b7a... add summarize function
 
 ## Related and Inpired Projects
 

@@ -86,6 +86,19 @@ defmodule Readability.Helper do
     end)
   end
 
+  @doc """
+  Normalize and Parse to html tree(tuple or list)) from binary html
+  """
+  @spec normalize(binary) :: html_tree
+  def normalize(raw_html) do
+    raw_html
+    |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
+    |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
+    |> String.replace(Readability.regexes[:normalize], " ")
+    |> Floki.parse
+    |> Floki.filter_out(:comment)
+  end
+
   defp candidates_selector do
     ["p", "td"]
     |> Enum.map(fn(s) ->
