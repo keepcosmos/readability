@@ -105,17 +105,15 @@ To run the test suite:
     $ mix test
 
 ## Todo
-<<<<<<< HEAD
 
-**Contributions are welcome!**
-
-Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones)
-=======
 * [x] Extract authors
 * [x] More configurable
 * [x] Summarize function
 * [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
->>>>>>> cb86b7a... add summarize function
+
+**Contributions are welcome!**
+
+Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones) and features of related projects below
 
 ## Related and Inpired Projects
 
