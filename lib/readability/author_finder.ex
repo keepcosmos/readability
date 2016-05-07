@@ -11,7 +11,9 @@ defmodule Readability.AuthorFinder do
   @spec find(html_tree) :: [binary]
   def find(html_tree) do
     author_names = find_by_meta_tag(html_tree)
-    split_author_names(author_names)
+    if author_names do
+      split_author_names(author_names)
+    end
   end
 
   def find_by_meta_tag(html_tree) do

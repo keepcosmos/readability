@@ -7,6 +7,9 @@ defmodule Readability do
   ```elixir
   @type html :: binary
 
+  # Just pass url
+  %Readability.Summary{title: title, authors: authors, article_html: article} = Readability.summarize(url)
+
   # Extract title
   Readability.title(html)
 
@@ -28,6 +31,7 @@ defmodule Readability do
   alias Readability.TitleFinder
   alias Readability.AuthorFinder
   alias Readability.ArticleBuilder
+  alias Readability.Summary
   alias Readability.Helper
 
   @default_options [retry_length: 250,
@@ -40,7 +44,8 @@ defmodule Readability do
                     min_image_height: 80,
                     ignore_image_format: [],
                     blacklist: nil,
-                    whitelist: nil
+                    whitelist: nil,
+                    page_url: nil
                    ]
 
   @regexes [unlikely_candidate: ~r/combx|comment|community|disqus|extra|foot|header|hidden|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
@@ -56,7 +61,27 @@ defmodule Readability do
            ]
 
   @type html_tree :: tuple | list
+  @type raw_html :: binary
+  @type url :: binary
   @type options :: list
+
+  @doc """
+  summarize the primary readable content of a webpage.
+  """
+  @spec summarize(url, options) :: Summary.t
+  def summarize(url, opts \\ []) do
+    opts = Keyword.merge(opts, [page_url: url])
+    %{status_code: _, body: raw_html} = HTTPoison.get!(url)
+    html_tree = Helper.normalize(raw_html)
+    article_tree = html_tree
+                   |> ArticleBuilder.build(opts)
+
+    %Summary{title: title(html_tree),
+             authors: authors(html_tree),
+             article_html: readable_html(article_tree),
+             article_text: readable_text(article_tree)
+           }
+  end
 
   @doc """
   Extract title
@@ -67,7 +92,11 @@ defmodule Readability do
       "Some title in html"
   """
   @spec title(binary | html_tree) :: binary
-  def title(html) when is_binary(html), do: html |> normalize |> title
+  def title(raw_html) when is_binary(raw_html) do
+     raw_html
+     |> Helper.normalize
+     |> title
+  end
   def title(html_tree), do: TitleFinder.title(html_tree)
 
 
@@ -97,7 +126,7 @@ defmodule Readability do
   def article(raw_html, opts \\ []) do
     opts = Keyword.merge(@default_options, opts)
     raw_html
-    |> normalize
+    |> Helper.normalize
     |> ArticleBuilder.build(opts)
   end
 
@@ -131,19 +160,6 @@ defmodule Readability do
   @spec raw_html(html_tree) :: binary
   def raw_html(html_tree) do
     html_tree |> Floki.raw_html
-  end
-
-  @doc """
-  Normalize and Parse to html tree(tuple or list)) from binary html
-  """
-  @spec parse(binary) :: html_tree
-  def normalize(raw_html) do
-    raw_html
-    |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
-    |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
-    |> String.replace(Readability.regexes[:normalize], " ")
-    |> Floki.parse
-    |> Floki.filter_out(:comment)
   end
 
   def parse(raw_html) when is_binary(raw_html), do: Floki.parse(raw_html)
