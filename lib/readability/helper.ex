@@ -92,6 +92,7 @@ defmodule Readability.Helper do
   @spec normalize(binary) :: html_tree
   def normalize(raw_html) do
     raw_html
+    |> String.replace(Readability.regexes[:replace_xml_version], "")
     |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
     |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
     |> String.replace(Readability.regexes[:normalize], " ")
