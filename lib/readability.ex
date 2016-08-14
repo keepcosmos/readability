@@ -55,6 +55,7 @@ defmodule Readability do
             div_to_p_elements: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
             replace_brs: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
             replace_fonts: ~r/<(\/?)font[^>]*>/i,
+            replace_xml_version: ~r/<\?xml.*\?>/i,
             normalize: ~r/\s{2,}/,
             video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i,
             protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i

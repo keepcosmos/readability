@@ -59,4 +59,19 @@ defmodule ReadabilityTest do
     assert buzzfeed_text =~ ~r/^The FBI no longer needs Apple’s help/
     assert buzzfeed_text =~ ~r/issue of court orders and encrypted devices.$/
   end
+
+  test "readability for pubmed" do
+    html = TestHelper.read_fixture("pubmed.html")
+    pubmed = Readability.article(html)
+
+    pubmed_html = Readability.readable_html(pubmed)
+
+    assert pubmed_html =~ ~r/^<div><div><h4>BACKGROUND AND OBJECTIVES: <\/h4><p><abstracttext>Although strict blood pressure/
+    assert pubmed_html =~ ~r/different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.<\/abstracttext><\/p><\/div><\/div>$/
+
+    pubmed_text = Readability.readable_text(pubmed)
+
+    assert pubmed_text =~ ~r/^BACKGROUND AND OBJECTIVES: \nAlthough strict blood pressure/
+    assert pubmed_text =~ ~r/with different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.$/
+  end
 end
