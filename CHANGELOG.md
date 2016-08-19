@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.5.2] - 2016.08.19
+
+### Bug fix
+- Support XML version tag
+
+
 ## [0.5.0] - 2016.07.16
 
 ### Maintain

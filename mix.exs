@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.5.1"
+  @version "0.5.2"
   @description """
   Readability library for extracting and curating articles.
   """
