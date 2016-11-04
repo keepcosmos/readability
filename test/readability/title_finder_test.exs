@@ -7,7 +7,7 @@ defmodule Readability.TitleFinderTest do
   <html>
     <head>
       <title>Tag title - test</title>
-      <meta property='og:title' content='og title | test'>
+      <meta property='og:title' content='og title'>
     </head>
     <body>
       <p>

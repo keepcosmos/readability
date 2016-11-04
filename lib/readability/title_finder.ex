@@ -35,6 +35,8 @@ defmodule Readability.TitleFinder do
     html_tree
     |> Floki.find("title")
     |> clean_title()
+    |> String.split(@title_suffix)
+    |> hd()
   end
 
   @doc """
@@ -62,8 +64,6 @@ defmodule Readability.TitleFinder do
   defp clean_title(html_tree) do
     html_tree
     |> Floki.text()
-    |> String.split(@title_suffix)
-    |> hd()
     |> String.strip()
   end
 
