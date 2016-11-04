@@ -3,7 +3,7 @@ defmodule Readability.TitleFinder do
   The TitleFinder engine traverses HTML tree searching for finding title.
   """
 
-  @title_suffix ~r/(\-)|(\:\:)|(\|)/
+  @title_suffix ~r/\s(?:\-|\:\:|\|)\s/
   @h_tag_selector "h1, h2, h3"
 
   @type html_tree :: tuple | list
