@@ -3,7 +3,7 @@ defmodule Readability.TitleFinder do
   The TitleFinder engine traverses HTML tree searching for finding title.
   """
 
-  @title_suffix ~r/(\-)|(\:\:)|(\|)/
+  @title_suffix ~r/\s(?:\-|\:\:|\|)\s/
   @h_tag_selector "h1, h2, h3"
 
   @type html_tree :: tuple | list
@@ -13,19 +13,18 @@ defmodule Readability.TitleFinder do
   """
   @spec title(html_tree) :: binary
   def title(html_tree) do
-    maybe_title = og_title(html_tree)
-    if String.length(String.strip(maybe_title)) == 0 do
-      maybe_title = tag_title(html_tree)
-    end
+    case og_title(html_tree) do
+      "" ->
+        title = tag_title(html_tree)
 
-    unless good_title?(maybe_title) do
-      h_title =  h_tag_title(html_tree)
-      if good_title?(h_title) do
-        maybe_title = h_title
-      end
+        if good_title?(title) do
+          title
+        else
+          h_tag_title(html_tree)
+        end
+      title when is_binary(title) ->
+        title
     end
-
-    maybe_title
   end
 
   @doc """
@@ -35,7 +34,9 @@ defmodule Readability.TitleFinder do
   def tag_title(html_tree) do
     html_tree
     |> Floki.find("title")
-    |> clean_title
+    |> clean_title()
+    |> String.split(@title_suffix)
+    |> hd()
   end
 
   @doc """
@@ -46,7 +47,7 @@ defmodule Readability.TitleFinder do
     html_tree
     |> Floki.find("meta[property=og:title]")
     |> Floki.attribute("content")
-    |> clean_title
+    |> clean_title()
   end
 
   @doc """
@@ -56,16 +57,14 @@ defmodule Readability.TitleFinder do
   def h_tag_title(html_tree, selector \\ @h_tag_selector) do
     html_tree
     |> Floki.find(selector)
-    |> hd
-    |> clean_title
+    |> hd()
+    |> clean_title()
   end
 
   defp clean_title(html_tree) do
-    title_text = html_tree
-                 |> Floki.text
-                 |> String.split(@title_suffix)
-                 |> hd
-                 |> String.strip
+    html_tree
+    |> Floki.text()
+    |> String.strip()
   end
 
   defp good_title?(title) do

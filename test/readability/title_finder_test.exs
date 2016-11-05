@@ -7,7 +7,7 @@ defmodule Readability.TitleFinderTest do
   <html>
     <head>
       <title>Tag title - test</title>
-      <meta property='og:title' content='og title | test'>
+      <meta property='og:title' content='og title'>
     </head>
     <body>
       <p>
@@ -31,6 +31,46 @@ defmodule Readability.TitleFinderTest do
   test "extract tag title" do
     title = Readability.TitleFinder.tag_title(@html)
     assert title == "Tag title"
+
+    html = """
+    <html>
+      <head>
+        <title>Tag title :: test</title>
+      </head>
+    </html>
+    """
+    title = Readability.TitleFinder.tag_title(html)
+    assert title == "Tag title"
+
+    html = """
+    <html>
+      <head>
+        <title>Tag title | test</title>
+      </head>
+    </html>
+    """
+    title = Readability.TitleFinder.tag_title(html)
+    assert title == "Tag title"
+
+    html = """
+    <html>
+      <head>
+        <title>Tag title-tag</title>
+      </head>
+    </html>
+    """
+    title = Readability.TitleFinder.tag_title(html)
+    assert title == "Tag title-tag"
+
+    html = """
+    <html>
+      <head>
+        <title>Tag title-tag-title - test</title>
+      </head>
+    </html>
+    """
+    title = Readability.TitleFinder.tag_title(html)
+    assert title == "Tag title-tag-title"
   end
 
   test "extract h1 tag title" do
