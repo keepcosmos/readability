@@ -5,8 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.6.0] - 2016.11.06
+
 ### Added
 - Add `httpoison_options` support to config
+- Improve Title extractor
 
 ## [0.5.2] - 2016.08.19
 
