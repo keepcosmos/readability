@@ -5,6 +5,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.6.1] - 2015.11.07
+- Fix `httpoison_options` default option error
+
 ## [0.6.0] - 2016.11.06
 
 ### Added
