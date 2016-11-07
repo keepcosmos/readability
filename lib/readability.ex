@@ -72,7 +72,7 @@ defmodule Readability do
   @spec summarize(url, options) :: Summary.t
   def summarize(url, opts \\ []) do
     opts = Keyword.merge(opts, [page_url: url])
-    httpoison_options = Application.get_env :readability, :httpoison_options
+    httpoison_options = Application.get_env :readability, :httpoison_options, []
     %{status_code: _, body: raw_html} = HTTPoison.get!(url, [], httpoison_options)
     html_tree = Helper.normalize(raw_html)
     article_tree = html_tree
