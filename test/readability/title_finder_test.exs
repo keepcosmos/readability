@@ -71,6 +71,19 @@ defmodule Readability.TitleFinderTest do
     """
     title = Readability.TitleFinder.tag_title(html)
     assert title == "Tag title-tag-title"
+
+    html = """
+    <html>
+      <head>
+        <title>Tag title</title>
+      </head>
+      <body>
+        <svg><title>SVG title</title></svg>
+      </body>
+    </html>
+    """
+    title = Readability.TitleFinder.tag_title(html)
+    assert title == "Tag title"
   end
 
   test "extract h1 tag title" do
