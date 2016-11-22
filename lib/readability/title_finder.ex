@@ -33,7 +33,7 @@ defmodule Readability.TitleFinder do
   @spec tag_title(html_tree) :: binary
   def tag_title(html_tree) do
     html_tree
-    |> Floki.find("title")
+    |> Floki.find("head title")
     |> clean_title()
     |> String.split(@title_suffix)
     |> hd()
