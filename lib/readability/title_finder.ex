@@ -33,7 +33,7 @@ defmodule Readability.TitleFinder do
   @spec tag_title(html_tree) :: binary
   def tag_title(html_tree) do
     html_tree
-    |> Floki.find("head title")
+    |> find_tag("head title")
     |> clean_title()
     |> String.split(@title_suffix)
     |> hd()
@@ -45,7 +45,7 @@ defmodule Readability.TitleFinder do
   @spec og_title(html_tree) :: binary
   def og_title(html_tree) do
     html_tree
-    |> Floki.find("meta[property=og:title]")
+    |> find_tag("meta[property=og:title]")
     |> Floki.attribute("content")
     |> clean_title()
   end
@@ -56,11 +56,22 @@ defmodule Readability.TitleFinder do
   @spec h_tag_title(html_tree, String.t) :: binary
   def h_tag_title(html_tree, selector \\ @h_tag_selector) do
     html_tree
-    |> Floki.find(selector)
-    |> hd()
+    |> find_tag(selector)
     |> clean_title()
   end
 
+  defp find_tag(html_tree, selector) do
+    case Floki.find(html_tree, selector) do
+      [] ->
+        []
+      matches when is_list(matches) ->
+        hd(matches)
+    end
+  end
+
+  defp clean_title([]) do
+    ""
+  end
   defp clean_title(html_tree) do
     html_tree
     |> Floki.text()
