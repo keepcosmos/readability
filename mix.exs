@@ -26,7 +26,8 @@ defmodule Readability.Mixfile do
   def application do
     [applications: [:logger,
                     :floki,
-                    :httpoison
+                    :httpoison,
+                    :fastimage
                    ]]
   end
 
@@ -40,12 +41,13 @@ defmodule Readability.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:floki, "~> 0.9.0"},
+    [{:floki, "~> 0.12.0"},
      {:httpoison, "~> 0.9.0"},
      {:earmark, "~> 0.1", only: :dev},
      {:ex_doc, "~> 0.11", only: :dev},
      {:credo, "~> 0.3", only: [:dev, :test]},
-     {:dialyxir, "~> 0.3", only: [:dev]}
+     {:dialyxir, "~> 0.3", only: [:dev]},
+     {:fastimage, "~> 0.0.6"}
     ]
   end
 

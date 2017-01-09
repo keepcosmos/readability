@@ -33,6 +33,7 @@ defmodule Readability do
   alias Readability.ArticleBuilder
   alias Readability.Summary
   alias Readability.Helper
+  alias Readability.TopImageFinder
 
   @default_options [retry_length: 250,
                     min_text_length: 25,
@@ -81,7 +82,8 @@ defmodule Readability do
     %Summary{title: title(html_tree),
              authors: authors(html_tree),
              article_html: readable_html(article_tree),
-             article_text: readable_text(article_tree)
+             article_text: readable_text(article_tree), 
+             top_image: top_image(html_tree)
            }
   end
 
@@ -120,7 +122,7 @@ defmodule Readability do
 
   ## Example
 
-      iex> article_tree = Redability(html_str)
+      iex> article_tree = Readability(html_str)
       # returns article that is tuple
 
   """
@@ -131,6 +133,18 @@ defmodule Readability do
     |> Helper.normalize
     |> ArticleBuilder.build(opts)
   end
+
+  @doc """
+  Using OG:Image, Twitter:Image and scanning through all images on a page, find the image most 
+  likely to be the top image of the page.
+
+  ## Example
+      iex> article_tree = Readability(html_str)
+      "https://some_image.com/someimage.jpg"
+  """
+  @spec top_image(binary | html_tree) :: binary
+  def top_image(html) when is_binary(html), do: html |> parse |> top_image
+  def top_image(html_tree), do: TopImageFinder.find(html_tree)
 
   @doc """
   return attributes, tags cleaned html

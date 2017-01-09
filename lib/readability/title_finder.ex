@@ -45,7 +45,7 @@ defmodule Readability.TitleFinder do
   @spec og_title(html_tree) :: binary
   def og_title(html_tree) do
     html_tree
-    |> find_tag("meta[property=og:title]")
+    |> find_tag("meta[property='og:title']")
     |> Floki.attribute("content")
     |> clean_title()
   end
