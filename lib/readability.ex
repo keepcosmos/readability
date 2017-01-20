@@ -144,7 +144,7 @@ defmodule Readability do
   """
   @spec top_image(binary | html_tree) :: binary
   def top_image(html) when is_binary(html), do: html |> parse |> top_image
-  def top_image(html_tree), do: TopImageFinder.find(html_tree)
+  def top_image(html_tree), do: TopImageFinder.top_image(html_tree)
 
   @doc """
   return attributes, tags cleaned html

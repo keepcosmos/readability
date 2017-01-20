@@ -1,10 +1,14 @@
 defmodule ReadabilityTest do
   use ExUnit.Case, async: true
 
+  alias Readability.Helper
+
   test "readability for NY Times" do
     html = TestHelper.read_fixture("nytimes.html")
     opts = [clean_conditionally: false]
     nytimes = Readability.article(html, opts)
+
+    nytimes_html_tree = Helper.normalize(html)
 
     nytimes_html = Readability.readable_html(nytimes)
     assert nytimes_html =~ ~r/^<div><div><figure id=\"media-100000004245260\"><div><img src=\"https/
@@ -13,11 +17,16 @@ defmodule ReadabilityTest do
     nytimes_text = Readability.readable_text(nytimes)
     assert nytimes_text =~ ~r/^Buddhist monks performing as part of/
     assert nytimes_text =~ ~r/one of her major priorities.$/
+
+    nytimes_top_image = Readability.top_image(nytimes_html_tree)
+    assert nytimes_top_image == "https://static01.nyt.com/images/2016/03/17/arts/design/17KOREA/17KOREA-facebookJumbo.jpg"
   end
 
   test "readability for BBC" do
     html = TestHelper.read_fixture("bbc.html")
     bbc = Readability.article(html)
+
+    bbc_html_tree = Helper.normalize(html)
 
     bbc_html = Readability.readable_html(bbc)
 
@@ -28,6 +37,17 @@ defmodule ReadabilityTest do
     # TODO: Remove image caption when extract only text
     # assert bbc_text =~ ~r/^Microsoft\'s quarterly profit has missed analysts/
     assert bbc_text =~ ~r/connected computing devices\".$/
+
+    bbc_top_image = Readability.top_image(bbc_html_tree)
+    assert bbc_top_image == "http://ichef-1.bbci.co.uk/news/1024/cpsprodpb/136A8/production/_89382597_3a9209bf-444a-4cda-bd5a-124db32077b3.jpg"
+  end
+
+  test "readability for Elixir" do
+    html = TestHelper.read_fixture("elixir.html")
+    elixir = Readability.article(html)
+
+    elixir_top_image = Readability.top_image(elixir)
+    assert elixir_top_image == ""
   end
 
   test "readability for medium" do
