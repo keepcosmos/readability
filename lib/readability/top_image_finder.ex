@@ -44,12 +44,20 @@ defmodule Readability.TopImageFinder do
     String.ends_with?(s, [".jpg", ".png", ".jpeg", ".gif"])
   end
 
+  def safe_fastimage_size(img) do
+    try do
+      Fastimage.size(img)
+    rescue
+      e -> %{height: 0, width: 0}
+    end
+  end
+
   def largest_image_url(html_tree) do
     image_urls = html_tree 
     |> Floki.find("img")
     |> Floki.attribute("src")
 
-    image_candidates = Enum.filter_map(image_urls, &check_image_url?/1, &Fastimage.size/1)
+    image_candidates = Enum.filter_map(image_urls, &check_image_url?/1, &safe_fastimage_size/1)
     |> Enum.zip(image_urls)
     |> Enum.filter(fn x -> 
       @widest_ratio >= elem(x, 0).width / elem(x, 0).height >= @tallest_ratio and # Make sure for dimensions
