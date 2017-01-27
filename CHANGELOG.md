@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+- Fix concatenation of multiple matching tags in Title extractor
+- Fix exception when no matches are found in Title extractor
 
 ## [0.6.2] - 2015.11.22
 - Scope the title tag selector to the head element

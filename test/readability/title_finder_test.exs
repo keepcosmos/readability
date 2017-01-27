@@ -28,6 +28,19 @@ defmodule Readability.TitleFinderTest do
     assert title == "og title"
   end
 
+  test "does not merge multiple matching og:title tags" do
+    html = """
+    <html>
+      <head>
+        <meta property='og:title' content='og title 1'>
+        <meta property='og:title' content='og title 2'>
+      </head>
+    </html>
+    """
+    title = Readability.TitleFinder.og_title(html)
+    assert title == "og title 1"
+  end
+
   test "extract tag title" do
     title = Readability.TitleFinder.tag_title(@html)
     assert title == "Tag title"
@@ -86,13 +99,51 @@ defmodule Readability.TitleFinderTest do
     assert title == "Tag title"
   end
 
+  test "does not merge multiple title tags" do
+    html = """
+    <html>
+      <head>
+        <title>tag title 1</title>
+        <title>tag title 2</title>
+      </head>
+    </html>
+    """
+    title = Readability.TitleFinder.tag_title(html)
+    assert title == "tag title 1"
+  end
+
   test "extract h1 tag title" do
     title = Readability.TitleFinder.h_tag_title(@html)
     assert title == "h1 title"
   end
 
-  test "extrat h2 tag title" do
+  test "extract h2 tag title" do
     title = Readability.TitleFinder.h_tag_title(@html, "h2")
     assert title == "h2 title"
+  end
+
+  test "does not merge multile header tags" do
+    html = """
+    <html>
+      <body>
+        <h1>header 1</h1>
+        <h1>header 2</h1>
+      </body>
+    </html>
+    """
+    title = Readability.TitleFinder.h_tag_title(html)
+    assert title == "header 1"
+  end
+
+  test "returns an empty string when no title tag can be found" do
+    assert Readability.TitleFinder.tag_title("") == ""
+  end
+
+  test "returns an empty string when no og:title tag can be found" do
+    assert Readability.TitleFinder.og_title("") == ""
+  end
+
+  test "returns an empty string when no header tag can be found" do
+    assert Readability.TitleFinder.h_tag_title("") == ""
   end
 end
