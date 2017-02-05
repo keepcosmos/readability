@@ -25,9 +25,7 @@ defmodule Readability.ArticleBuilder do
                      Enum.member?(["script", "style"], tag)
                    end)
 
-    if opts[:remove_unlikely_candidates] do
-      html_tree = Cleaner.remove_unlikely_tree(html_tree)
-    end
+    html_tree = if opts[:remove_unlikely_candidates], do: Cleaner.remove_unlikely_tree(html_tree), else: html_tree
     html_tree = Cleaner.transform_misused_div_to_p(html_tree)
 
     candidates = CandidateFinder.find(html_tree, opts)
@@ -61,8 +59,10 @@ defmodule Readability.ArticleBuilder do
   defp find_article(candidates, html_tree) do
     best_candidate = CandidateFinder.find_best_candidate(candidates)
     unless best_candidate do
-      tree = html_tree |> Floki.find("body") |> hd
-      best_candidate = %Candidate{html_tree: tree}
+      best_candidate = case html_tree |> Floki.find("body") do
+                         [tree|_] -> %Candidate{html_tree: tree}
+                         _ -> %Candidate{html_tree: {}}
+                       end
     end
     article_trees = find_article_trees(best_candidate, candidates)
     {"div", [], article_trees}

@@ -31,16 +31,16 @@ defmodule Readability.Helper do
     [remove_attrs(h, t_attrs)|remove_attrs(t, t_attrs)]
   end
   def remove_attrs({tag_name, attrs, inner_tree}, target_attr) do
-    reject_fun = fn(attr) -> attr end
-    cond do
-      is_binary(target_attr) ->
-        reject_fun = fn(attr) -> elem(attr, 0) == target_attr end
-      Regex.regex?(target_attr) ->
-        reject_fun = fn(attr) -> elem(attr, 0) =~ target_attr end
-      is_list(target_attr) ->
-        reject_fun = fn(attr) -> Enum.member?(target_attr, elem(attr, 0)) end
-      true -> nil
-    end
+    reject_fun =
+      cond do
+        is_binary(target_attr) ->
+          fn(attr) -> elem(attr, 0) == target_attr end
+        Regex.regex?(target_attr) ->
+          fn(attr) -> elem(attr, 0) =~ target_attr end
+        is_list(target_attr) ->
+          fn(attr) -> Enum.member?(target_attr, elem(attr, 0)) end
+        true -> fn(attr) -> attr end
+      end
     {tag_name, Enum.reject(attrs, reject_fun), remove_attrs(inner_tree, target_attr)}
   end
 
@@ -80,7 +80,7 @@ defmodule Readability.Helper do
   """
   @spec candidate_tag?(html_tree) :: boolean
   def candidate_tag?(html_tree) do
-    Enum.any?(candidates_selector, fn(selector) ->
+    Enum.any?(candidates_selector(), fn(selector) ->
       Floki.Selector.match?(html_tree, selector)
       && (text_length(html_tree)) >= Readability.default_options[:min_text_length]
     end)
@@ -92,10 +92,10 @@ defmodule Readability.Helper do
   @spec normalize(binary) :: html_tree
   def normalize(raw_html) do
     raw_html
-    |> String.replace(Readability.regexes[:replace_xml_version], "")
-    |> String.replace(Readability.regexes[:replace_brs], "</p><p>")
-    |> String.replace(Readability.regexes[:replace_fonts], "<\1span>")
-    |> String.replace(Readability.regexes[:normalize], " ")
+    |> String.replace(Readability.regexes(:replace_xml_version), "")
+    |> String.replace(Readability.regexes(:replace_brs), "</p><p>")
+    |> String.replace(Readability.regexes(:replace_fonts), "<\1span>")
+    |> String.replace(Readability.regexes(:normalize), " ")
     |> Floki.parse
     |> Floki.filter_out(:comment)
   end

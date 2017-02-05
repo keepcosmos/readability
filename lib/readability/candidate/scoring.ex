@@ -34,7 +34,7 @@ defmodule Readability.Candidate.Scoring do
 
   defp calc_node_score({tag, attrs, _}, opts) do
     score = 0
-    if opts[:weight_classes], do: score = score + class_weight(attrs)
+    score = if opts[:weight_classes], do: score + class_weight(attrs), else: score
     score + (@element_scores[tag] || 0)
   end
   defp calc_node_score([h|t], opts) do
@@ -47,11 +47,10 @@ defmodule Readability.Candidate.Scoring do
     class = attrs |> List.keyfind("class", 0, {"", ""}) |> elem(1)
     id = attrs |> List.keyfind("id", 0, {"", ""}) |> elem(1)
 
-    if class =~ Readability.regexes[:positive], do: weight = weight + 25
-    if id =~ Readability.regexes[:positive], do: weight = weight + 25
-    if class =~ Readability.regexes[:negative], do: weight = weight - 25
-    if id =~ Readability.regexes[:negative], do: weight = weight - 25
-
+    weight = if class =~ Readability.regexes(:positive), do: weight + 25, else: weight
+    weight = if id =~ Readability.regexes(:positive), do: weight + 25, else: weight
+    weight = if class =~ Readability.regexes(:negative), do: weight - 25, else: weight
+    weight = if id =~ Readability.regexes(:negative), do: weight - 25, else: weight
     weight
   end
 

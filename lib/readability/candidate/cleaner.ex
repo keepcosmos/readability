@@ -18,7 +18,7 @@ defmodule Readability.Candidate.Cleaner do
     [transform_misused_div_to_p(h)|transform_misused_div_to_p(t)]
   end
   def transform_misused_div_to_p({tag, attrs, inner_tree}) do
-    if misused_divs?(tag, inner_tree), do: tag = "p"
+    tag = if misused_divs?(tag, inner_tree), do: "p", else: tag
     {tag, attrs, transform_misused_div_to_p(inner_tree)}
   end
 
@@ -31,7 +31,7 @@ defmodule Readability.Candidate.Cleaner do
   end
 
   defp misused_divs?("div", inner_tree) do
-    !(Floki.raw_html(inner_tree) =~ Readability.regexes[:div_to_p_elements])
+    !(Floki.raw_html(inner_tree) =~ Readability.regexes(:div_to_p_elements))
   end
   defp misused_divs?(_, _), do: false
 
@@ -41,8 +41,8 @@ defmodule Readability.Candidate.Cleaner do
                   |> Enum.join("")
     str = tag <> idclass_str
 
-    str =~ Readability.regexes[:unlikely_candidate]
-      && !(str =~ Readability.regexes[:ok_maybe_its_a_candidate])
+    str =~ Readability.regexes(:unlikely_candidate)
+      && !(str =~ Readability.regexes(:ok_maybe_its_a_candidate))
       && tag != "html"
   end
 end

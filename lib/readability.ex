@@ -138,7 +138,7 @@ defmodule Readability do
   @spec readable_html(html_tree) :: binary
   def readable_html(html_tree) do
     html_tree
-    |> Helper.remove_attrs(regexes[:protect_attrs])
+    |> Helper.remove_attrs(regexes(:protect_attrs))
     |> raw_html
   end
 
@@ -166,7 +166,7 @@ defmodule Readability do
 
   def parse(raw_html) when is_binary(raw_html), do: Floki.parse(raw_html)
 
-  def regexes, do: @regexes
+  def regexes(key), do: @regexes[key]
 
   def default_options, do: @default_options
 end

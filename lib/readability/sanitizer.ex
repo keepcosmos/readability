@@ -21,10 +21,10 @@ defmodule Readability.Sanitizer do
                 |> Helper.remove_tag(&clean_empty_p?(&1))
 
     if opts[:clean_conditionally] do
-      html_tree = html_tree
-                  |> Helper.remove_tag(conditionally_cleaing_fn(candidates))
+      html_tree |> Helper.remove_tag(conditionally_cleaing_fn(candidates))
+    else
+      html_tree
     end
-    html_tree
   end
 
   defp conditionally_cleaing_fn(candidates) do
@@ -48,7 +48,7 @@ defmodule Readability.Sanitizer do
             input_len = tree |> Floki.find("input") |> length
             embed_len = tree
                         |> Floki.find("embed")
-                        |> Enum.reject(&(&1 =~ Readability.regexes[:video]))
+                        |> Enum.reject(&(&1 =~ Readability.regexes(:video)))
                         |> length
 
             link_density =  Scoring.calc_link_density(tree)
@@ -57,7 +57,7 @@ defmodule Readability.Sanitizer do
             img_len > p_len                 # too many image
             || (!list? && li_len > p_len)   # more <li>s than <p>s
             || input_len > (p_len / 3)      # less than 3x <p>s than <input>s
-            || (!list? && conent_len < Readability.regexes[:min_text_length] && img_len != 1) # too short a content length without a single image
+            || (!list? && conent_len < Readability.regexes(:min_text_length) && img_len != 1) # too short a content length without a single image
             || (weight < 25 && link_density > 0.2) # too many links for its weight (#{weight})
             || (weight >= 25 && link_density > 0.5) # too many links for its weight (#{weight})
             || ((embed_len == 1 && conent_len < 75) || embed_len > 1) # <embed>s with too short a content length, or too many <embed>s
@@ -75,7 +75,7 @@ defmodule Readability.Sanitizer do
 
   defp clean_unlikely_tag?({tag, attrs, _}) do
     attrs_str = attrs |> Enum.map(&(elem(&1, 1))) |> Enum.join("")
-    tag =~ ~r/form|object|iframe|embed/ && !(attrs_str =~ Readability.regexes[:video])
+    tag =~ ~r/form|object|iframe|embed/ && !(attrs_str =~ Readability.regexes(:video))
   end
 
   defp clean_empty_p?({tag, _, _} = html_tree) do
