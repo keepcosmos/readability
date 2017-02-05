@@ -15,7 +15,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
     ```elixir
     def deps do
-      [{:readability, "~> 0.6.1"}]
+      [{:readability, "~> 0.7"}]
     end
     ```
 
