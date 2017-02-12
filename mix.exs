@@ -47,7 +47,7 @@ defmodule Readability.Mixfile do
      {:ex_doc, "~> 0.11", only: :dev},
      {:credo, "~> 0.3", only: [:dev, :test]},
      {:dialyxir, "~> 0.3", only: [:dev]},
-     {:fastimage, "~> 0.0.6"}
+     {:fastimage, git: "https://github.com/jonzlin95/fastimage.git"},
     ]
   end
 

@@ -47,8 +47,8 @@ defmodule Readability.TopImageFinder do
   def safe_fastimage_size(img) do
     try do
       case Fastimage.size(img) do
-        %{height: _, width: _} = h -> h
         %{error: _} -> %{height: 0, width: 0}
+        dimensions -> dimensions
       end
     rescue
       e -> %{height: 0, width: 0}
@@ -62,6 +62,7 @@ defmodule Readability.TopImageFinder do
 
     image_candidates = Enum.filter_map(image_urls, &check_image_url?/1, &safe_fastimage_size/1)
     |> Enum.zip(image_urls)
+    |> Enum.filter(fn x -> elem(x, 0).width != 0 and elem(x, 0).height != 0 end)
     |> Enum.filter(fn x -> 
       @widest_ratio >= elem(x, 0).width / elem(x, 0).height >= @tallest_ratio and # Make sure for dimensions
       elem(x, 0).width * elem(x, 0).height >= @min_area end) # and also minimum area
