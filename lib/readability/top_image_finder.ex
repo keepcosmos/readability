@@ -46,7 +46,10 @@ defmodule Readability.TopImageFinder do
 
   def safe_fastimage_size(img) do
     try do
-      Fastimage.size(img)
+      case Fastimage.size(img) do
+        %{height: _, width: _} = h -> h
+        %{error: _} -> %{height: 0, width: 0}
+      end
     rescue
       e -> %{height: 0, width: 0}
     end

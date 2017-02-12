@@ -14,10 +14,10 @@ defmodule Readability.Mixfile do
      version: @version,
      elixir: "~> 1.2",
      description: @description,
-     package: package,
+     package: package(),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps]
+     deps: deps()]
   end
 
   # Configuration for the OTP application
