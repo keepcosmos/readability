@@ -40,7 +40,7 @@ defmodule Readability.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:floki, "~> 0.13.1"},
+    [{:floki, "~> 0.14.0"},
      {:httpoison, "~> 0.11.0"},
      {:ex_doc, "~> 0.14", only: :dev},
      {:credo, "~> 0.6.1", only: [:dev, :test]},
