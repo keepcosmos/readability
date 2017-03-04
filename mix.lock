@@ -4,7 +4,7 @@
   "dialyxir": {:hex, :dialyxir, "0.3.5", "eaba092549e044c76f83165978979f60110dc58dd5b92fd952bf2312f64e9b14", [:mix], []},
   "earmark": {:hex, :earmark, "1.1.1", "433136b7f2e99cde88b745b3a0cfc3fbc81fe58b918a09b40fce7f00db4d8187", [:mix], []},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
-  "floki": {:hex, :floki, "0.13.1", "b3b287e02914cb41a66285071dade287165ed1915ab07903e18fb454fe961bad", [:mix], [{:mochiweb, "~> 2.15", [hex: :mochiweb, optional: false]}]},
+  "floki": {:hex, :floki, "0.14.0", "91a6be57349e10a63cf52d7890479a19012cef9185fa93c305d4fe42e6a50dee", [:mix], [{:mochiweb, "~> 2.15", [hex: :mochiweb, optional: false]}]},
   "hackney": {:hex, :hackney, "1.6.5", "8c025ee397ac94a184b0743c73b33b96465e85f90a02e210e86df6cbafaa5065", [:rebar3], [{:certifi, "0.7.0", [hex: :certifi, optional: false]}, {:idna, "1.2.0", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.1", [hex: :ssl_verify_fun, optional: false]}]},
   "httpoison": {:hex, :httpoison, "0.11.0", "b9240a9c44fc46fcd8618d17898859ba09a3c1b47210b74316c0ffef10735e76", [:mix], [{:hackney, "~> 1.6.3", [hex: :hackney, optional: false]}]},
   "idna": {:hex, :idna, "1.2.0", "ac62ee99da068f43c50dc69acf700e03a62a348360126260e87f2b54eced86b2", [:rebar3], []},
