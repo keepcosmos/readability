@@ -16,11 +16,12 @@ defmodule Readability.TitleFinder do
     case og_title(html_tree) do
       "" ->
         title = tag_title(html_tree)
+        h_title = h_tag_title(html_tree)
 
-        if good_title?(title) do
+        if good_title?(title) || h_title == "" do
           title
         else
-          h_tag_title(html_tree)
+          h_title
         end
       title when is_binary(title) ->
         title
