@@ -61,10 +61,13 @@ defmodule Readability do
             protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
            ]
 
+  @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s+charset=.*)?$/i
+
   @type html_tree :: tuple | list
   @type raw_html :: binary
   @type url :: binary
   @type options :: list
+  @type headers :: list[tuple]
 
   @doc """
   summarize the primary readable content of a webpage.
@@ -73,16 +76,59 @@ defmodule Readability do
   def summarize(url, opts \\ []) do
     opts = Keyword.merge(opts, [page_url: url])
     httpoison_options = Application.get_env :readability, :httpoison_options, []
-    %{status_code: _, body: raw_html} = HTTPoison.get!(url, [], httpoison_options)
-    html_tree = Helper.normalize(raw_html)
-    article_tree = html_tree
-                   |> ArticleBuilder.build(opts)
+    %{status_code: _, body: raw, headers: headers} = HTTPoison.get!(url, [], httpoison_options)
 
-    %Summary{title: title(html_tree),
-             authors: authors(html_tree),
-             article_html: readable_html(article_tree),
-             article_text: readable_text(article_tree)
-           }
+    case is_response_markup(headers) do
+      true ->
+        html_tree = Helper.normalize(raw)
+        article_tree = html_tree
+        |> ArticleBuilder.build(opts)
+
+        %Summary{title: title(html_tree),
+                 authors: authors(html_tree),
+                 article_html: readable_html(article_tree),
+                 article_text: readable_text(article_tree)
+        }
+
+      _ ->
+        %Summary{title: nil,
+                 authors: nil,
+                 article_html: nil,
+                 article_text: raw
+        }
+    end
+
+  end
+
+  @doc """
+  Extract MIME Type from headers
+
+  ## Example
+
+      iex> mime = Readability.mime(headers_list)
+      "text/html"
+  """
+  @spec mime(headers) :: String.t()
+  def mime(headers \\ []) do
+    headers
+    |> Enum.find(
+      {"Content-Type", "text/plain"},  # default
+      fn({key, _}) -> key == "Content-Type" end)
+    |> elem(1)
+  end
+
+  @doc """
+  Return true if Content-Type in provided headers list is a markup type,
+  else false
+
+  ## Example
+
+      iex> Readability.is_response_markup?([{"Content-Type", "text/html"}])
+      true
+  """
+  @spec is_response_markup(headers) :: boolean
+  def is_response_markup(headers) do
+    mime(headers) =~ @markup_mimes
   end
 
   @doc """
