@@ -58,13 +58,15 @@ defmodule Readability.ArticleBuilder do
 
   defp find_article(candidates, html_tree) do
     best_candidate = CandidateFinder.find_best_candidate(candidates)
-    unless best_candidate do
-      best_candidate = case html_tree |> Floki.find("body") do
-                         [tree|_] -> %Candidate{html_tree: tree}
-                         _ -> %Candidate{html_tree: {}}
-                       end
-    end
-    article_trees = find_article_trees(best_candidate, candidates)
+    article_trees = if best_candidate do
+                      find_article_trees(best_candidate, candidates)
+                    else
+                      fallback_candidate = case html_tree |> Floki.find("body") do
+                                             [tree|_] -> %Candidate{html_tree: tree}
+                                             _ -> %Candidate{html_tree: {}}
+                                           end
+                      find_article_trees(fallback_candidate, candidates)
+                    end
     {"div", [], article_trees}
   end
 
@@ -73,11 +75,12 @@ defmodule Readability.ArticleBuilder do
 
     candidates
     |> Enum.filter(&(&1.tree_depth == best_candidate.tree_depth))
-    |> Enum.filter_map(fn(candidate) ->
+    |> Enum.filter(fn(candidate) ->
          candidate == best_candidate
          || candidate.score >= score_threshold
          || append?(candidate)
-       end, &(to_article_tag(&1.html_tree)))
+       end)
+    |> Enum.map(&(to_article_tag(&1.html_tree)))
   end
 
   defp append?(%Candidate{html_tree: html_tree}) when elem(html_tree, 0) == "p" do
