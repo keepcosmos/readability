@@ -13,19 +13,19 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
   1. Add readability to your list of dependencies in `mix.exs`:
 
-    ```elixir
-    def deps do
-      [{:readability, "~> 0.7"}]
-    end
-    ```
+```elixir
+def deps do
+  [{:readability, "~> 0.7"}]
+end
+```
 
   2. Ensure readability is started before your application:
 
-    ```elixir
-    def application do
-      [applications: [:readability]]
-    end
-    ```
+```elixir
+def application do
+  [applications: [:readability]]
+end
+```
 
 ## Usage
 
