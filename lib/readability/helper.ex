@@ -79,9 +79,9 @@ defmodule Readability.Helper do
   Check html_tree can be candidate or not.
   """
   @spec candidate_tag?(html_tree) :: boolean
-  def candidate_tag?(html_tree) do
-    Enum.any?(candidates_selector(), fn(selector) ->
-      Floki.Selector.match?(html_tree, selector)
+  def candidate_tag?({tag, _, _} = html_tree) do
+    Enum.any?(["p", "td"], fn(candidate_tag) ->
+      tag == candidate_tag
       && (text_length(html_tree)) >= Readability.default_options[:min_text_length]
     end)
   end
@@ -98,13 +98,5 @@ defmodule Readability.Helper do
     |> String.replace(Readability.regexes(:normalize), " ")
     |> Floki.parse
     |> Floki.filter_out(:comment)
-  end
-
-  defp candidates_selector do
-    ["p", "td"]
-    |> Enum.map(fn(s) ->
-         tokens = Floki.SelectorTokenizer.tokenize(s)
-         Floki.SelectorParser.parse(tokens)
-       end)
   end
 end
