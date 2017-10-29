@@ -66,4 +66,20 @@ defmodule ReadabilityHttpTest do
       assert result_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
     end
   end
+
+  test "response with content-type in different case is parsed correctly" do
+    # HTTP header keys are case insensitive (RFC2616 - Section 4.2)
+    url = "https://news.bbc.co.uk/test.html"
+    content = TestHelper.read_fixture("bbc.html")
+    response = %HTTPoison.Response{
+      status_code: 200,
+      headers: [{"content-Type", "text/html; charset=UTF-8"}],
+      body: content}
+    
+    with_mock HTTPoison, [get!: fn(_url, _headers, _opts) -> response end] do
+      %Readability.Summary{article_html: result_html} = Readability.summarize(url)
+
+      assert result_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
+    end
+  end
 end

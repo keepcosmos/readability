@@ -113,7 +113,7 @@ defmodule Readability do
     headers
     |> Enum.find(
       {"Content-Type", "text/plain"},  # default
-      fn({key, _}) -> key == "Content-Type" end)
+      fn({key, _}) -> String.downcase(key) == "content-type" end)
     |> elem(1)
   end
 
