@@ -27,6 +27,8 @@ def application do
 end
 ```
 
+Note: Readability requires Elixir 1.3 or higher.
+
 ## Usage
 
 ### Examples
