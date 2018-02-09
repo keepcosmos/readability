@@ -14,9 +14,11 @@ defmodule Readability.Candidate.Cleaner do
   @spec transform_misused_div_to_p(html_tree) :: html_tree
   def transform_misused_div_to_p(content) when is_binary(content), do: content
   def transform_misused_div_to_p([]), do: []
-  def transform_misused_div_to_p([h|t]) do
-    [transform_misused_div_to_p(h)|transform_misused_div_to_p(t)]
+
+  def transform_misused_div_to_p([h | t]) do
+    [transform_misused_div_to_p(h) | transform_misused_div_to_p(t)]
   end
+
   def transform_misused_div_to_p({tag, attrs, inner_tree}) do
     tag = if misused_divs?(tag, inner_tree), do: "p", else: tag
     {tag, attrs, transform_misused_div_to_p(inner_tree)}
@@ -33,16 +35,18 @@ defmodule Readability.Candidate.Cleaner do
   defp misused_divs?("div", inner_tree) do
     !(Floki.raw_html(inner_tree) =~ Readability.regexes(:div_to_p_elements))
   end
+
   defp misused_divs?(_, _), do: false
 
   defp unlikely_tree?({tag, attrs, _}) do
-    idclass_str = attrs
-                  |> Enum.filter_map(&(elem(&1, 0)  =~ ~r/id|class/i), &(elem(&1, 1)))
-                  |> Enum.join("")
+    idclass_str =
+      attrs
+      |> Enum.filter_map(&(elem(&1, 0) =~ ~r/id|class/i), &elem(&1, 1))
+      |> Enum.join("")
+
     str = tag <> idclass_str
 
-    str =~ Readability.regexes(:unlikely_candidate)
-      && !(str =~ Readability.regexes(:ok_maybe_its_a_candidate))
-      && tag != "html"
+    str =~ Readability.regexes(:unlikely_candidate) &&
+      !(str =~ Readability.regexes(:ok_maybe_its_a_candidate)) && tag != "html"
   end
 end

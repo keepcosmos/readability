@@ -8,15 +8,18 @@ defmodule Readability.Helper do
   @doc """
   Change existing tags by selector
   """
-  @spec change_tag(html_tree, String.t, String.t) :: html_tree
+  @spec change_tag(html_tree, String.t(), String.t()) :: html_tree
   def change_tag(content, _, _) when is_binary(content), do: content
   def change_tag([], _, _), do: []
-  def change_tag([h|t], selector, tag) do
-    [change_tag(h, selector, tag)|change_tag(t, selector, tag)]
+
+  def change_tag([h | t], selector, tag) do
+    [change_tag(h, selector, tag) | change_tag(t, selector, tag)]
   end
+
   def change_tag({tag_name, attrs, inner_tree}, tag_name, tag) do
     {tag, attrs, change_tag(inner_tree, tag_name, tag)}
   end
+
   def change_tag({tag_name, attrs, html_tree}, selector, tag) do
     {tag_name, attrs, change_tag(html_tree, selector, tag)}
   end
@@ -24,26 +27,32 @@ defmodule Readability.Helper do
   @doc """
   Remove html attributes
   """
-  @spec remove_attrs(html_tree, String.t | [String.t] | Regex.t) :: html_tree
+  @spec remove_attrs(html_tree, String.t() | [String.t()] | Regex.t()) :: html_tree
   def remove_attrs(content, _) when is_binary(content), do: content
   def remove_attrs([], _), do: []
-  def remove_attrs([h|t], t_attrs) do
-    [remove_attrs(h, t_attrs)|remove_attrs(t, t_attrs)]
+
+  def remove_attrs([h | t], t_attrs) do
+    [remove_attrs(h, t_attrs) | remove_attrs(t, t_attrs)]
   end
+
   def remove_attrs({tag_name, attrs, inner_tree}, target_attr) do
     reject_fun =
       cond do
         is_binary(target_attr) ->
-          fn(attr) -> elem(attr, 0) == target_attr end
+          fn attr -> elem(attr, 0) == target_attr end
+
         Regex.regex?(target_attr) ->
-          fn(attr) -> elem(attr, 0) =~ target_attr end
+          fn attr -> elem(attr, 0) =~ target_attr end
+
         is_list(target_attr) ->
-          fn(attr) -> Enum.member?(target_attr, elem(attr, 0)) end
-        true -> fn(attr) -> attr end
+          fn attr -> Enum.member?(target_attr, elem(attr, 0)) end
+
+        true ->
+          fn attr -> attr end
       end
+
     {tag_name, Enum.reject(attrs, reject_fun), remove_attrs(inner_tree, target_attr)}
   end
-
 
   @doc """
   Remove tags
@@ -51,14 +60,17 @@ defmodule Readability.Helper do
   @spec remove_tag(html_tree, fun) :: html_tree
   def remove_tag(content, _) when is_binary(content), do: content
   def remove_tag([], _), do: []
-  def remove_tag([h|t], fun) do
+
+  def remove_tag([h | t], fun) do
     node = remove_tag(h, fun)
+
     if is_nil(node) do
       remove_tag(t, fun)
     else
-      [node|remove_tag(t, fun)]
+      [node | remove_tag(t, fun)]
     end
   end
+
   def remove_tag({tag, attrs, inner_tree} = html_tree, fun) do
     if fun.(html_tree) do
       nil
@@ -72,7 +84,7 @@ defmodule Readability.Helper do
   """
   @spec text_length(html_tree) :: number
   def text_length(html_tree) do
-    html_tree |> Floki.text |> String.strip |> String.length
+    html_tree |> Floki.text() |> String.strip() |> String.length()
   end
 
   @doc """
@@ -80,9 +92,9 @@ defmodule Readability.Helper do
   """
   @spec candidate_tag?(html_tree) :: boolean
   def candidate_tag?({tag, _, _} = html_tree) do
-    Enum.any?(["p", "td"], fn(candidate_tag) ->
-      tag == candidate_tag
-      && (text_length(html_tree)) >= Readability.default_options[:min_text_length]
+    Enum.any?(["p", "td"], fn candidate_tag ->
+      tag == candidate_tag &&
+        text_length(html_tree) >= Readability.default_options()[:min_text_length]
     end)
   end
 
@@ -96,7 +108,7 @@ defmodule Readability.Helper do
     |> String.replace(Readability.regexes(:replace_brs), "</p><p>")
     |> String.replace(Readability.regexes(:replace_fonts), "<\1span>")
     |> String.replace(Readability.regexes(:normalize), " ")
-    |> Floki.parse
+    |> Floki.parse()
     |> Floki.filter_out(:comment)
   end
 end

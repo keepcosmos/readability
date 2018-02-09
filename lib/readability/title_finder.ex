@@ -23,6 +23,7 @@ defmodule Readability.TitleFinder do
         else
           h_title
         end
+
       title when is_binary(title) ->
         title
     end
@@ -54,7 +55,7 @@ defmodule Readability.TitleFinder do
   @doc """
   Find title from h tag
   """
-  @spec h_tag_title(html_tree, String.t) :: binary
+  @spec h_tag_title(html_tree, String.t()) :: binary
   def h_tag_title(html_tree, selector \\ @h_tag_selector) do
     html_tree
     |> find_tag(selector)
@@ -65,6 +66,7 @@ defmodule Readability.TitleFinder do
     case Floki.find(html_tree, selector) do
       [] ->
         []
+
       matches when is_list(matches) ->
         hd(matches)
     end
@@ -73,9 +75,11 @@ defmodule Readability.TitleFinder do
   defp clean_title([]) do
     ""
   end
+
   defp clean_title([title]) when is_binary(title) do
     String.strip(title)
   end
+
   defp clean_title(html_tree) do
     html_tree
     |> Floki.text()

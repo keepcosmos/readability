@@ -34,32 +34,36 @@ defmodule Readability do
   alias Readability.Summary
   alias Readability.Helper
 
-  @default_options [retry_length: 250,
-                    min_text_length: 25,
-                    remove_unlikely_candidates: true,
-                    weight_classes: true,
-                    clean_conditionally: true,
-                    remove_empty_nodes: true,
-                    min_image_width: 130,
-                    min_image_height: 80,
-                    ignore_image_format: [],
-                    blacklist: nil,
-                    whitelist: nil,
-                    page_url: nil
-                   ]
+  @default_options [
+    retry_length: 250,
+    min_text_length: 25,
+    remove_unlikely_candidates: true,
+    weight_classes: true,
+    clean_conditionally: true,
+    remove_empty_nodes: true,
+    min_image_width: 130,
+    min_image_height: 80,
+    ignore_image_format: [],
+    blacklist: nil,
+    whitelist: nil,
+    page_url: nil
+  ]
 
-  @regexes [unlikely_candidate: ~r/combx|comment|community|disqus|extra|foot|header|hidden|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
-            ok_maybe_its_a_candidate: ~r/and|article|body|column|main|shadow/i,
-            positive: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i,
-            negative: ~r/hidden|^hid|combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i,
-            div_to_p_elements: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
-            replace_brs: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
-            replace_fonts: ~r/<(\/?)font[^>]*>/i,
-            replace_xml_version: ~r/<\?xml.*\?>/i,
-            normalize: ~r/\s{2,}/,
-            video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i,
-            protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
-           ]
+  @regexes [
+    unlikely_candidate:
+      ~r/combx|comment|community|disqus|extra|foot|header|hidden|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
+    ok_maybe_its_a_candidate: ~r/and|article|body|column|main|shadow/i,
+    positive: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i,
+    negative:
+      ~r/hidden|^hid|combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i,
+    div_to_p_elements: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
+    replace_brs: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
+    replace_fonts: ~r/<(\/?)font[^>]*>/i,
+    replace_xml_version: ~r/<\?xml.*\?>/i,
+    normalize: ~r/\s{2,}/,
+    video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i,
+    protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
+  ]
 
   @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s+charset=.*)?$/i
 
@@ -72,32 +76,30 @@ defmodule Readability do
   @doc """
   summarize the primary readable content of a webpage.
   """
-  @spec summarize(url, options) :: Summary.t
+  @spec summarize(url, options) :: Summary.t()
   def summarize(url, opts \\ []) do
-    opts = Keyword.merge(opts, [page_url: url])
-    httpoison_options = Application.get_env :readability, :httpoison_options, []
+    opts = Keyword.merge(opts, page_url: url)
+    httpoison_options = Application.get_env(:readability, :httpoison_options, [])
     %{status_code: _, body: raw, headers: headers} = HTTPoison.get!(url, [], httpoison_options)
 
     case is_response_markup(headers) do
       true ->
         html_tree = Helper.normalize(raw)
-        article_tree = html_tree
-        |> ArticleBuilder.build(opts)
 
-        %Summary{title: title(html_tree),
-                 authors: authors(html_tree),
-                 article_html: readable_html(article_tree),
-                 article_text: readable_text(article_tree)
+        article_tree =
+          html_tree
+          |> ArticleBuilder.build(opts)
+
+        %Summary{
+          title: title(html_tree),
+          authors: authors(html_tree),
+          article_html: readable_html(article_tree),
+          article_text: readable_text(article_tree)
         }
 
       _ ->
-        %Summary{title: nil,
-                 authors: nil,
-                 article_html: nil,
-                 article_text: raw
-        }
+        %Summary{title: nil, authors: nil, article_html: nil, article_text: raw}
     end
-
   end
 
   @doc """
@@ -112,8 +114,10 @@ defmodule Readability do
   def mime(headers \\ []) do
     headers
     |> Enum.find(
-      {"Content-Type", "text/plain"},  # default
-      fn({key, _}) -> String.downcase(key) == "content-type" end)
+      # default
+      {"Content-Type", "text/plain"},
+      fn {key, _} -> String.downcase(key) == "content-type" end
+    )
     |> elem(1)
   end
 
@@ -141,12 +145,12 @@ defmodule Readability do
   """
   @spec title(binary | html_tree) :: binary
   def title(raw_html) when is_binary(raw_html) do
-     raw_html
-     |> Helper.normalize
-     |> title
+    raw_html
+    |> Helper.normalize()
+    |> title
   end
-  def title(html_tree), do: TitleFinder.title(html_tree)
 
+  def title(html_tree), do: TitleFinder.title(html_tree)
 
   @doc """
   Extract authors
@@ -173,8 +177,9 @@ defmodule Readability do
   @spec article(binary, options) :: html_tree
   def article(raw_html, opts \\ []) do
     opts = Keyword.merge(@default_options, opts)
+
     raw_html
-    |> Helper.normalize
+    |> Helper.normalize()
     |> ArticleBuilder.build(opts)
   end
 
@@ -196,10 +201,11 @@ defmodule Readability do
     # TODO: Remove image caption when extract only text
     tags_to_br = ~r/<\/(p|div|article|h\d)/i
     html_str = html_tree |> raw_html
-    Regex.replace(tags_to_br, html_str, &("\n#{&1}"))
-    |> Floki.parse
-    |> Floki.text
-    |> String.strip
+
+    Regex.replace(tags_to_br, html_str, &"\n#{&1}")
+    |> Floki.parse()
+    |> Floki.text()
+    |> String.strip()
   end
 
   @doc """
@@ -207,7 +213,7 @@ defmodule Readability do
   """
   @spec raw_html(html_tree) :: binary
   def raw_html(html_tree) do
-    html_tree |> Floki.raw_html
+    html_tree |> Floki.raw_html()
   end
 
   def parse(raw_html) when is_binary(raw_html), do: Floki.parse(raw_html)
