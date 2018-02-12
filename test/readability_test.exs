@@ -7,7 +7,10 @@ defmodule ReadabilityTest do
     nytimes = Readability.article(html, opts)
 
     nytimes_html = Readability.readable_html(nytimes)
-    assert nytimes_html =~ ~r/^<div><div><figure id=\"media-100000004245260\"><div><img src=\"https/
+
+    assert nytimes_html =~
+             ~r/^<div><div><figure id=\"media-100000004245260\"><div><img src=\"https/
+
     assert nytimes_html =~ ~r/major priorities.<\/p><\/div><\/div>$/
 
     nytimes_text = Readability.readable_text(nytimes)
@@ -66,12 +69,17 @@ defmodule ReadabilityTest do
 
     pubmed_html = Readability.readable_html(pubmed)
 
-    assert pubmed_html =~ ~r/^<div><div><h4>BACKGROUND AND OBJECTIVES: <\/h4><p><abstracttext>Although strict blood pressure/
-    assert pubmed_html =~ ~r/different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.<\/abstracttext><\/p><\/div><\/div>$/
+    assert pubmed_html =~
+             ~r/^<div><div><h4>BACKGROUND AND OBJECTIVES: <\/h4><p><abstracttext>Although strict blood pressure/
+
+    assert pubmed_html =~
+             ~r/different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.<\/abstracttext><\/p><\/div><\/div>$/
 
     pubmed_text = Readability.readable_text(pubmed)
 
     assert pubmed_text =~ ~r/^BACKGROUND AND OBJECTIVES: \nAlthough strict blood pressure/
-    assert pubmed_text =~ ~r/with different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.$/
+
+    assert pubmed_text =~
+             ~r/with different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.$/
   end
 end

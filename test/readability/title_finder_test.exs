@@ -37,6 +37,7 @@ defmodule Readability.TitleFinderTest do
       </head>
     </html>
     """
+
     title = Readability.TitleFinder.og_title(html)
     assert title == "og title 1"
   end
@@ -52,6 +53,7 @@ defmodule Readability.TitleFinderTest do
       </head>
     </html>
     """
+
     title = Readability.TitleFinder.tag_title(html)
     assert title == "Tag title"
 
@@ -62,6 +64,7 @@ defmodule Readability.TitleFinderTest do
       </head>
     </html>
     """
+
     title = Readability.TitleFinder.tag_title(html)
     assert title == "Tag title"
 
@@ -72,6 +75,7 @@ defmodule Readability.TitleFinderTest do
       </head>
     </html>
     """
+
     title = Readability.TitleFinder.tag_title(html)
     assert title == "Tag title-tag"
 
@@ -82,6 +86,7 @@ defmodule Readability.TitleFinderTest do
       </head>
     </html>
     """
+
     title = Readability.TitleFinder.tag_title(html)
     assert title == "Tag title-tag-title"
 
@@ -95,6 +100,7 @@ defmodule Readability.TitleFinderTest do
       </body>
     </html>
     """
+
     title = Readability.TitleFinder.tag_title(html)
     assert title == "Tag title"
   end
@@ -108,6 +114,7 @@ defmodule Readability.TitleFinderTest do
       </head>
     </html>
     """
+
     title = Readability.TitleFinder.tag_title(html)
     assert title == "tag title 1"
   end
@@ -131,6 +138,7 @@ defmodule Readability.TitleFinderTest do
       </body>
     </html>
     """
+
     title = Readability.TitleFinder.h_tag_title(html)
     assert title == "header 1"
   end

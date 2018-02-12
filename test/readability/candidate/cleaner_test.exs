@@ -29,14 +29,14 @@ defmodule Readability.Candidate.CleanerTest do
 
   test "transform divs containing no block elements", %{html_tree: html_tree} do
     html_tree = Cleaner.transform_misused_div_to_p(html_tree)
-    [{tag, _, _}|_] = html_tree |> Floki.find("#body")
+    [{tag, _, _} | _] = html_tree |> Floki.find("#body")
 
     assert tag == "p"
   end
 
   test "not transform divs that contain block elements", %{html_tree: html_tree} do
     html_tree = Cleaner.transform_misused_div_to_p(html_tree)
-    [{tag, _, _}|_] = html_tree |> Floki.find("#contains_blockquote")
+    [{tag, _, _} | _] = html_tree |> Floki.find("#contains_blockquote")
     assert tag == "div"
   end
 
