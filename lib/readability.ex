@@ -61,7 +61,7 @@ defmodule Readability do
             protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
            ]
 
-  @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s+charset=.*)?$/i
+  @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s*charset=.*)?$/i
 
   @type html_tree :: tuple | list
   @type raw_html :: binary
