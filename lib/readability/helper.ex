@@ -101,14 +101,54 @@ defmodule Readability.Helper do
   @doc """
   Normalize and Parse to html tree(tuple or list)) from binary html
   """
-  @spec normalize(binary) :: html_tree
-  def normalize(raw_html) do
+  @spec normalize(binary, list) :: html_tree
+  def normalize(raw_html, opts \\ []) do
     raw_html
     |> String.replace(Readability.regexes(:replace_xml_version), "")
     |> String.replace(Readability.regexes(:replace_brs), "</p><p>")
     |> String.replace(Readability.regexes(:replace_fonts), "<\1span>")
     |> String.replace(Readability.regexes(:normalize), " ")
+    |> transform_img_paths(opts[:url])
     |> Floki.parse()
     |> Floki.filter_out(:comment)
+  end
+
+  # Turn relative `img` tag paths into absolute if possible
+  defp transform_img_paths(html_str, nil), do: html_str
+
+  defp transform_img_paths(html_str, url) do
+    Readability.regexes(:img_tag_src)
+    |> Regex.replace(html_str, &build_img_path(url, &1, &2, &3, &4))
+  end
+
+  defp build_img_path(url, _str, pre_src, src, post_src) do
+    new_src =
+      case URI.parse(src) do
+        %URI{host: nil} ->
+          base_url = base_url(url)
+          scrubbed_src = String.trim_leading(src, "/")
+
+          base_url <> "/" <> scrubbed_src
+
+        _ ->
+          src
+      end
+
+    pre_src <> new_src <> post_src
+  end
+
+  # Get the base url of a given url, including its scheme.
+  # E.g: both http://elixir-lang.org/guides and elixir-lang.org/guides
+  # would return http://elixir-lang.org
+  defp base_url(url) do
+    scheme_regex = ~r/^(https?:\/\/)?(.*)/i
+    path_regex = ~r/^([^\/]+)(.*)/i
+
+    url_without_scheme = Regex.replace(scheme_regex, url, "\\2")
+    base_url = Regex.replace(path_regex, url_without_scheme, "\\1")
+
+    scheme = URI.parse(url).scheme || "http"
+
+    scheme <> "://" <> base_url
   end
 end
