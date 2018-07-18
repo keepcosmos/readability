@@ -213,7 +213,7 @@ defmodule Readability do
   """
   @spec raw_html(html_tree) :: binary
   def raw_html(html_tree) do
-    html_tree |> Floki.raw_html()
+    html_tree |> Floki.raw_html(encode: false)
   end
 
   def parse(raw_html) when is_binary(raw_html), do: Floki.parse(raw_html)
