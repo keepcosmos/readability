@@ -208,7 +208,7 @@ defmodule Readability do
     Regex.replace(tags_to_br, html_str, &"\n#{&1}")
     |> Floki.parse()
     |> Floki.text()
-    |> String.strip()
+    |> String.trim()
   end
 
   @doc """

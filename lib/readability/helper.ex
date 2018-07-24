@@ -84,7 +84,7 @@ defmodule Readability.Helper do
   """
   @spec text_length(html_tree) :: number
   def text_length(html_tree) do
-    html_tree |> Floki.text() |> String.strip() |> String.length()
+    html_tree |> Floki.text() |> String.trim() |> String.length()
   end
 
   @doc """

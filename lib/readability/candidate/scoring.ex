@@ -84,7 +84,8 @@ defmodule Readability.Candidate.Scoring do
   defp calc_grand_children_content_score({_, _, children_tree}) do
     score =
       children_tree
-      |> Enum.filter_map(&is_tuple(&1), &elem(&1, 2))
+      |> Enum.filter(&is_tuple(&1))
+      |> Enum.map(&elem(&1, 2))
       |> List.flatten()
       |> Enum.filter(&(is_tuple(&1) && Helper.candidate_tag?(&1)))
       |> calc_content_score

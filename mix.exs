@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.9.1"
+  @version "0.10.0"
   @description """
   Readability library for extracting and curating articles.
   """
@@ -43,7 +43,7 @@ defmodule Readability.Mixfile do
       {:floki, "~> 0.20"},
       {:httpoison, "~> 0.13.0"},
       {:ex_doc, "~> 0.14", only: :dev},
-      {:credo, "~> 0.6.1", only: [:dev, :test]},
+      {:credo, "~> 0.9", only: [:dev, :test]},
       {:dialyxir, "~> 0.3", only: [:dev]},
       {:mock, "~> 0.2.0", only: :test}
     ]

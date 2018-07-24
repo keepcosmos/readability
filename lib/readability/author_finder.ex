@@ -25,7 +25,7 @@ defmodule Readability.AuthorFinder do
         meta
         |> Floki.attribute("content")
         |> Enum.join(" ")
-        |> String.strip()
+        |> String.trim()
       end)
       |> Enum.reject(&(is_nil(&1) || String.length(&1) == 0))
 
