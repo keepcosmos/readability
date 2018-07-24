@@ -62,7 +62,8 @@ defmodule Readability do
     replace_xml_version: ~r/<\?xml.*\?>/i,
     normalize: ~r/\s{2,}/,
     video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i,
-    protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
+    protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i,
+    img_tag_src: ~r/(<img.*src=['"])([^'"]+)(['"][^>]*>)/Ui
   ]
 
   @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s*charset=.*)?$/i
@@ -84,7 +85,9 @@ defmodule Readability do
 
     case is_response_markup(headers) do
       true ->
-        html_tree = Helper.normalize(raw)
+        html_tree =
+          raw
+          |> Helper.normalize(url: url)
 
         article_tree =
           html_tree

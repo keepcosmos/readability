@@ -11,10 +11,12 @@ defmodule Readability.HelperTest do
           <font>a</fond>
           <p>
             <font>abc</font>
+            <img src="https://example.org/images/foo.png">
           </p>
         </p>
         <p>
           <font>b</font>
+          <img class="img" src="/images/bar.png" alt="alt" />
         </p>
       </body>
     </html>
@@ -43,8 +45,30 @@ defmodule Readability.HelperTest do
     assert result == expected
   end
 
-  test "inner text lengt", %{html_tree: html_tree} do
+  test "inner text length", %{html_tree: html_tree} do
     result = html_tree |> Helper.text_length()
     assert result == 5
+  end
+
+  test "transform img relative paths into absolute" do
+    foo_url = "https://example.org/images/foo.png"
+    bar_url_http = "http://example.org/images/bar.png"
+    bar_url_https = "https://example.org/images/bar.png"
+
+    result_without_scheme =
+      @sample
+      |> Helper.normalize(url: "example.org/blog/a-blog-post")
+      |> Floki.raw_html()
+
+    result_with_scheme =
+      @sample
+      |> Helper.normalize(url: "https://example.org/blog/a-blog-post")
+      |> Floki.raw_html()
+
+    assert result_without_scheme =~ foo_url
+    assert result_without_scheme =~ bar_url_http
+
+    assert result_with_scheme =~ foo_url
+    assert result_with_scheme =~ bar_url_https
   end
 end
