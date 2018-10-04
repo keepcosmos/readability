@@ -83,6 +83,7 @@ defmodule Readability.Helper do
   Count only text length
   """
   @spec text_length(html_tree) :: number
+  def text_length(nil), do: 0
   def text_length(html_tree) do
     html_tree |> Floki.text() |> String.trim() |> String.length()
   end
