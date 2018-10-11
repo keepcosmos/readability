@@ -64,7 +64,7 @@ defmodule Readability.Helper do
   def remove_tag([h | t], fun) do
     node = remove_tag(h, fun)
 
-    if is_nil(node) do
+    if node == [] do
       remove_tag(t, fun)
     else
       [node | remove_tag(t, fun)]
@@ -73,7 +73,7 @@ defmodule Readability.Helper do
 
   def remove_tag({tag, attrs, inner_tree} = html_tree, fun) do
     if fun.(html_tree) do
-      nil
+      []
     else
       {tag, attrs, remove_tag(inner_tree, fun)}
     end
