@@ -111,6 +111,7 @@ defmodule Readability.Helper do
     |> transform_img_paths(opts[:url])
     |> Floki.parse()
     |> Floki.filter_out(:comment)
+    |> remove_tag(fn {tag, _, _} -> is_atom(tag) end)
   end
 
   # Turn relative `img` tag paths into absolute if possible

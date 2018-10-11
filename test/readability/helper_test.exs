@@ -50,6 +50,15 @@ defmodule Readability.HelperTest do
     assert result == 5
   end
 
+  test "strips out special case tags" do
+    expected_html =
+      "<html><body><p>Hello <? echo esc_html( wired_get_the_byline_name( $related_video ) ); ?></p></body></html>"
+      |> Helper.normalize()
+      |> Floki.raw_html()
+
+    assert expected_html == "<html><body><p>Hello </p></body></html>"
+  end
+
   test "transform img relative paths into absolute" do
     foo_url = "https://example.org/images/foo.png"
     bar_url_http = "http://example.org/images/bar.png"
