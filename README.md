@@ -33,7 +33,7 @@ Note: Readability requires Elixir 1.3 or higher.
 
 ### Examples
 
-#### Just pass url
+#### Just pass a url
 ```elixir
 url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
 summary = Readability.summarize(url)
@@ -85,7 +85,7 @@ html
 
 ### Options
 
-If result is different with your expectation, you can add options.
+If the result is different from your expectations, you can add options to customize it.
 
 #### Example
 ```elixir
@@ -114,9 +114,19 @@ To run the test suite:
 * [x] Summarize function
 * [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
 
-**Contributions are welcome!**
+## Contributions are welcome!
 
 Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones) and features of related projects below
+
+**Contributing**
+1. **Fork** the repo on GitHub
+2. **Clone** the project to your own machine
+3. **Commit** changes to your own branch
+4. **Push** your work back up to your fork
+5. Submit a **Pull request** so that we can review your changes
+
+NOTE: Be sure to merge the latest from "upstream" before making a pull request!
+
 
 ## Related and Inpired Projects
 
