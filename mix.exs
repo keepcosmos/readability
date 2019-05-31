@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.10.0"
+  @version "0.11.0"
   @description """
   Readability library for extracting and curating articles.
   """
@@ -13,7 +13,7 @@ defmodule Readability.Mixfile do
     [
       app: :readability,
       version: @version,
-      elixir: "~> 1.8",
+      elixir: "~> 1.3",
       description: @description,
       package: package(),
       build_embedded: Mix.env() == :prod,
