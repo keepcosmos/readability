@@ -2,9 +2,9 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.10.0"
+  @version "0.1.0"
   @description """
-  Readability library for extracting and curating articles.
+  A fork of the Readability library for extracting and curating articles.
   """
 
   use Mix.Project
@@ -13,7 +13,7 @@ defmodule Readability.Mixfile do
     [
       app: :readability,
       version: @version,
-      elixir: "~> 1.3",
+      elixir: "~> 1.9",
       description: @description,
       package: package(),
       build_embedded: Mix.env() == :prod,
@@ -40,23 +40,24 @@ defmodule Readability.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:floki, "~> 0.20"},
-      {:httpoison, "~> 0.13.0"},
-      {:ex_doc, "~> 0.14", only: :dev},
-      {:credo, "~> 0.9", only: [:dev, :test]},
-      {:dialyxir, "~> 0.3", only: [:dev]},
-      {:mock, "~> 0.2.0", only: :test}
+      {:floki, "~> 0.26"},
+      {:httpoison, "~> 1.6"},
+      {:ex_doc, "~> 0.22", only: :dev},
+      {:credo, "~> 1.4", only: [:dev, :test]},
+      {:dialyxir, "~> 1.0", only: [:dev]},
+      {:mock, "~> 0.3", only: :test}
     ]
   end
 
   defp package do
     [
+      name: :readability2,
       files: ["lib", "mix.exs", "README*", "LICENSE*", "doc"],
-      maintainers: ["Jaehyun Shin"],
+      maintainers: ["Mark Harper"],
       licenses: ["Apache 2.0"],
       links: %{
-        "GitHub" => "https://github.com/keepcosmos/readability",
-        "Docs" => "https://hexdocs.pm/readability/Readability.html"
+        "GitHub" => "https://github.com/markharper/readability",
+        "Docs" => "https://hexdocs.pm/readability2/Readability.html"
       }
     ]
   end
