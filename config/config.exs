@@ -10,11 +10,11 @@ use Mix.Config
 
 # You can configure for your application as:
 #
-#     config :readability, key: :value
+#     config :readability2, key: :value
 #
 # And access this configuration in your application as:
 #
-#     Application.get_env(:readability, :key)
+#     Application.get_env(:readability2, :key)
 #
 # Or configure a 3rd-party app:
 #
@@ -29,4 +29,4 @@ use Mix.Config
 #
 #     import_config "#{Mix.env}.exs"
 
-config :readability, httpoison_options: []
+config :readability2, httpoison_options: []
