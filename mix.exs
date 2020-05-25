@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.1.0"
+  @version "0.2.0"
   @description """
   A fork of the Readability library for extracting and curating articles.
   """
@@ -11,7 +11,7 @@ defmodule Readability.Mixfile do
 
   def project do
     [
-      app: :readability,
+      app: :readability2,
       version: @version,
       elixir: "~> 1.9",
       description: @description,
@@ -51,7 +51,6 @@ defmodule Readability.Mixfile do
 
   defp package do
     [
-      name: :readability2,
       files: ["lib", "mix.exs", "README*", "LICENSE*", "doc"],
       maintainers: ["Mark Harper"],
       licenses: ["Apache 2.0"],
