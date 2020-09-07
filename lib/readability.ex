@@ -83,6 +83,15 @@ defmodule Readability do
     httpoison_options = Application.get_env(:readability, :httpoison_options, [])
     %{status_code: _, body: raw, headers: headers} = HTTPoison.get!(url, [], httpoison_options)
 
+    raw = if !String.valid?(raw) do
+      case Codepagex.to_string(raw, :iso_8859_1) do
+        {:ok, res} -> res
+        _ ->  Codepagex.to_string!(raw, :iso_8859_1, Codepagex.use_utf_replacement())
+      end
+    else
+      raw
+    end
+
     case is_response_markup(headers) do
       true ->
         html_tree =
