@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   @moduledoc """
   """
 
-  @version "0.3.0"
+  @version "0.4.0"
   @description """
   A fork of the Readability library for extracting and curating articles.
   """
@@ -26,7 +26,7 @@ defmodule Readability.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :floki, :httpoison]]
+    [applications: [:logger, :floki, :httpoison, :codepagex]]
   end
 
   # Dependencies can be Hex packages:
