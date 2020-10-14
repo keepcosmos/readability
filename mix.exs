@@ -18,7 +18,10 @@ defmodule Readability.Mixfile do
       package: package(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test]
+
     ]
   end
 
@@ -45,7 +48,8 @@ defmodule Readability.Mixfile do
       {:ex_doc, "~> 0.14", only: :dev},
       {:credo, "~> 0.9", only: [:dev, :test]},
       {:dialyxir, "~> 0.3", only: [:dev]},
-      {:mock, "~> 0.2.0", only: :test}
+      {:mock, "~> 0.2.0", only: :test},
+      {:excoveralls, "~> 0.11.2", only: :test}
     ]
   end
 
