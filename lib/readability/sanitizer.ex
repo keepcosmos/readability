@@ -1,7 +1,9 @@
 defmodule Readability.Sanitizer do
   @moduledoc """
   Clean an element of all tags of type "tag" if they look fishy.
-  "Fishy" is an algorithm based on content length, classnames, link density, number of images & embeds, etc.
+
+  "Fishy" is an algorithm based on content length, classnames, link density,
+  number of images & embeds, etc.
   """
 
   alias Readability.Candidate
@@ -11,7 +13,7 @@ defmodule Readability.Sanitizer do
   @type html_tree :: tuple | list
 
   @doc """
-  Sanitizes article html tree
+  Sanitizes article HTML tree.
   """
   @spec sanitize(html_tree, [Candidate.t()], list) :: html_tree
   def sanitize(html_tree, candidates, opts \\ []) do

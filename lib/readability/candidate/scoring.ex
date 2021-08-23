@@ -1,6 +1,6 @@
 defmodule Readability.Candidate.Scoring do
   @moduledoc """
-  Score html tree
+  Score HTML tree.
   """
   alias Readability.Helper
 
@@ -10,8 +10,9 @@ defmodule Readability.Candidate.Scoring do
   @type options :: list
 
   @doc """
-  Score html tree by some algorithm that check children nodes, attributes, link densities, etcs..
-  options -> weight_classes :: boolean, calculate weight class
+  Score HTML tree by some algorithm that check children nodes, attributes, link densities, etcs..
+
+  options -> weight_classes :: boolean, calculate weight class.
   """
   @spec calc_score(html_tree, options) :: number
   def calc_score(html_tree, opts \\ []) do

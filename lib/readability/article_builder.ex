@@ -1,6 +1,6 @@
 defmodule Readability.ArticleBuilder do
   @moduledoc """
-  Build article for readability
+  Build article for readability.
   """
 
   alias Readability.Candidate
@@ -15,6 +15,7 @@ defmodule Readability.ArticleBuilder do
 
   @doc """
   Prepare the article node for display.
+
   Clean out any inline styles, iframes, forms, strip extraneous <p> tags, etc.
   """
   @spec build(html_tree, options) :: html_tree

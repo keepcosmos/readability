@@ -1,12 +1,12 @@
 defmodule Readability.Helper do
   @moduledoc """
-  Helpers for parsing, updating, removing html tree
+  Helpers for parsing, updating, and removing HTML tree.
   """
 
   @type html_tree :: tuple | list
 
   @doc """
-  Change existing tags by selector
+  Change existing tags by selector.
   """
   @spec change_tag(html_tree, String.t(), String.t()) :: html_tree
   def change_tag(content, _, _) when is_binary(content), do: content
@@ -55,7 +55,7 @@ defmodule Readability.Helper do
   end
 
   @doc """
-  Remove tags
+  Removes tags.
   """
   @spec remove_tag(html_tree, fun) :: html_tree
   def remove_tag(content, _) when is_binary(content), do: content
@@ -80,7 +80,7 @@ defmodule Readability.Helper do
   end
 
   @doc """
-  Count only text length
+  Count only text length.
   """
   @spec text_length(html_tree) :: number
   def text_length(html_tree) do
@@ -88,7 +88,7 @@ defmodule Readability.Helper do
   end
 
   @doc """
-  Check html_tree can be candidate or not.
+  Check `html_tree` can be candidate or not.
   """
   @spec candidate_tag?(html_tree) :: boolean
   def candidate_tag?({tag, _, _} = html_tree) do
@@ -99,7 +99,7 @@ defmodule Readability.Helper do
   end
 
   @doc """
-  Normalize and Parse to html tree(tuple or list)) from binary html
+  Normalizes and parses to HTML tree (tuple or list)) from binary HTML.
   """
   @spec normalize(binary, list) :: html_tree
   def normalize(raw_html, opts \\ []) do

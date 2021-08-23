@@ -9,7 +9,7 @@ defmodule Readability.TitleFinder do
   @type html_tree :: tuple | list
 
   @doc """
-  Find proper title
+  Find proper title.
   """
   @spec title(html_tree) :: binary
   def title(html_tree) do
@@ -30,7 +30,7 @@ defmodule Readability.TitleFinder do
   end
 
   @doc """
-  Find title from title tag
+  Find title from title tag.
   """
   @spec tag_title(html_tree) :: binary
   def tag_title(html_tree) do
@@ -42,7 +42,7 @@ defmodule Readability.TitleFinder do
   end
 
   @doc """
-  Find title from og:title property of meta tag
+  Find title from `og:title` property of meta tag.
   """
   @spec og_title(html_tree) :: binary
   def og_title(html_tree) do
@@ -53,7 +53,7 @@ defmodule Readability.TitleFinder do
   end
 
   @doc """
-  Find title from h tag
+  Find title from `h` tag.
   """
   @spec h_tag_title(html_tree, String.t()) :: binary
   def h_tag_title(html_tree, selector \\ @h_tag_selector) do
