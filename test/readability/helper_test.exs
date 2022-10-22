@@ -57,7 +57,6 @@ defmodule Readability.HelperTest do
     assert result == expected
   end
 
-
   test "inner text length", %{html_tree: html_tree} do
     result = html_tree |> Helper.text_length()
     assert result == 5
