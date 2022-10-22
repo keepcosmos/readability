@@ -28,7 +28,7 @@ defmodule ReadabilityTest do
     assert bbc_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
 
     bbc_text = Readability.readable_text(bbc)
-    # TODO: Remove image caption when extract only text
+    # @TODO: Remove image caption when extract only text
     # assert bbc_text =~ ~r/^Microsoft\'s quarterly profit has missed analysts/
     assert bbc_text =~ ~r/connected computing devices\".$/
   end

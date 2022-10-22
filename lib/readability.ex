@@ -28,11 +28,11 @@ defmodule Readability do
   ```
   """
 
-  alias Readability.TitleFinder
-  alias Readability.AuthorFinder
   alias Readability.ArticleBuilder
-  alias Readability.Summary
+  alias Readability.AuthorFinder
   alias Readability.Helper
+  alias Readability.Summary
+  alias Readability.TitleFinder
 
   @default_options [
     retry_length: 250,
@@ -201,7 +201,7 @@ defmodule Readability do
   """
   @spec readable_text(html_tree) :: binary
   def readable_text(html_tree) do
-    # TODO: Remove image caption when extract only text
+    # @TODO: Remove image caption when extract only text
     tags_to_br = ~r/<\/(p|div|article|h\d)/i
     html_str = html_tree |> raw_html
 
