@@ -3,12 +3,12 @@ defmodule Readability.ArticleBuilder do
   Build article for readability
   """
 
-  alias Readability.Helper
-  alias Readability.Sanitizer
   alias Readability.Candidate
-  alias Readability.CandidateFinder
   alias Readability.Candidate.Cleaner
   alias Readability.Candidate.Scoring
+  alias Readability.CandidateFinder
+  alias Readability.Helper
+  alias Readability.Sanitizer
 
   @type html_tree :: tuple | list
   @type options :: list

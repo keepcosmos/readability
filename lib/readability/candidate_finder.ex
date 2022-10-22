@@ -4,9 +4,9 @@ defmodule Readability.CandidateFinder do
   It traverses the HTML tree searching, removing, socring nodes
   """
 
-  alias Readability.Helper
   alias Readability.Candidate
   alias Readability.Candidate.Scoring
+  alias Readability.Helper
 
   @type html_tree :: tuple | list
   @type options :: list
