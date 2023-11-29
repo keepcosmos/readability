@@ -41,7 +41,7 @@ defmodule Readability.Helper do
         is_binary(target_attr) ->
           fn attr -> elem(attr, 0) == target_attr end
 
-        Regex.regex?(target_attr) ->
+        Kernel.is_struct(target_attr, Regex) ->
           fn attr -> elem(attr, 0) =~ target_attr end
 
         is_list(target_attr) ->
