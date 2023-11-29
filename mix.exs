@@ -26,7 +26,12 @@ defmodule Readability.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :floki, :httpoison, :mock]]
+    applications = [:logger, :floki, :httpoison]
+    applications = case Mix.env do
+      :test -> [:mock | applications]
+      _ -> applications
+    end
+    [applications: applications]
   end
 
   # Dependencies can be Hex packages:
