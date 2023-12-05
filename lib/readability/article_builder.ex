@@ -8,6 +8,7 @@ defmodule Readability.ArticleBuilder do
   alias Readability.Candidate.Scoring
   alias Readability.CandidateFinder
   alias Readability.Helper
+  alias Readability.Queries
   alias Readability.Sanitizer
 
   @type html_tree :: tuple | list
@@ -35,19 +36,23 @@ defmodule Readability.ArticleBuilder do
 
     html_tree = Cleaner.transform_misused_div_to_p(html_tree)
 
-    candidates = CandidateFinder.find(html_tree, opts)
+    candidates =
+      html_tree
+      |> Queries.cache_stats_in_attributes()
+      |> CandidateFinder.find(opts)
+
     article = find_article(candidates, html_tree)
 
     html_tree = Sanitizer.sanitize(article, candidates, opts)
 
-    if Helper.text_length(html_tree) < opts[:retry_length] do
+    if Queries.text_length(html_tree) < opts[:retry_length] do
       if opts = next_try_opts(opts) do
         build(origin_tree, opts)
       else
-        html_tree
+        Queries.clear_stats_from_attributes(html_tree)
       end
     else
-      html_tree
+      Queries.clear_stats_from_attributes(html_tree)
     end
   end
 
@@ -75,7 +80,7 @@ defmodule Readability.ArticleBuilder do
         find_article_trees(best_candidate, candidates)
       else
         fallback_candidate =
-          case html_tree |> Floki.find("body") do
+          case html_tree |> Queries.find_tag("body") do
             [tree | _] -> %Candidate{html_tree: tree}
             _ -> %Candidate{html_tree: {}}
           end
@@ -99,11 +104,10 @@ defmodule Readability.ArticleBuilder do
 
   defp append?(%Candidate{html_tree: html_tree}) when elem(html_tree, 0) == "p" do
     link_density = Scoring.calc_link_density(html_tree)
-    inner_text = html_tree |> Floki.text()
-    inner_length = inner_text |> String.length()
+    inner_length = Queries.text_length(html_tree)
 
     (inner_length > 80 && link_density < 0.25) ||
-      (inner_length < 80 && link_density == 0 && inner_text =~ ~r/\.( |$)/)
+      (inner_length < 80 && link_density == 0 && Floki.text(html_tree) =~ ~r/\.( |$)/)
   end
 
   defp append?(_), do: false

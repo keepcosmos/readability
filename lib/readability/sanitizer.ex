@@ -9,6 +9,7 @@ defmodule Readability.Sanitizer do
   alias Readability.Candidate
   alias Readability.Candidate.Scoring
   alias Readability.Helper
+  alias Readability.Queries
 
   @type html_tree :: tuple | list
 
@@ -45,23 +46,23 @@ defmodule Readability.Sanitizer do
           weight + same_tree.score < 0 ->
             true
 
-          length(Regex.scan(~r/\,/, Floki.text(tree))) < 10 ->
+          Queries.count_character(tree, ",") < 10 ->
             # If there are not very many commas, and the number of
             # non-paragraph elements is more than paragraphs or other
             # ominous signs, remove the element.
-            p_len = tree |> Floki.find("p") |> length
-            img_len = tree |> Floki.find("img") |> length
-            li_len = tree |> Floki.find("li") |> length
-            input_len = tree |> Floki.find("input") |> length
+            p_len = tree |> Queries.find_tag("p") |> length
+            img_len = tree |> Queries.find_tag("img") |> length
+            li_len = tree |> Queries.find_tag("li") |> length
+            input_len = tree |> Queries.find_tag("input") |> length
 
             embed_len =
               tree
-              |> Floki.find("embed")
+              |> Queries.find_tag("embed")
               |> Enum.reject(&(&1 =~ Readability.regexes(:video)))
               |> length
 
             link_density = Scoring.calc_link_density(tree)
-            conent_len = Helper.text_length(tree)
+            conent_len = Queries.text_length(tree)
 
             # too many image
             # more <li>s than <p>s
@@ -93,6 +94,6 @@ defmodule Readability.Sanitizer do
   end
 
   defp clean_empty_p?({tag, _, _} = html_tree) do
-    tag == "p" && Helper.text_length(html_tree) == 0
+    tag == "p" && Queries.text_length(html_tree) == 0
   end
 end
