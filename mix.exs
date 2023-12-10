@@ -27,10 +27,13 @@ defmodule Readability.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     applications = [:logger, :floki, :httpoison]
-    applications = case Mix.env do
-      :test -> [:mock | applications]
-      _ -> applications
-    end
+
+    applications =
+      case Mix.env() do
+        :test -> [:mock | applications]
+        _ -> applications
+      end
+
     [applications: applications]
   end
 
@@ -46,7 +49,7 @@ defmodule Readability.Mixfile do
   defp deps do
     [
       {:floki, "~> 0.21"},
-      {:httpoison, "~> 2.0"},
+      {:httpoison, "~> 1.8 or ~> 2.0"},
       {:ex_doc, "~> 0.29", only: :dev},
       {:credo, "~> 1.6", only: [:dev, :test]},
       {:dialyxir, "~> 0.5", only: [:dev]},
