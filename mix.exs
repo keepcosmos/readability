@@ -52,7 +52,7 @@ defmodule Readability.Mixfile do
     [
       description: "Readability library for extracting and curating articles.",
       files: ["lib", "mix.exs", "README*", "LICENSE*", "doc"],
-      maintainers: ["Jaehyun Shin"],
+      maintainers: ["Jaehyun Shin", "Jakub Skałecki"],
       licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @source_url
