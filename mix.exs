@@ -25,15 +25,9 @@ defmodule Readability.Mixfile do
   end
 
   def application do
-    applications = [:logger, :floki, :httpoison]
-
-    applications =
-      case Mix.env() do
-        :test -> [:mock | applications]
-        _ -> applications
-      end
-
-    [applications: applications]
+    [
+      extra_applications: [:logger]
+    ]
   end
 
   defp deps do

@@ -23,15 +23,7 @@ def deps do
 end
 ```
 
-Ensure readability is started before your application:
-
-```elixir
-def application do
-  [
-    applications: [:readability]
-  ]
-end
-```
+After that, run mix deps.get.
 
 Note: Readability requires Elixir 1.3 or higher.
 
