@@ -75,7 +75,7 @@ defmodule Readability do
   @type headers :: list[tuple]
 
   @doc """
-  summarize the primary readable content of a webpage.
+  Summarize the primary readable content of a webpage.
   """
   @spec summarize(url, options) :: Summary.t()
   def summarize(url, opts \\ []) do
@@ -106,12 +106,13 @@ defmodule Readability do
   end
 
   @doc """
-  Extract MIME Type from headers
+  Extract MIME Type from headers.
 
   ## Example
 
       iex> mime = Readability.mime(headers_list)
       "text/html"
+
   """
   @spec mime(headers) :: String.t()
   def mime(headers \\ []) do
@@ -125,13 +126,14 @@ defmodule Readability do
   end
 
   @doc """
-  Return true if Content-Type in provided headers list is a markup type,
-  else false
+  Returns true if Content-Type in provided headers list is a markup type,
+  else false.
 
   ## Example
 
       iex> Readability.is_response_markup?([{"Content-Type", "text/html"}])
       true
+
   """
   @spec is_response_markup(headers) :: boolean
   def is_response_markup(headers) do
@@ -145,6 +147,7 @@ defmodule Readability do
 
       iex> title = Readability.title(html_str)
       "Some title in html"
+
   """
   @spec title(binary | html_tree) :: binary
   def title(raw_html) when is_binary(raw_html) do
@@ -156,12 +159,13 @@ defmodule Readability do
   def title(html_tree), do: TitleFinder.title(html_tree)
 
   @doc """
-  Extract authors
+  Extract authors.
 
   ## Example
 
       iex> authors = Readability.authors(html_str)
       ["José Valim", "chrismccord"]
+
   """
   @spec authors(binary | html_tree) :: list[binary]
   def authors(html) when is_binary(html), do: html |> parse |> authors
@@ -169,7 +173,7 @@ defmodule Readability do
 
   @doc """
   Using a variety of metrics (content score, classname, element types), find the content that is
-  most likely to be the stuff a user wants to read
+  most likely to be the stuff a user wants to read.
 
   ## Example
 
@@ -187,7 +191,7 @@ defmodule Readability do
   end
 
   @doc """
-  return attributes, tags cleaned html
+  Returns attributes, tags cleaned HTML.
   """
   @spec readable_html(html_tree) :: binary
   def readable_html(html_tree) do
@@ -197,7 +201,7 @@ defmodule Readability do
   end
 
   @doc """
-  return only text binary from html_tree
+  Returns only text binary from `html_tree`.
   """
   @spec readable_text(html_tree) :: binary
   def readable_text(html_tree) do
@@ -212,7 +216,7 @@ defmodule Readability do
   end
 
   @doc """
-  return raw html binary from html_tree
+  Returns raw HTML binary from `html_tree`.
   """
   @spec raw_html(html_tree) :: binary
   def raw_html(html_tree) do

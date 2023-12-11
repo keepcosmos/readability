@@ -1,6 +1,7 @@
 defmodule Readability.Candidate.Cleaner do
   @moduledoc """
-  Clean html tree for prepare candidates.
+  Clean HTML tree for prepare candidates.
+
   It transforms misused tags and removes unlikely candidates.
   """
 
@@ -9,7 +10,7 @@ defmodule Readability.Candidate.Cleaner do
   @type html_tree :: tuple | list
 
   @doc """
-  Transform misused divs <div>s that do not contain other block elements into <p>s
+  Transforms misused divs <div>s that do not contain other block elements into <p>s.
   """
   @spec transform_misused_div_to_p(html_tree) :: html_tree
   def transform_misused_div_to_p(content) when is_binary(content), do: content
@@ -25,7 +26,7 @@ defmodule Readability.Candidate.Cleaner do
   end
 
   @doc """
-  Remove unlikely html tree
+  Removes unlikely HTML tree.
   """
   @spec remove_unlikely_tree(html_tree) :: html_tree
   def remove_unlikely_tree(html_tree) do

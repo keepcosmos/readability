@@ -1,28 +1,35 @@
 # Readability
 
 [![Build Status](https://travis-ci.org/keepcosmos/readability.svg?branch=master)](https://travis-ci.org/keepcosmos/readability)
-[![Readability version](https://img.shields.io/hexpm/v/readability.svg)](https://hex.pm/packages/readability)
+[![Module Version](https://img.shields.io/hexpm/v/readability.svg)](https://hex.pm/packages/readability)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/readability/)
+[![Total Download](https://img.shields.io/hexpm/dt/readability.svg)](https://hex.pm/packages/readability)
+[![License](https://img.shields.io/hexpm/l/readability.svg)](https://github.com/keepcosmos/readability/blob/master/LICENSE.md)
+[![Last Updated](https://img.shields.io/github/last-commit/keepcosmos/readability.svg)](https://github.com/keepcosmos/readability/commits/master)
 
-Readability is a tool for extracting and curating the primary readable content of a webpage.  
-Check out The [Documentation](https://hexdocs.pm/readability/Readability.html) for full and detailed guides
+Readability is a tool for extracting and curating the primary readable content of a webpage.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+The package can be installed as:
 
-  1. Add readability to your list of dependencies in `mix.exs`:
+Add `:readability` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:readability, "~> 0.9"}]
+  [
+    {:readability, "~> 0.9"}
+  ]
 end
 ```
 
-  2. Ensure readability is started before your application:
+Ensure readability is started before your application:
 
 ```elixir
 def application do
-  [applications: [:readability]]
+  [
+    applications: [:readability]
+  ]
 end
 ```
 
@@ -33,6 +40,7 @@ Note: Readability requires Elixir 1.3 or higher.
 ### Examples
 
 #### Just pass a url
+
 ```elixir
 url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
 summary = Readability.summarize(url)
@@ -87,16 +95,17 @@ html
 If the result is different from your expectations, you can add options to customize it.
 
 #### Example
+
 ```elixir
 url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
 summary = Readability.summarize(url, [clean_conditionally: false])
 ```
 
-* min_text_length \\\\ 25
-* remove_unlikely_candidates \\\\ true
-* weight_classes \\\\ true
-* clean_conditionally \\\\ true
-* retry_length \\\\ 250
+* `:min_text_length` \\\\ 25
+* `:remove_unlikely_candidates` \\\\ true
+* `:weight_classes` \\\\ true
+* `:clean_conditionally` \\\\ true
+* `:retry_length` \\\\ 250
 
 **You can find other algorithm and regex options in `readability.ex`**
 
@@ -127,12 +136,22 @@ Check out [the main features milestone](https://github.com/keepcosmos/readabilit
 NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 
 
-## Related and Inpired Projects
+## Related and Inspired Projects
 
 * [readability.js](https://github.com/mozilla/readability) is a standalone version of the readability library used for Firefox Reader View.
 * [newspaper](https://github.com/codelucas/newspaper) is an advanced news extraction, article extraction, and content curation library for Python.
 * [ruby-readability](https://github.com/cantino/ruby-readability) is a tool for extracting the primary readable content of a webpage.
 
-## LICENSE
+## Copyright and License
 
-This code is under the Apache License 2.0. See <http://www.apache.org/licenses/LICENSE-2.0>.
+Copyright (c) 2016 Jaehyun Shin
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

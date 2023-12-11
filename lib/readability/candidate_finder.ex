@@ -1,7 +1,8 @@
 defmodule Readability.CandidateFinder do
   @moduledoc """
-  The builing and finding candidates  engine
-  It traverses the HTML tree searching, removing, socring nodes
+  The builing and finding candidates  engine.
+
+  It traverses the HTML tree searching, removing, socring nodes.
   """
 
   alias Readability.Candidate
@@ -12,7 +13,7 @@ defmodule Readability.CandidateFinder do
   @type options :: list
 
   @doc """
-  Find candidates that shuld be meaningful article by analysing nodes
+  Find candidates that should be meaningful article by analysing nodes.
   """
   @spec find(html_tree, options, number) :: [Candidate.t()]
   def find(_, opts \\ [], tree_depth \\ 0)

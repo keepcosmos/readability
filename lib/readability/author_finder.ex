@@ -1,12 +1,12 @@
 defmodule Readability.AuthorFinder do
   @moduledoc """
-  AuthorFinder extracts authors
+  AuthorFinder extracts authors.
   """
 
   @type html_tree :: tuple | list
 
   @doc """
-  Extract authors
+  Extract authors.
   """
   @spec find(html_tree) :: [binary]
   def find(html_tree) do
