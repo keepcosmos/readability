@@ -1,11 +1,11 @@
 # Readability
 
-[![Build Status](https://travis-ci.org/keepcosmos/readability.svg?branch=master)](https://travis-ci.org/keepcosmos/readability)
+[![CI](https://github.com/keepcosmos/readability/actions/workflows/elixir.yml/badge.svg)](https://github.com/keepcosmos/readability/actions/workflows/elixir.yml)
 [![Module Version](https://img.shields.io/hexpm/v/readability.svg)](https://hex.pm/packages/readability)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/readability/)
 [![Total Download](https://img.shields.io/hexpm/dt/readability.svg)](https://hex.pm/packages/readability)
 [![License](https://img.shields.io/hexpm/l/readability.svg)](https://github.com/keepcosmos/readability/blob/master/LICENSE.md)
-[![Last Updated](https://img.shields.io/github/last-commit/keepcosmos/readability.svg)](https://github.com/keepcosmos/readability/commits/master)
+[![Coverage Status](https://coveralls.io/repos/github/keepcosmos/readability/badge.svg?branch=master)](https://coveralls.io/github/keepcosmos/readability?branch=master)
 
 Readability is a tool for extracting and curating the primary readable content of a webpage.
 
@@ -18,14 +18,14 @@ Add `:readability` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:readability, "~> 0.9"}
+    {:readability, "~> 0.10"}
   ]
 end
 ```
 
 After that, run mix deps.get.
 
-Note: Readability requires Elixir 1.3 or higher.
+Note: Readability requires Elixir 1.10 or higher.
 
 ## Usage
 

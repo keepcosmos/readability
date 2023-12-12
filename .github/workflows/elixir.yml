@@ -2,28 +2,29 @@ name: Elixir CI
 
 on:
   push:
-    branches: [master, ci]
+    branches: [master]
   pull_request:
     branches: [master]
 
 jobs:
   build:
-    name: Build and test
+    name: Build and test ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
     runs-on: ubuntu-20.04
 
     env:
-      # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       MIX_ENV: test
 
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - elixir: '1.8'
+          - elixir: '1.10'
             otp: '22.3'
-          - elixir: '1.13'
-            otp: '24.3'
-          - elixir: '1.14'
-            otp: '25.2'
+          - elixir: '1.15'
+            otp: '25.3'
+          - elixir: '1.15'
+            otp: '26.0'
 
     steps:
       - uses: actions/checkout@v3
@@ -32,19 +33,19 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
-      # - name: Restore dependency cache
-      #   uses: actions/cache@v3.3.1
-      #   id: deps-cache
-      #   with:
-      #     path: deps
-      #     key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles('**/mix.lock') }}
-      #     restore-keys: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-
-      # - name: Restore build cache
-      #   uses: actions/cache@v3.3.1
-      #   with:
-      #     path: _build
-      #     key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-build-${{ hashFiles('**/mix.lock') }}
-      #     restore-keys: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-build-
+      - name: Restore dependency cache
+        uses: actions/cache@v3.3.1
+        id: deps-cache
+        with:
+          path: deps
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-
+      - name: Restore build cache
+        uses: actions/cache@v3.3.1
+        with:
+          path: _build
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-build-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-build-
       # - name: Restore plt cache
       #   uses: actions/cache@v3.3.1
       #   id: plt-cache
@@ -53,7 +54,7 @@ jobs:
       #     key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plts-${{ hashFiles('**/mix.lock') }}
       #     restore-keys: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plts-
       - name: Install dependencies
-        # if: steps.deps-cache.outputs.cache-hit != 'true'
+        if: steps.deps-cache.outputs.cache-hit != 'true'
         run: mix deps.get
       - name: Compile application
         run: mix compile
@@ -69,5 +70,5 @@ jobs:
       - name: Run tests
         run: mix test
       - name: Run tests and coverage
-        if: matrix.elixir == '1.14' && matrix.otp == '25.2'
+        if: matrix.elixir == '1.15' && matrix.otp == '26.0'
         run: mix coveralls.github

@@ -41,7 +41,8 @@ defmodule Readability.Helper do
         is_binary(target_attr) ->
           fn attr -> elem(attr, 0) == target_attr end
 
-        Kernel.is_struct(target_attr, Regex) ->
+        # compatibility with older versions of Elixir where is no is_struct/2
+        is_struct(target_attr) and :erlang.map_get(:__struct__, target_attr) == Regex ->
           fn attr -> elem(attr, 0) =~ target_attr end
 
         is_list(target_attr) ->
