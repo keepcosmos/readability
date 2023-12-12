@@ -18,13 +18,15 @@ defmodule Readability.TitleFinderTest do
   </html>
   """
 
+  @html_tree Floki.parse_fragment!(@html)
+
   test "extract most proper title" do
-    title = Readability.TitleFinder.title(@html)
+    title = Readability.TitleFinder.title(@html_tree)
     assert title == "og title"
   end
 
   test "extract og title" do
-    title = Readability.TitleFinder.og_title(@html)
+    title = Readability.TitleFinder.og_title(@html_tree)
     assert title == "og title"
   end
 
@@ -38,12 +40,12 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.og_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.og_title()
     assert title == "og title 1"
   end
 
   test "extract tag title" do
-    title = Readability.TitleFinder.tag_title(@html)
+    title = Readability.TitleFinder.tag_title(@html_tree)
     assert title == "Tag title"
 
     html = """
@@ -54,7 +56,7 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.tag_title()
     assert title == "Tag title"
 
     html = """
@@ -65,7 +67,7 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.tag_title()
     assert title == "Tag title"
 
     html = """
@@ -76,7 +78,7 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.tag_title()
     assert title == "Tag title-tag"
 
     html = """
@@ -87,7 +89,7 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.tag_title()
     assert title == "Tag title-tag-title"
 
     html = """
@@ -101,7 +103,7 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.tag_title()
     assert title == "Tag title"
   end
 
@@ -115,17 +117,17 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.tag_title()
     assert title == "tag title 1"
   end
 
   test "extract h1 tag title" do
-    title = Readability.TitleFinder.h_tag_title(@html)
+    title = Readability.TitleFinder.h_tag_title(@html_tree)
     assert title == "h1 title"
   end
 
   test "extract h2 tag title" do
-    title = Readability.TitleFinder.h_tag_title(@html, "h2")
+    title = Readability.TitleFinder.h_tag_title(@html_tree, "h2")
     assert title == "h2 title"
   end
 
@@ -139,19 +141,19 @@ defmodule Readability.TitleFinderTest do
     </html>
     """
 
-    title = Readability.TitleFinder.h_tag_title(html)
+    title = html |> Floki.parse_fragment!() |> Readability.TitleFinder.h_tag_title()
     assert title == "header 1"
   end
 
   test "returns an empty string when no title tag can be found" do
-    assert Readability.TitleFinder.tag_title("") == ""
+    assert Readability.TitleFinder.tag_title([]) == ""
   end
 
   test "returns an empty string when no og:title tag can be found" do
-    assert Readability.TitleFinder.og_title("") == ""
+    assert Readability.TitleFinder.og_title([]) == ""
   end
 
   test "returns an empty string when no header tag can be found" do
-    assert Readability.TitleFinder.h_tag_title("") == ""
+    assert Readability.TitleFinder.h_tag_title([]) == ""
   end
 end

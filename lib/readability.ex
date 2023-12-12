@@ -85,13 +85,8 @@ defmodule Readability do
 
     case is_response_markup(headers) do
       true ->
-        html_tree =
-          raw
-          |> Helper.normalize(url: url)
-
-        article_tree =
-          html_tree
-          |> ArticleBuilder.build(opts)
+        html_tree = Helper.normalize(raw, url: url)
+        article_tree = ArticleBuilder.build(html_tree, opts)
 
         %Summary{
           title: title(html_tree),
@@ -152,7 +147,7 @@ defmodule Readability do
   @spec title(binary | html_tree) :: binary
   def title(raw_html) when is_binary(raw_html) do
     raw_html
-    |> Helper.normalize()
+    |> Floki.parse_document()
     |> title
   end
 
@@ -168,7 +163,7 @@ defmodule Readability do
 
   """
   @spec authors(binary | html_tree) :: list[binary]
-  def authors(html) when is_binary(html), do: html |> parse |> authors
+  def authors(html) when is_binary(html), do: html |> Floki.parse_document!() |> authors
   def authors(html_tree), do: AuthorFinder.find(html_tree)
 
   @doc """
@@ -209,8 +204,9 @@ defmodule Readability do
     tags_to_br = ~r/<\/(p|div|article|h\d)/i
     html_str = html_tree |> raw_html
 
-    Regex.replace(tags_to_br, html_str, &"\n#{&1}")
-    |> Floki.parse()
+    tags_to_br
+    |> Regex.replace(html_str, &"\n#{&1}")
+    |> Floki.parse_fragment!()
     |> Floki.text()
     |> String.trim()
   end
@@ -223,7 +219,12 @@ defmodule Readability do
     html_tree |> Floki.raw_html(encode: false)
   end
 
-  def parse(raw_html) when is_binary(raw_html), do: Floki.parse(raw_html)
+  @deprecated "Use `Floki.parse_document/1` or `Floki.parse_fragment/1` instead."
+  def parse(raw_html) when is_binary(raw_html) do
+    with {:ok, document} <- Floki.parse_document(raw_html) do
+      document
+    end
+  end
 
   def regexes(key), do: @regexes[key]
 

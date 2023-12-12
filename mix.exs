@@ -25,14 +25,12 @@ defmodule Readability.Mixfile do
   end
 
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    []
   end
 
   defp deps do
     [
-      {:floki, "~> 0.21"},
+      {:floki, "~> 0.24"},
       {:httpoison, "~> 1.8 or ~> 2.0"},
       {:ex_doc, "~> 0.29", only: :dev},
       {:credo, "~> 1.6", only: [:dev, :test]},

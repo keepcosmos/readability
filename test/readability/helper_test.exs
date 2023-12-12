@@ -1,7 +1,6 @@
 defmodule Readability.HelperTest do
   use ExUnit.Case, async: true
 
-  import Readability, only: [parse: 1]
   alias Readability.Helper
 
   @sample """
@@ -22,44 +21,30 @@ defmodule Readability.HelperTest do
     </html>
   """
 
-  setup do
-    html_tree = Floki.parse(@sample)
-    {:ok, html_tree: html_tree}
+  @html_tree Floki.parse_fragment!(@sample)
+
+  test "change font tag to span" do
+    expected = @sample |> String.replace(~r/font/, "span") |> Floki.parse_fragment!()
+    result = Helper.change_tag(@html_tree, "font", "span")
+    assert result == expected
   end
 
-  test "change font tag to span", %{html_tree: html_tree} do
-    expectred = @sample |> String.replace(~r/font/, "span") |> Floki.parse()
-    result = Helper.change_tag(html_tree, "font", "span")
-    assert result == expectred
-  end
-
-  test "remove tag", %{html_tree: html_tree} do
-    expected = "<html><body></body></html>" |> parse
-
-    result =
-      html_tree
-      |> Helper.remove_tag(fn {tag, _, _} ->
-        tag == "p"
-      end)
+  test "remove tag" do
+    expected = "<html><body></body></html>" |> Floki.parse_fragment!()
+    result = Helper.remove_tag(@html_tree, fn {tag, _, _} -> tag == "p" end)
 
     assert result == expected
   end
 
-  test "remove all tags", %{html_tree: html_tree} do
-    expected = "" |> parse
-
-    result =
-      html_tree
-      |> Helper.remove_tag(fn {tag, _, _} ->
-        tag == "html"
-      end)
+  test "remove all tags" do
+    expected = Floki.parse_fragment!("")
+    result = Helper.remove_tag(@html_tree, fn {tag, _, _} -> tag == "html" end)
 
     assert result == expected
   end
 
-  test "inner text length", %{html_tree: html_tree} do
-    result = html_tree |> Helper.text_length()
-    assert result == 5
+  test "inner text length" do
+    assert Helper.text_length(@html_tree) == 5
   end
 
   test "strips out special case tags" do
