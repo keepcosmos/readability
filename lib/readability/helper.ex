@@ -107,7 +107,7 @@ defmodule Readability.Helper do
     raw_html
     |> String.replace(Readability.regexes(:replace_xml_version), "")
     |> String.replace(Readability.regexes(:replace_brs), "</p><p>")
-    |> String.replace(Readability.regexes(:replace_fonts), "<\1span>")
+    |> String.replace(Readability.regexes(:replace_fonts), "<\\1span>")
     |> String.replace(Readability.regexes(:normalize), " ")
     |> transform_img_paths(opts[:url])
     |> Floki.parse_document!()

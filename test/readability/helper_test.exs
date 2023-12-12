@@ -48,12 +48,30 @@ defmodule Readability.HelperTest do
   end
 
   test "strips out special case tags" do
-    expected_html =
+    html =
       "<html><body><p>Hello <? echo esc_html( wired_get_the_byline_name( $related_video ) ); ?></p></body></html>"
       |> Helper.normalize()
       |> Floki.raw_html()
 
-    assert expected_html == "<html><body><p>Hello </p></body></html>"
+    assert html == "<html><body><p>Hello </p></body></html>"
+  end
+
+  test "replaces fonts by spans" do
+    input_html = """
+    <div>
+      <font color="red" face="Verdana, Geneva, sans-serif" size="+1">Hello</font>
+      <font>World</font>
+    </div>
+    """
+
+    expected_html = """
+    <div>
+      <span>Hello</span>
+      <span>World</span>
+    </div>
+    """
+
+    assert input_html |> Helper.normalize() == expected_html |> Floki.parse_document!()
   end
 
   test "transform img relative paths into absolute" do
