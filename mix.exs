@@ -30,6 +30,9 @@ defmodule Readability.Mixfile do
   end
 
   defp deps do
+    # https://github.com/lpil/mix-test.watch/pull/140#issuecomment-1853912030
+    test_watch_runtime = match?(["test.watch" | _], System.argv())
+
     [
       {:floki, "~> 0.24"},
       {:httpoison, "~> 1.8 or ~> 2.0"},
@@ -38,7 +41,7 @@ defmodule Readability.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
-      {:mix_test_watch, "~> 1.0", only: [:dev, :test]}
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: test_watch_runtime}
     ]
   end
 
