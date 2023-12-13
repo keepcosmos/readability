@@ -81,25 +81,6 @@ defmodule Readability.Helper do
   end
 
   @doc """
-  Count only text length.
-  """
-  @spec text_length(html_tree) :: number
-  def text_length(html_tree) do
-    html_tree |> Floki.text() |> String.trim() |> String.length()
-  end
-
-  @doc """
-  Check `html_tree` can be candidate or not.
-  """
-  @spec candidate_tag?(html_tree) :: boolean
-  def candidate_tag?({tag, _, _} = html_tree) do
-    Enum.any?(["p", "td"], fn candidate_tag ->
-      tag == candidate_tag &&
-        text_length(html_tree) >= Readability.default_options()[:min_text_length]
-    end)
-  end
-
-  @doc """
   Normalizes and parses to HTML tree (tuple or list)) from binary HTML.
   """
   @spec normalize(binary, list) :: html_tree

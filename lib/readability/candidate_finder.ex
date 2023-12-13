@@ -7,7 +7,7 @@ defmodule Readability.CandidateFinder do
 
   alias Readability.Candidate
   alias Readability.Candidate.Scoring
-  alias Readability.Helper
+  alias Readability.Queries
 
   @type html_tree :: tuple | list
   @type options :: list
@@ -53,6 +53,14 @@ defmodule Readability.CandidateFinder do
     |> Enum.max_by(fn candidate -> candidate.score end)
   end
 
+  @doc """
+  Check `html_tree` can be candidate or not.
+  """
+  @spec candidate_tag?(html_tree) :: boolean
+  def candidate_tag?({tag, _, _} = html_tree) do
+    (tag == "p" || tag == "td") && Queries.text_length(html_tree) >= 25
+  end
+
   defp candidate?(_, depth \\ 0)
   defp candidate?(_, depth) when depth > 2, do: false
   defp candidate?([h | t], depth), do: candidate?(h, depth) || candidate?(t, depth)
@@ -60,7 +68,7 @@ defmodule Readability.CandidateFinder do
   defp candidate?(text, _) when is_binary(text), do: false
 
   defp candidate?({_, _, inner_tree} = html_tree, depth) do
-    if Helper.candidate_tag?(html_tree) do
+    if candidate_tag?(html_tree) do
       true
     else
       candidate?(inner_tree, depth + 1)

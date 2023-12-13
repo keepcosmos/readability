@@ -2,7 +2,7 @@ defmodule Readability.Candidate.Scoring do
   @moduledoc """
   Score HTML tree.
   """
-  alias Readability.Helper
+  alias Readability.Queries
 
   @element_scores %{"div" => 5, "blockquote" => 3, "form" => -3, "th" => -5}
 
@@ -27,9 +27,8 @@ defmodule Readability.Candidate.Scoring do
 
   defp calc_content_score(html_tree) do
     score = 1
-    inner_text = html_tree |> Floki.text()
-    split_score = inner_text |> String.split(",") |> length
-    length_score = [String.length(inner_text) / 100, 3] |> Enum.min()
+    split_score = Queries.count_character(html_tree, ",") + 1
+    length_score = min(Queries.text_length(html_tree) / 100, 3)
     score + split_score + length_score
   end
 
@@ -58,27 +57,23 @@ defmodule Readability.Candidate.Scoring do
   end
 
   def calc_link_density(html_tree) do
-    link_length =
-      html_tree
-      |> Floki.find("a")
-      |> Floki.text()
-      |> String.length()
-
-    text_length =
-      html_tree
-      |> Floki.text()
-      |> String.length()
+    text_length = Queries.text_length(html_tree)
 
     if text_length == 0 do
       0
     else
+      link_length =
+        html_tree
+        |> Queries.find_tag("a")
+        |> Queries.text_length()
+
       link_length / text_length
     end
   end
 
   defp calc_children_content_score({_, _, children_tree}) do
     children_tree
-    |> Enum.filter(&(is_tuple(&1) && Helper.candidate_tag?(&1)))
+    |> Enum.filter(&(is_tuple(&1) && Readability.CandidateFinder.candidate_tag?(&1)))
     |> calc_content_score
   end
 
@@ -88,7 +83,7 @@ defmodule Readability.Candidate.Scoring do
       |> Enum.filter(&is_tuple(&1))
       |> Enum.map(&elem(&1, 2))
       |> List.flatten()
-      |> Enum.filter(&(is_tuple(&1) && Helper.candidate_tag?(&1)))
+      |> Enum.filter(&(is_tuple(&1) && Readability.CandidateFinder.candidate_tag?(&1)))
       |> calc_content_score
 
     score / 2

@@ -43,10 +43,6 @@ defmodule Readability.HelperTest do
     assert result == expected
   end
 
-  test "inner text length" do
-    assert Helper.text_length(@html_tree) == 5
-  end
-
   test "strips out special case tags" do
     html =
       "<html><body><p>Hello <? echo esc_html( wired_get_the_byline_name( $related_video ) ); ?></p></body></html>"
