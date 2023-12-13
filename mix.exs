@@ -16,7 +16,8 @@ defmodule Readability.Mixfile do
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        "test.watch": :test
       ],
       package: package(),
       deps: deps(),
@@ -36,7 +37,8 @@ defmodule Readability.Mixfile do
       {:credo, "~> 1.6", only: [:dev, :test]},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3", only: :test},
-      {:excoveralls, "~> 0.18", only: :test}
+      {:excoveralls, "~> 0.18", only: :test},
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test]}
     ]
   end
 
