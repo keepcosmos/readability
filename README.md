@@ -18,7 +18,7 @@ Add `:readability` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:readability, "~> 0.10"}
+    {:readability, "~> 0.12"}
   ]
 end
 ```
