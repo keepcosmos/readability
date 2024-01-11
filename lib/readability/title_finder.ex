@@ -4,7 +4,7 @@ defmodule Readability.TitleFinder do
   """
 
   @title_suffix ~r/\s(?:\-|\:\:|\|)\s/
-  @h_tag_selector "h1, h2, h3"
+  @h_tag_selector "h1"
 
   @type html_tree :: tuple | list
 
