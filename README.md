@@ -40,6 +40,9 @@ summary = Readability.summarize(url)
 summary.title
 #=> "Why I’m betting on Elixir"
 
+summary.published_at
+#=> ~U[2015-02-23 16:53:27.006Z]
+
 summary.authors
 #=> ["Ken Mazaika"]
 
@@ -61,6 +64,9 @@ summary.article_text
 ```elixir
 ### Extract the title.
 Readability.title(html)
+
+### Extract the published at
+Readability.published_at(html)
 
 ### Extract authors.
 Readability.authors(html)
@@ -93,11 +99,11 @@ url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
 summary = Readability.summarize(url, [clean_conditionally: false])
 ```
 
-* `:min_text_length` \\\\ 25
-* `:remove_unlikely_candidates` \\\\ true
-* `:weight_classes` \\\\ true
-* `:clean_conditionally` \\\\ true
-* `:retry_length` \\\\ 250
+- `:min_text_length` \\\\ 25
+- `:remove_unlikely_candidates` \\\\ true
+- `:weight_classes` \\\\ true
+- `:clean_conditionally` \\\\ true
+- `:retry_length` \\\\ 250
 
 **You can find other algorithm and regex options in `readability.ex`**
 
@@ -109,16 +115,17 @@ To run the test suite:
 
 ## Todo
 
-* [x] Extract authors
-* [x] More configurable
-* [x] Summarize function
-* [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
+- [x] Extract authors
+- [x] More configurable
+- [x] Summarize function
+- [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
 
 ## Contributions are welcome!
 
 Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones) and features of related projects below
 
 **Contributing**
+
 1. **Fork** the repo on GitHub
 2. **Clone** the project to your own machine
 3. **Commit** changes to your own branch
@@ -127,12 +134,11 @@ Check out [the main features milestone](https://github.com/keepcosmos/readabilit
 
 NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 
-
 ## Related and Inspired Projects
 
-* [readability.js](https://github.com/mozilla/readability) is a standalone version of the readability library used for Firefox Reader View.
-* [newspaper](https://github.com/codelucas/newspaper) is an advanced news extraction, article extraction, and content curation library for Python.
-* [ruby-readability](https://github.com/cantino/ruby-readability) is a tool for extracting the primary readable content of a webpage.
+- [readability.js](https://github.com/mozilla/readability) is a standalone version of the readability library used for Firefox Reader View.
+- [newspaper](https://github.com/codelucas/newspaper) is an advanced news extraction, article extraction, and content curation library for Python.
+- [ruby-readability](https://github.com/cantino/ruby-readability) is a tool for extracting the primary readable content of a webpage.
 
 ## Copyright and License
 

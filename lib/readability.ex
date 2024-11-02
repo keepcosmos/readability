@@ -13,6 +13,9 @@ defmodule Readability do
   # Extract title
   Readability.title(html)
 
+  # Extract published at
+  Readability.published_at(html)
+
   # Extract authors.
   Readability.authors(html)
 
@@ -31,6 +34,7 @@ defmodule Readability do
   alias Readability.ArticleBuilder
   alias Readability.AuthorFinder
   alias Readability.Helper
+  alias Readability.PublishedAtFinder
   alias Readability.Summary
   alias Readability.TitleFinder
 
@@ -91,6 +95,7 @@ defmodule Readability do
         %Summary{
           title: title(html_tree),
           authors: authors(html_tree),
+          published_at: published_at(html_tree),
           article_html: readable_html(article_tree),
           article_text: readable_text(article_tree)
         }
@@ -165,6 +170,24 @@ defmodule Readability do
   @spec authors(binary | html_tree) :: list[binary]
   def authors(html) when is_binary(html), do: html |> Floki.parse_document!() |> authors
   def authors(html_tree), do: AuthorFinder.find(html_tree)
+
+  @doc """
+  Extract published_at
+
+  ## Example
+
+      iex> datetime = Readability.published_at(html_str)
+      %DateTime{}
+
+  """
+  @spec published_at(binary | html_tree) :: %DateTime{} | %Date{} | nil
+  def published_at(raw_html) when is_binary(raw_html) do
+    raw_html
+    |> Floki.parse_document()
+    |> published_at()
+  end
+
+  def published_at(html_tree), do: PublishedAtFinder.find(html_tree)
 
   @doc """
   Using a variety of metrics (content score, classname, element types), find the content that is
