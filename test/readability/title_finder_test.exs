@@ -25,6 +25,22 @@ defmodule Readability.TitleFinderTest do
     assert title == "og title"
   end
 
+  test "extracts most proper title from an html string" do
+    assert Readability.title(@html) == "og title"
+  end
+
+  test "extracts regular title from an html string" do
+    html = """
+    <html>
+      <head>
+        <title>Tag title - test</title>
+      </head>
+    </html>
+    """
+
+    assert Readability.title(html) == "Tag title"
+  end
+
   test "extract og title" do
     title = Readability.TitleFinder.og_title(@html_tree)
     assert title == "og title"
