@@ -152,7 +152,7 @@ defmodule Readability do
   @spec title(binary | html_tree) :: binary
   def title(raw_html) when is_binary(raw_html) do
     raw_html
-    |> Floki.parse_document()
+    |> Floki.parse_document!()
     |> title
   end
 
@@ -183,7 +183,7 @@ defmodule Readability do
   @spec published_at(binary | html_tree) :: %DateTime{} | %Date{} | nil
   def published_at(raw_html) when is_binary(raw_html) do
     raw_html
-    |> Floki.parse_document()
+    |> Floki.parse_document!()
     |> published_at()
   end
 
