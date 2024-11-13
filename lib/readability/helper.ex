@@ -61,6 +61,7 @@ defmodule Readability.Helper do
   @spec remove_tag(html_tree, fun) :: html_tree
   def remove_tag(content, _) when is_binary(content), do: content
   def remove_tag([], _), do: []
+  def remove_tag([{:doctype, _, _, _} | t], fun), do: remove_tag(t, fun)
 
   def remove_tag([h | t], fun) do
     node = remove_tag(h, fun)
