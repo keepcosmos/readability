@@ -1,5 +1,5 @@
 defmodule ReadabilityTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   test "readability for NY Times" do
     html = TestHelper.read_fixture("nytimes.html")
