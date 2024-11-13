@@ -41,7 +41,8 @@ defmodule Readability.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
-      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: test_watch_runtime}
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: test_watch_runtime},
+      {:html5ever, "~> 0.16", only: :test}
     ]
   end
 

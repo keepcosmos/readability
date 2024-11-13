@@ -82,4 +82,17 @@ defmodule ReadabilityTest do
     assert pubmed_text =~
              ~r/with different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.$/
   end
+
+  test "correctly processing DOCTYPE when using html5ever parser" do
+    original_parser = Application.get_env(:floki, :html_parser) || Floki.HTMLParser.Mochiweb
+    Application.put_env(:floki, :html_parser, Floki.HTMLParser.Html5ever)
+
+    try do
+      # Your test code here
+      html = TestHelper.read_fixture("medium.html")
+      html |> Readability.article() |> Readability.readable_html()
+    after
+      Application.put_env(:floki, :html_parser, original_parser)
+    end
+  end
 end
