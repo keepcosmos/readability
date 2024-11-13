@@ -33,6 +33,14 @@ defmodule Readability.Mixfile do
     # https://github.com/lpil/mix-test.watch/pull/140#issuecomment-1853912030
     test_watch_runtime = match?(["test.watch" | _], System.argv())
 
+    # Make test suite run with Elixir 1.10 happy
+    html5ever_dep =
+      if Version.match?(System.version(), ">= 1.13.0") do
+        {:html5ever, "~> 0.16", only: :test}
+      else
+        []
+      end
+
     [
       {:floki, "~> 0.24"},
       {:httpoison, "~> 1.8 or ~> 2.0"},
@@ -41,9 +49,8 @@ defmodule Readability.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mock, "~> 0.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
-      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: test_watch_runtime},
-      {:html5ever, "~> 0.16", only: :test, optional: true}
-    ]
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: test_watch_runtime}
+    ] ++ List.wrap(html5ever_dep)
   end
 
   defp package do
