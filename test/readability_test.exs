@@ -1,5 +1,5 @@
 defmodule ReadabilityTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   test "readability for NY Times" do
     html = TestHelper.read_fixture("nytimes.html")
@@ -81,5 +81,22 @@ defmodule ReadabilityTest do
 
     assert pubmed_text =~
              ~r/with different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.$/
+  end
+
+  test "correctly processing DOCTYPE when using html5ever parser" do
+    # Since html5ever requires Elixir 1.13 or later, we won't run it on ealier Elixir versions
+    if Version.match?(System.version(), ">=1.13.0") do
+      original_parser = Application.get_env(:floki, :html_parser) || Floki.HTMLParser.Mochiweb
+      Application.put_env(:floki, :html_parser, Floki.HTMLParser.Html5ever)
+
+      try do
+        html = TestHelper.read_fixture("medium.html")
+        html |> Readability.article() |> Readability.readable_html()
+      after
+        Application.put_env(:floki, :html_parser, original_parser)
+      end
+    else
+      :ok
+    end
   end
 end
