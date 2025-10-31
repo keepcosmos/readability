@@ -53,23 +53,6 @@ defmodule Readability do
     page_url: nil
   ]
 
-  @regexes [
-    unlikely_candidate:
-      ~r/combx|comment|community|disqus|extra|foot|header|hidden|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i,
-    ok_maybe_its_a_candidate: ~r/and|article|body|column|main|shadow/i,
-    positive: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i,
-    negative:
-      ~r/hidden|^hid|combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i,
-    div_to_p_elements: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i,
-    replace_brs: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i,
-    replace_fonts: ~r/<(\/?)font[^>]*>/i,
-    replace_xml_version: ~r/<\?xml.*\?>/i,
-    normalize: ~r/\s{2,}/,
-    video: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i,
-    protect_attrs: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i,
-    img_tag_src: ~r/(<img.*src=['"])([^'"]+)(['"][^>]*>)/Ui
-  ]
-
   @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s*charset=.*)?$/i
 
   @type html_tree :: tuple | list
@@ -249,7 +232,37 @@ defmodule Readability do
     end
   end
 
-  def regexes(key), do: @regexes[key]
+  def regexes(:unlikely_candidate),
+    do:
+      ~r/combx|comment|community|disqus|extra|foot|header|hidden|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i
+
+  def regexes(:ok_maybe_its_a_candidate), do: ~r/and|article|body|column|main|shadow/i
+
+  def regexes(:positive),
+    do: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i
+
+  def regexes(:negative),
+    do:
+      ~r/hidden|^hid|combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i
+
+  def regexes(:div_to_p_elements), do: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i
+
+  def regexes(:replace_brs), do: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i
+
+  def regexes(:replace_fonts), do: ~r/<(\/?)font[^>]*>/i
+
+  def regexes(:replace_xml_version), do: ~r/<\?xml.*\?>/i
+
+  def regexes(:normalize), do: ~r/\s{2,}/
+
+  def regexes(:video),
+    do: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i
+
+  def regexes(:protect_attrs), do: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
+
+  def regexes(:img_tag_src), do: ~r/(<img.*src=['"])([^'"]+)(['"][^>]*>)/Ui
+
+  def regexes(_key), do: nil
 
   def default_options, do: @default_options
 end
