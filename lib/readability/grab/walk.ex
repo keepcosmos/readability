@@ -63,28 +63,19 @@ defmodule Readability.Grab.Walk do
   # One iteration of the `while (node)` loop, in the JS order of checks.
   defp visit({tag, attrs, children, _} = el, anc, path, acc, cfg) do
     acc = if tag == "html", do: %{acc | lang: DOM.attr(el, "lang")}, else: acc
-    {class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop} = scan_attrs(attrs)
+    info = scan_attrs(attrs)
 
     cond do
-      not visible?(style, hidden?, aria_hidden, class) ->
+      hidden?(info) ->
         {:removed, acc}
 
-      aria_modal == "true" and role == "dialog" ->
-        {:removed, acc}
-
-      byline = byline(el, class, id, rel, itemprop, acc, cfg) ->
+      byline = byline(el, info, acc, cfg) ->
         {:removed, %{acc | byline: byline}}
 
       acc.title_header? and header_duplicates_title?(el, cfg.title) ->
         {:removed, %{acc | title_header?: false}}
 
-      cfg.strip? and unlikely?(tag, class, id, anc) ->
-        {:removed, acc}
-
-      cfg.strip? and role in @unlikely_roles ->
-        {:removed, acc}
-
-      empty_container_tag?(tag) and DOM.without_content?(el) ->
+      unlikely?(el, info, anc, cfg) ->
         {:removed, acc}
 
       tag == "div" ->
@@ -130,60 +121,52 @@ defmodule Readability.Grab.Walk do
   end
 
   # ---------------------------------------------------------------------------------------------
-  # Attributes, in one pass: {class, id, style, hidden?, aria-hidden, aria-modal, role, rel,
-  # itemprop}. Like getAttribute, the first occurrence of a name wins.
+  # The attributes the walk reads, in one pass, as `{class, id, style, hidden, aria-hidden,
+  # aria-modal, role, rel, itemprop}` (`nil` when missing; the first occurrence wins, like
+  # getAttribute).
   # ---------------------------------------------------------------------------------------------
 
-  defp scan_attrs(attrs), do: scan_attrs(attrs, nil, nil, nil, false, nil, nil, nil, nil, nil)
+  @no_attrs {nil, nil, nil, nil, nil, nil, nil, nil, nil}
 
-  defp scan_attrs([], class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop),
-    do: {class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop}
+  defp scan_attrs([]), do: @no_attrs
+  defp scan_attrs(attrs), do: scan_attrs(attrs, @no_attrs)
 
-  defp scan_attrs([{name, value} | rest], class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop) do
-    case name do
-      "class" when class == nil ->
-        scan_attrs(rest, value, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
+  defp scan_attrs([], info), do: info
 
-      "id" when id == nil ->
-        scan_attrs(rest, class, value, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
-
-      "style" when style == nil ->
-        scan_attrs(rest, class, id, value, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
-
-      "hidden" ->
-        scan_attrs(rest, class, id, style, true, aria_hidden, aria_modal, role, rel, itemprop)
-
-      "aria-hidden" when aria_hidden == nil ->
-        scan_attrs(rest, class, id, style, hidden?, value, aria_modal, role, rel, itemprop)
-
-      "aria-modal" when aria_modal == nil ->
-        scan_attrs(rest, class, id, style, hidden?, aria_hidden, value, role, rel, itemprop)
-
-      "role" when role == nil ->
-        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, value, rel, itemprop)
-
-      "rel" when rel == nil ->
-        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, role, value, itemprop)
-
-      "itemprop" when itemprop == nil ->
-        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, role, rel, value)
-
-      _ ->
-        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
+  defp scan_attrs([{name, value} | rest], info) do
+    case attr_index(name) do
+      nil -> scan_attrs(rest, info)
+      i when elem(info, i) == nil -> scan_attrs(rest, put_elem(info, i, value))
+      _ -> scan_attrs(rest, info)
     end
   end
+
+  for {name, i} <- Enum.with_index(~w(class id style hidden aria-hidden aria-modal role rel itemprop)) do
+    defp attr_index(unquote(name)), do: unquote(i)
+  end
+
+  defp attr_index(_), do: nil
 
   # ---------------------------------------------------------------------------------------------
   # Predicates
   # ---------------------------------------------------------------------------------------------
 
-  # `_isProbablyVisible`, with JSDOMParser's `style` (design §4.2). A style without the words
-  # "display" and "visibility" cannot hide.
-  defp visible?(style, hidden?, aria_hidden, class) do
-    not hidden? and
-      (aria_hidden != "true" or (class != nil and :binary.match(class, "fallback-image") != :nomatch)) and
-      (style == nil or not may_hide?(style) or
-         (style_value(style, "display") != "none" and style_value(style, "visibility") != "hidden"))
+  # `!_isProbablyVisible(node)`, or a modal dialog.
+  defp hidden?({_, _, _, _, _, "true", "dialog", _, _}), do: true
+  defp hidden?({_, _, _, hidden, _, _, _, _, _}) when hidden != nil, do: true
+  defp hidden?({class, _, _, _, "true", _, _, _, _}) when class == nil, do: true
+
+  defp hidden?({class, _, _, _, "true", _, _, _, _} = info) do
+    :binary.match(class, "fallback-image") == :nomatch or hidden_by_style?(info)
+  end
+
+  defp hidden?(info), do: hidden_by_style?(info)
+
+  # JSDOMParser's `style` (design §4.2). A style without "display" and "visibility" can't hide.
+  defp hidden_by_style?({_, _, nil, _, _, _, _, _, _}), do: false
+
+  defp hidden_by_style?({_, _, style, _, _, _, _, _, _}) do
+    may_hide?(style) and (style_value(style, "display") == "none" or style_value(style, "visibility") == "hidden")
   end
 
   defp may_hide?(<<"display", _::binary>>), do: true
@@ -206,18 +189,20 @@ defmodule Readability.Grab.Walk do
   end
 
   # `_isValidByline` and the byline extraction. Returns the byline text or nil.
-  defp byline(el, class, id, rel, itemprop, acc, cfg) do
-    if not truthy?(acc.byline) and not cfg.metadata_byline? and
-         (rel == "author" or contains?(itemprop, "author") or
-            ((class != nil or id != nil) and Matchers.byline?(class, id))) and
-         nonws_below?(elem(el, 2), 100) do
+  defp byline({_, _, children, _} = el, info, acc, cfg) do
+    if not truthy?(acc.byline) and not cfg.metadata_byline? and byline_like?(info) and nonws_below?(children, 100) do
       len = el |> DOM.text_content() |> Text.trim() |> Text.length()
 
       if len > 0 and len < 100 do
-        (find_itemprop_name(elem(el, 2)) || el) |> DOM.text_content() |> Text.trim() |> :binary.copy()
+        (find_itemprop_name(children) || el) |> DOM.text_content() |> Text.trim() |> :binary.copy()
       end
     end
   end
+
+  defp byline_like?({_, _, _, _, _, _, _, "author", _}), do: true
+
+  defp byline_like?({class, id, _, _, _, _, _, _, itemprop}),
+    do: contains?(itemprop, "author") or ((class != nil or id != nil) and Matchers.byline?(class, id))
 
   # Whether the text has fewer than `limit` non-whitespace UTF-16 units: a bound for
   # `textContent.trim().length < limit` that stops early instead of building a large text.
@@ -254,7 +239,13 @@ defmodule Readability.Grab.Walk do
 
   defp header_duplicates_title?(_el, _title), do: false
 
-  defp unlikely?(tag, class, id, anc) do
+  # Unlikely candidates and roles (with FLAG_STRIP_UNLIKELYS), then empty containers.
+  defp unlikely?({tag, _, _, _} = el, {class, id, _, _, _, _, role, _, _}, anc, cfg) do
+    (cfg.strip? and (unlikely_candidate?(tag, class, id, anc) or role in @unlikely_roles)) or
+      (empty_container_tag?(tag) and DOM.without_content?(el))
+  end
+
+  defp unlikely_candidate?(tag, class, id, anc) do
     (class != nil or id != nil) and tag != "body" and tag != "a" and Matchers.unlikely_candidate?(class, id) and
       not DOM.has_ancestor_tag?(anc, "table") and not DOM.has_ancestor_tag?(anc, "code")
   end

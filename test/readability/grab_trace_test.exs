@@ -50,12 +50,16 @@ defmodule Readability.GrabTraceTest do
     select = act.select
     tree = act.tree
 
-    top_tag = if select.created?, do: "div", else: elem(Select.at(tree, select.top), 0)
-    appended = for {path, tag} <- select.appended, do: {if(select.created?, do: nil, else: path), tag}
+    # a created top candidate has no path in the post-walk tree (nor in the trace's appended list)
+    {top_tag, appended} =
+      if select.created?,
+        do: {"div", for({_, tag} <- select.appended, do: {nil, tag})},
+        else: {tag_at(tree, select.top), select.appended}
 
     [
       {"flags", same(act.flags, exp["flags"])},
-      {"start", Traces.diff_trees(act.start, exp["start"] || Traces.tree(trace, "prepped"))},
+      # `start` is only in the trace when it differs from `prepped`
+      {"start", Traces.diff_trees(act.start, Map.get_lazy(exp, "start", fn -> Traces.tree(trace, "prepped") end))},
       {"post_walk", Traces.diff_trees(tree, exp["post_walk"])},
       {"post_walk_stats", verified(tree)},
       {"article_pre_prep_stats", verified(select.article)},

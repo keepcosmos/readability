@@ -121,20 +121,21 @@ defmodule Readability.Grab.Score do
 
   # The densities in the order of `paths`.
   defp link_densities(tree, paths) do
-    densities =
-      for path <- paths do
-        el = at(tree, path)
-        if hash_links_below?(el), do: :exact, else: DOM.link_density(el)
-      end
+    densities = for path <- paths, do: density_from_stats(at(tree, path))
 
     if :exact in densities do
       exact = for {path, :exact} <- Enum.zip(paths, densities), do: {:lists.reverse(path), path}
       {[], sums} = sums(tree, 0, exact |> Enum.sort() |> trie(), [], %{})
-      Enum.zip_with(paths, densities, fn path, d -> if d == :exact, do: Map.fetch!(sums, path), else: d end)
+      Enum.zip_with(paths, densities, &exact_density(&1, &2, sums))
     else
       densities
     end
   end
+
+  defp density_from_stats(el), do: if(hash_links_below?(el), do: :exact, else: DOM.link_density(el))
+
+  defp exact_density(path, :exact, sums), do: Map.fetch!(sums, path)
+  defp exact_density(_path, density, _sums), do: density
 
   defp at(tree, path), do: at_forward(tree, :lists.reverse(path))
   defp at_forward(nodes, [i]), do: :lists.nth(i + 1, nodes)
