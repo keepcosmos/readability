@@ -66,7 +66,7 @@ defmodule Readability do
   @spec article(input(), keyword()) :: {:ok, Article.t()} | {:error, reason()}
   def article(html, opts \\ []) do
     opts = Options.validate!(opts)
-    doc = html |> parse() |> LazyHTML.to_tree() |> DOM.from_lazy()
+    doc = html |> parse() |> LazyHTML.to_tree() |> valid_tree(html) |> DOM.from_lazy()
     ctx = if opts.max_elems_to_parse > 0, do: %{element_count: count_elements(doc, 0)}, else: %{}
 
     doc = Prep.unwrap_noscript_images(doc)
@@ -111,8 +111,35 @@ defmodule Readability do
   end
 
   defp parse(%LazyHTML{} = lazy), do: lazy
-  defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(html)
-  defp parse(html) when is_binary(html), do: LazyHTML.from_document(html)
+  defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(valid_utf8(html))
+  defp parse(html) when is_binary(html), do: LazyHTML.from_document(valid_utf8(html))
+
+  # LazyHTML keeps invalid UTF-8 as is; a decoder replaces each malformed sequence with U+FFFD.
+  defp valid_utf8(html), do: if(String.valid?(html), do: html, else: String.replace_invalid(html))
+
+  # A `%LazyHTML{}` passed in may have been parsed from invalid UTF-8: scrub its tree the same way.
+  defp valid_tree(tree, %LazyHTML{}), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
+  defp valid_tree(tree, _html), do: tree
+
+  defp valid_list?([]), do: true
+  defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text) and valid_list?(rest)
+  defp valid_list?([{:comment, _} | rest]), do: valid_list?(rest)
+
+  defp valid_list?([{tag, attrs, children} | rest]) do
+    String.valid?(tag) and Enum.all?(attrs, fn {name, value} -> String.valid?(name) and String.valid?(value) end) and
+      valid_list?(children) and valid_list?(rest)
+  end
+
+  defp scrub_list(nodes) do
+    Enum.map(nodes, fn
+      text when is_binary(text) -> String.replace_invalid(text)
+      {:comment, _} = comment -> comment
+      {tag, attrs, children} -> {String.replace_invalid(tag), scrub_attrs(attrs), scrub_list(children)}
+    end)
+  end
+
+  defp scrub_attrs(attrs),
+    do: for({name, value} <- attrs, do: {String.replace_invalid(name), String.replace_invalid(value)})
 
   # `getElementsByTagName("*").length` on the document as parsed
   defp count_elements([], n), do: n
