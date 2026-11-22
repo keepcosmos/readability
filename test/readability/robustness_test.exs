@@ -67,5 +67,14 @@ defmodule Readability.RobustnessTest do
       assert a.content =~ "<table>"
       assert Readability.Clean.parse_int("-" <> digits) == -1_000_000_000_000_000_000
     end
+
+    test "Punycode decoding takes linear time" do
+      within(500, fn ->
+        assert Readability.URL.resolve("https://xn--" <> String.duplicate("9", 160_000), nil) == :error
+
+        assert {:ok, "https://xn--4c" <> _} =
+                 Readability.URL.resolve("https://xn--4c" <> String.duplicate("a", 30_000), nil)
+      end)
+    end
   end
 end
