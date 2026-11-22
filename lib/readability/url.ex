@@ -96,9 +96,7 @@ defmodule Readability.URL do
   """
   @spec absolutize_srcset(binary, (binary -> binary)) :: binary
   def absolutize_srcset(srcset, absolutize) do
-    Regex.replace(Readability.Matchers.regex(:srcset_url), srcset, fn _, p1, p2, p3 ->
-      absolutize.(p1) <> p2 <> p3
-    end)
+    Readability.Matchers.srcset_replace(srcset, fn p1, p2, p3 -> [absolutize.(p1), p2 | p3] end)
   end
 
   @doc "Readability.js removes links whose `href` starts with `javascript:` (case-sensitive)."

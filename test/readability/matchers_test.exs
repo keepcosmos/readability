@@ -122,8 +122,28 @@ defmodule Readability.MatchersTest do
     assert mismatches(for([s, e] <- cases["hash_url"], do: {s, e}), &M.hash_url?/1) == []
     assert mismatches(for([s, e] <- cases["sentence_end"], do: {s, e}), &M.sentence_end?/1) == []
 
-    srcset = &Regex.replace(M.regex(:srcset_url), &1, fn _, p1, p2, p3 -> "[" <> p1 <> "]" <> p2 <> p3 end)
+    srcset = &M.srcset_replace(&1, fn p1, p2, p3 -> ["[", p1, "]", p2 | p3] end)
     assert mismatches(for([s, e] <- cases["srcset"], do: {s, e}), srcset) == []
+  end
+
+  test "srcset_replace/2 follows the srcsetUrl regex's backtracking" do
+    show = &M.srcset_replace(&1, fn p1, p2, p3 -> ["[", p1, "|", p2, "|", p3, "]"] end)
+    assert show.("a 1x,b") == "[a| 1x|,][b||]"
+    assert show.("a 1x b") == "a 1x [b||]"
+    assert show.("a,b,c d") == "[a,b||,]c [d||]"
+    assert show.(",,x 2w ,") == "[,,x| 2w| ,]"
+    assert show.("a  \u00A0, b") == "[a||  \u00A0,] [b||]"
+    assert show.("é.jpg 1.5x") == "[é.jpg| 1.5x|]"
+    assert show.("a .x") == "[a| .x|]"
+    assert show.("a 1xy") == "a [1xy||]"
+    assert show.(", ") == "[,|| ]"
+  end
+
+  test "srcset_replace/2 is linear on a long run without a match" do
+    for input <- [String.duplicate("a", 200_000) <> " b", String.duplicate("a,", 100_000) <> "a b"] do
+      {us, _} = :timer.tc(fn -> M.srcset_replace(input, fn p1, p2, p3 -> [p1, p2 | p3] end) end)
+      assert us < 200_000, "took #{us} µs"
+    end
   end
 
   test "lower/1 returns the argument when there is nothing to change" do
