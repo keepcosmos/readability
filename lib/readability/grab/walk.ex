@@ -208,7 +208,9 @@ defmodule Readability.Grab.Walk do
   # `_isValidByline` and the byline extraction. Returns the byline text or nil.
   defp byline(el, class, id, rel, itemprop, acc, cfg) do
     if not truthy?(acc.byline) and not cfg.metadata_byline? and
-         (rel == "author" or contains?(itemprop, "author") or Matchers.byline?(class, id)) do
+         (rel == "author" or contains?(itemprop, "author") or
+            ((class != nil or id != nil) and Matchers.byline?(class, id))) and
+         nonws_below?(elem(el, 2), 100) do
       len = el |> DOM.text_content() |> Text.trim() |> Text.length()
 
       if len > 0 and len < 100 do
@@ -216,6 +218,16 @@ defmodule Readability.Grab.Walk do
       end
     end
   end
+
+  # Whether the text has fewer than `limit` non-whitespace UTF-16 units: a bound for
+  # `textContent.trim().length < limit` that stops early instead of building a large text.
+  defp nonws_below?(nodes, limit), do: nonws_left(nodes, limit) > 0
+
+  defp nonws_left(_nodes, limit) when limit <= 0, do: limit
+  defp nonws_left([], limit), do: limit
+  defp nonws_left([text | rest], limit) when is_binary(text), do: nonws_left(rest, limit - elem(Text.summary(text), 0))
+  defp nonws_left([{_, _, children, nil} | rest], limit), do: nonws_left(rest, nonws_left(children, limit))
+  defp nonws_left([{_, _, _, stats} | rest], limit), do: nonws_left(rest, limit - elem(stats, 0))
 
   defp contains?(nil, _), do: false
   defp contains?(value, part), do: :binary.match(value, part) != :nomatch
