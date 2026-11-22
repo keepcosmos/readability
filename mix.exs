@@ -15,7 +15,9 @@ defmodule Readability.Mixfile do
       test_coverage: [tool: ExCoveralls],
       package: package(),
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      # iodata with binary tails (`[a | "b"]`) is deliberate
+      dialyzer: [flags: [:no_improper_lists]]
     ]
   end
 
