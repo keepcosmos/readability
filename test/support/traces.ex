@@ -30,8 +30,17 @@ defmodule Readability.Test.Traces do
   """
   def dir(input \\ :jsdomparser), do: Path.join(@root, Map.fetch!(@inputs, input))
 
-  @doc "Whether traces have been generated."
+  @doc "Whether any traces have been generated (see `missing/1` for full coverage)."
   def available?(input \\ :jsdomparser), do: pages(input) != []
+
+  @doc """
+  The test pages (`test/fixtures/readability_js/pages`) that have no trace for `input`, sorted.
+  `test_helper.exs` enables the `:traces` tag only when this is empty for both inputs.
+  """
+  def missing(input \\ :jsdomparser) do
+    all = @root |> Path.join("test/fixtures/readability_js/pages") |> File.ls!() |> Enum.sort()
+    all -- pages(input)
+  end
 
   @doc "Pages with a trace, sorted."
   def pages(input \\ :jsdomparser) do
@@ -129,12 +138,16 @@ defmodule Readability.Test.Traces do
   @doc """
   Compares two trees (lists of nodes) or two nodes exactly: tags, attributes in order, text
   byte for byte, children counts. The 4th element slot (stats) is ignored, and 3-tuples are
-  accepted as well.
+  accepted as well. `nil` (e.g. a trace's missing article) equals only `nil`.
 
   Returns `:ok` or `{:diff, description}` for the first difference in document order, where the
   description names the location as a `tag[index]` chain from the compared root and shows both
   sides.
   """
+  def diff_trees(nil, nil), do: :ok
+  def diff_trees(nil, expected), do: {:diff, "at root: nothing vs #{summary_any(expected)} expected"}
+  def diff_trees(actual, nil), do: {:diff, "at root: #{summary_any(actual)} vs nothing expected"}
+
   def diff_trees(actual, expected) do
     case diff(List.wrap(actual), List.wrap(expected), []) do
       :ok -> :ok
@@ -207,6 +220,9 @@ defmodule Readability.Test.Traces do
     do: (nodes |> Enum.take(12) |> Enum.map_join(", ", &summary/1)) <> ", …"
 
   defp summary_list(nodes), do: Enum.map_join(nodes, ", ", &summary/1)
+
+  defp summary_any(nodes) when is_list(nodes), do: "[#{summary_list(nodes)}]"
+  defp summary_any(node), do: summary(node)
 
   defp summary(nil), do: "(nothing)"
   defp summary(text) when is_binary(text), do: inspect(truncate(text, 40))

@@ -70,4 +70,16 @@ defmodule Readability.TracesTest do
 
     assert Traces.diff_trees({"p", [], ["x"], {1, 0, 0, 0, 0, 0, 0, 0}}, {"p", [], ["x"], nil}) == :ok
   end
+
+  test "diff_trees: nil equals only nil" do
+    assert Traces.diff_trees(nil, nil) == :ok
+    assert {:diff, "at root: nothing vs [] expected"} = Traces.diff_trees(nil, [])
+    assert {:diff, "at root: [] vs nothing expected"} = Traces.diff_trees([], nil)
+    assert {:diff, "at root: <p>(0) vs nothing expected"} = Traces.diff_trees({"p", [], [], nil}, nil)
+  end
+
+  test "missing/1 lists the test pages without a trace" do
+    assert Traces.missing(:jsdomparser) == []
+    assert Traces.missing(:lexbor) == []
+  end
 end
