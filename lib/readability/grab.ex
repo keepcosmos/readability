@@ -9,7 +9,8 @@ defmodule Readability.Grab do
   # from the previous attempt's post-walk tree with `<body>`'s children replaced by the prepared
   # ones with adjacent text nodes merged (the serialize/re-parse round trip merges them); what
   # the walk did outside `<body>` stays. No re-parse, no serialization: the merged children are
-  # computed once.
+  # computed once. `<body>` itself survives too, with its `readability` object: once it has been
+  # a candidate, it is never one again (its score keeps growing, unread).
 
   alias Readability.{DOM, Flags}
   alias Readability.Grab.{Score, Select, Walk}
