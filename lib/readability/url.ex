@@ -140,11 +140,12 @@ defmodule Readability.URL do
   end
 
   defp strip_tab_newline(s) do
-    case :binary.match(s, ["\t", "\n", "\r"]) do
-      :nomatch -> s
-      _ -> :binary.replace(s, ["\t", "\n", "\r"], "", [:global])
-    end
+    if tab_newline?(s), do: :binary.replace(s, ["\t", "\n", "\r"], "", [:global]), else: s
   end
+
+  defp tab_newline?(<<c, _::binary>>) when c == ?\t or c == ?\n or c == ?\r, do: true
+  defp tab_newline?(<<_, r::binary>>), do: tab_newline?(r)
+  defp tab_newline?(<<>>), do: false
 
   # scheme start state + scheme state
   defp scheme(<<c, r::binary>>, input, <<>>) when c in ?a..?z or c in ?A..?Z,
@@ -238,12 +239,11 @@ defmodule Readability.URL do
     {auth, rest} = split_authority(input, special, 0)
 
     {url, hostport} =
-      case :binary.matches(auth, "@") do
-        [] ->
+      case last_at(auth, 0, nil) do
+        nil ->
           {url, auth}
 
-        matches ->
-          {at, 1} = List.last(matches)
+        at ->
           hostport = binary_part(auth, at + 1, byte_size(auth) - at - 1)
           if hostport == "", do: fail()
           {user, pass} = userinfo(binary_part(auth, 0, at))
@@ -256,6 +256,10 @@ defmodule Readability.URL do
     url = %{url | host: parse_host(host, special), port: parse_port(port, url.scheme)}
     {:ok, path_start(rest, url)}
   end
+
+  defp last_at(<<"@", r::binary>>, i, _at), do: last_at(r, i + 1, i)
+  defp last_at(<<_, r::binary>>, i, at), do: last_at(r, i + 1, at)
+  defp last_at(<<>>, _i, at), do: at
 
   defp split_authority(input, special, i) do
     case input do
@@ -412,25 +416,35 @@ defmodule Readability.URL do
   defp shorten([seg], "file") when byte_size(seg) == 2, do: if(normalized_drive_letter?(seg), do: [seg], else: [])
   defp shorten([_ | rest], _scheme), do: rest
 
-  # path state: `url.path` is the reversed segment list built so far
-  defp path_state(input, url), do: path_seg(input, url, special?(url.scheme), <<>>)
+  # path state: `url.path` is the reversed segment list built so far. A segment is scanned as
+  # `seg` (the input from its first byte) and its length `i`; `enc?` tells whether a byte in it
+  # needs percent-encoding, so the common segment is a sub-binary of the input.
+  defp path_state(input, url), do: path_seg(input, input, 0, false, url, special?(url.scheme))
 
-  defp path_seg(<<"/", r::binary>>, url, special, buf), do: path_seg(r, end_segment(url, buf, true), special, <<>>)
+  defp path_seg(<<"/", r::binary>>, seg, i, enc?, url, special),
+    do: path_seg(r, r, 0, false, end_segment(url, segment(seg, i, enc?), true), special)
 
-  defp path_seg(<<"\\", r::binary>>, url, true, buf), do: path_seg(r, end_segment(url, buf, true), true, <<>>)
+  defp path_seg(<<"\\", r::binary>>, seg, i, enc?, url, true),
+    do: path_seg(r, r, 0, false, end_segment(url, segment(seg, i, enc?), true), true)
 
-  defp path_seg(<<"?", r::binary>>, url, _special, buf), do: query_state(r, end_segment(url, buf, false))
+  defp path_seg(<<"?", r::binary>>, seg, i, enc?, url, _special),
+    do: query_state(r, end_segment(url, segment(seg, i, enc?), false))
 
-  defp path_seg(<<"#", r::binary>>, url, _special, buf),
-    do: %{end_segment(url, buf, false) | fragment: encode(r, :fragment)}
+  defp path_seg(<<"#", r::binary>>, seg, i, enc?, url, _special),
+    do: %{end_segment(url, segment(seg, i, enc?), false) | fragment: encode(r, :fragment)}
 
-  defp path_seg(<<>>, url, _special, buf), do: end_segment(url, buf, false)
+  defp path_seg(<<>>, seg, i, enc?, url, _special), do: end_segment(url, segment(seg, i, enc?), false)
 
-  defp path_seg(<<c, r::binary>>, url, special, buf) do
-    if encode?(c, :path),
-      do: path_seg(r, url, special, <<buf::binary, ?%, hex(c >>> 4), hex(c &&& 15)>>),
-      else: path_seg(r, url, special, <<buf::binary, c>>)
-  end
+  # not in the path percent-encode set
+  defp path_seg(<<c, r::binary>>, seg, i, enc?, url, special)
+       when c > 0x20 and c < 0x7F and c != ?" and c != ?< and c != ?> and c != ?^ and c != ?` and c != ?{ and
+              c != ?},
+       do: path_seg(r, seg, i + 1, enc?, url, special)
+
+  defp path_seg(<<_, r::binary>>, seg, i, _enc?, url, special), do: path_seg(r, seg, i + 1, true, url, special)
+
+  defp segment(seg, i, false), do: binary_part(seg, 0, i)
+  defp segment(seg, i, true), do: enc(binary_part(seg, 0, i), :path, <<>>)
 
   defp end_segment(url, buf, slash?) do
     cond do
@@ -450,9 +464,14 @@ defmodule Readability.URL do
     end
   end
 
-  defp single_dot?(s), do: s == "." or (byte_size(s) == 3 and lower(s) == "%2e")
+  defp single_dot?("."), do: true
+  defp single_dot?(<<"%2", e>>) when e == ?e or e == ?E, do: true
+  defp single_dot?(_), do: false
 
-  defp double_dot?(s) when byte_size(s) in [2, 4, 6], do: lower(s) in ["..", ".%2e", "%2e.", "%2e%2e"]
+  defp double_dot?(".."), do: true
+  defp double_dot?(<<".%2", e>>) when e == ?e or e == ?E, do: true
+  defp double_dot?(<<"%2", e, ".">>) when e == ?e or e == ?E, do: true
+  defp double_dot?(<<"%2", e, "%2", f>>) when (e == ?e or e == ?E) and (f == ?e or f == ?E), do: true
   defp double_dot?(_), do: false
 
   defp lower(s), do: for(<<c <- s>>, into: <<>>, do: <<if(c in ?A..?Z, do: c + 32, else: c)>>)
@@ -501,6 +520,22 @@ defmodule Readability.URL do
   end
 
   defp parse_host(host, true) do
+    if plain_host?(host, true, nil, nil), do: host, else: parse_domain(host)
+  end
+
+  # A host of lower-case letters, digits, "-" and "." with no "xn--" label and whose last label
+  # starts with a letter (so it is not an IPv4 address) comes out of the host parser unchanged.
+  # Arguments: at a label start?, first byte of the current label, of the last finished label.
+  defp plain_host?(<<"xn--", _::binary>>, true, _cur, _last), do: false
+  defp plain_host?(<<?., r::binary>>, _start, cur, _last), do: plain_host?(r, true, nil, cur)
+
+  defp plain_host?(<<c, r::binary>>, start, cur, last) when c in ?a..?z or c in ?0..?9 or c == ?-,
+    do: plain_host?(r, false, if(start, do: c, else: cur), last)
+
+  defp plain_host?(<<>>, _start, cur, last), do: (cur || last) in ?a..?z
+  defp plain_host?(_, _start, _cur, _last), do: false
+
+  defp parse_domain(host) do
     domain = host |> percent_decode() |> domain_to_ascii()
 
     for <<c <- domain>>, c in @forbidden_host or c < 0x20 or c == ?% or c == 0x7F, do: fail()
