@@ -109,33 +109,35 @@ defmodule Readability.Clean.Conditional do
     do: {p + p2, i + i2, l + l2, n + n2, e + e2, v or v2, h + h2, x or x2, s + s2, d or d2}
 
   # The element's own contribution to its ancestors' counts.
-  defp own({p, i, l, n, e, v, h, x, s, d}, {"p", _, _, _} = el, _ctx),
-    do: textish({p + 1, i, l, n, e, v, h, x, s, d}, el)
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {"img", _, _, _} = el, _ctx),
-    do: textish({p, i + 1, l, n, e, v, h, x, s, d}, el)
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {"li", _, _, _} = el, _ctx),
-    do: textish({p, i, l + 1, n, e, v, h, x, s, d}, el)
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {"input", _, _, _}, _ctx), do: {p, i, l, n + 1, e, v, h, x, s, d}
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {tag, attrs, _, _}, ctx) when tag in ["object", "embed", "iframe"],
-    do: {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {tag, _, _, _} = el, _ctx) when tag in ["h1", "h2", "h3", "h4", "h5", "h6"],
-    do: {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {tag, _, _, _} = el, _ctx) when tag in ["ul", "ol"],
-    do: textish({p, i, l, n, e, v, h, x, s + DOM.inner_text_length(el), d}, el)
-
-  defp own({p, i, l, n, e, v, h, x, s, d}, {"table", attrs, _, _} = el, _ctx),
-    do: textish({p, i, l, n, e, v, h, x, s, d or data_table?(attrs)}, el)
-
-  defp own(acc, {tag, _, _, _} = el, _ctx) when tag in ["span", "td", "blockquote", "dl", "div", "pre"],
-    do: textish(acc, el)
-
-  defp own(acc, _el, _ctx), do: acc
+  # One `case` on the tag (a decision tree), see `late_junk?/3` in Readability.Clean.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
+  defp own({p, i, l, n, e, v, h, x, s, d} = acc, {tag, attrs, _, _} = el, ctx) do
+    case tag do
+      "p" -> textish({p + 1, i, l, n, e, v, h, x, s, d}, el)
+      "img" -> textish({p, i + 1, l, n, e, v, h, x, s, d}, el)
+      "li" -> textish({p, i, l + 1, n, e, v, h, x, s, d}, el)
+      "input" -> {p, i, l, n + 1, e, v, h, x, s, d}
+      "object" -> {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
+      "embed" -> {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
+      "iframe" -> {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
+      "h1" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+      "h2" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+      "h3" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+      "h4" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+      "h5" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+      "h6" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+      "ul" -> textish({p, i, l, n, e, v, h, x, s + DOM.inner_text_length(el), d}, el)
+      "ol" -> textish({p, i, l, n, e, v, h, x, s + DOM.inner_text_length(el), d}, el)
+      "table" -> textish({p, i, l, n, e, v, h, x, s, d or data_table?(attrs)}, el)
+      "span" -> textish(acc, el)
+      "td" -> textish(acc, el)
+      "blockquote" -> textish(acc, el)
+      "dl" -> textish(acc, el)
+      "div" -> textish(acc, el)
+      "pre" -> textish(acc, el)
+      _ -> acc
+    end
+  end
 
   defp textish({_, _, _, _, _, _, _, true, _, _} = acc, _el), do: acc
   defp textish(acc, el), do: if(DOM.blank?(el), do: acc, else: put_elem(acc, 7, true))

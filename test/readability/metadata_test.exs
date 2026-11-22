@@ -163,8 +163,7 @@ defmodule Readability.MetadataTest do
                byline: nil,
                excerpt: nil,
                site_name: "S & T",
-               published_time: "2021",
-               lang: "en"
+               published_time: "2021"
              }
     end
 
@@ -189,18 +188,7 @@ defmodule Readability.MetadataTest do
         |> doc()
         |> Metadata.extract(%{title: "LD &amp; co", byline: "B", date_published: "2020"})
 
-      assert %{title: "LD & co", byline: "B", published_time: "2020", lang: nil} = metadata
-    end
-
-    test "returned binaries do not reference the parser's binaries" do
-      metadata =
-        extract(
-          ~s(<title>#{String.duplicate("x", 200)}</title><meta name="author" content=" #{String.duplicate("y", 100)} ">)
-        )
-
-      for {_, value} <- metadata, is_binary(value) do
-        assert :binary.referenced_byte_size(value) == byte_size(value)
-      end
+      assert %{title: "LD & co", byline: "B", published_time: "2020"} = metadata
     end
   end
 end

@@ -1,5 +1,5 @@
 defmodule Readability.MetadataTraceTest do
-  @moduledoc "`Readability.Metadata` against the lexbor golden traces (`json_ld`, `metadata`, `_articleTitle`, `lang`)."
+  @moduledoc "`Readability.Metadata` against the lexbor golden traces (`json_ld`, `metadata`, `_articleTitle`)."
   use ExUnit.Case, async: true
 
   alias Readability.Metadata
@@ -48,14 +48,7 @@ defmodule Readability.MetadataTraceTest do
       for {_, key} <- @metadata_keys, metadata[key] != expected[key] do
         "#{key}: #{inspect(metadata[key])} != #{inspect(expected[key])}"
       end,
-      if(metadata.title != trace["article_title"], do: "article_title: #{inspect(trace["article_title"])}", else: []),
-      if(metadata.lang != trace["article_lang"],
-        do: "lang: #{inspect(metadata.lang)} != #{inspect(trace["article_lang"])}",
-        else: []
-      ),
-      for {key, value} <- metadata, is_binary(value), :binary.referenced_byte_size(value) != byte_size(value) do
-        "#{key} references a larger binary"
-      end
+      if(metadata.title != trace["article_title"], do: "article_title: #{inspect(trace["article_title"])}", else: [])
     ])
   end
 end

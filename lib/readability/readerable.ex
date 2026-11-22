@@ -281,14 +281,15 @@ defmodule Readability.Readerable do
   defp candidate?([]), do: true
 
   defp candidate?(attrs) do
-    class = attr(attrs, "class")
-    visible?(attrs, class) and not Matchers.unlikely_candidate?(class, attr(attrs, "id"))
+    class = DOM.attr_value(attrs, "class")
+    visible?(attrs, class) and not Matchers.unlikely_candidate?(class, DOM.attr_value(attrs, "id"))
   end
 
   # `isNodeVisible`
   defp visible?(attrs, class) do
-    not display_none?(attr(attrs, "style")) and not :lists.keymember("hidden", 1, attrs) and
-      (attr(attrs, "aria-hidden") != "true" or (class != nil and :binary.match(class, "fallback-image") != :nomatch))
+    not display_none?(DOM.attr_value(attrs, "style")) and not :lists.keymember("hidden", 1, attrs) and
+      (DOM.attr_value(attrs, "aria-hidden") != "true" or
+         (class != nil and :binary.match(class, "fallback-image") != :nomatch))
   end
 
   defp display_none?(nil), do: false
@@ -312,11 +313,4 @@ defmodule Readability.Readerable do
   # UTF-16 unit takes at least one byte of UTF-8)
   defp text_length(text, min_length) when byte_size(text) < min_length, do: {byte_size(text), 0}
   defp text_length(text, _min_length), do: {byte_size(text), text |> Text.trim() |> Text.length()}
-
-  defp attr(attrs, name) do
-    case :lists.keyfind(name, 1, attrs) do
-      {_, value} -> value
-      false -> nil
-    end
-  end
 end

@@ -244,14 +244,10 @@ defmodule Readability.Grab.Walk do
   defp find_itemprop_name([text | rest]) when is_binary(text), do: find_itemprop_name(rest)
 
   defp find_itemprop_name([{_, attrs, children, _} = el | rest]) do
-    if contains?(attr(attrs, "itemprop"), "name"),
+    if contains?(DOM.attr_value(attrs, "itemprop"), "name"),
       do: el,
       else: find_itemprop_name(children) || find_itemprop_name(rest)
   end
-
-  defp attr([], _name), do: nil
-  defp attr([{name, value} | _], name), do: value
-  defp attr([_ | rest], name), do: attr(rest, name)
 
   # `_headerDuplicatesTitle`
   defp header_duplicates_title?({tag, _, _, _} = el, title) when tag == "h1" or tag == "h2" do

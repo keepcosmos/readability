@@ -86,7 +86,7 @@ defmodule Readability.Grab.Score do
   @spec initial_score(DOM.tag(), DOM.attrs(), boolean()) :: integer()
   def initial_score(tag, attrs, weight?) do
     if weight?,
-      do: tag_score(tag) + Matchers.class_weight(attr(attrs, "class"), attr(attrs, "id")),
+      do: tag_score(tag) + Matchers.class_weight(DOM.attr_value(attrs, "class"), DOM.attr_value(attrs, "id")),
       else: tag_score(tag)
   end
 
@@ -105,10 +105,6 @@ defmodule Readability.Grab.Score do
   end
 
   defp tag_score(_), do: 0
-
-  defp attr([], _name), do: nil
-  defp attr([{name, value} | _], name), do: value
-  defp attr([_ | rest], name), do: attr(rest, name)
 
   # ---------------------------------------------------------------------------------------------
   # `_getLinkDensity` of every candidate. Without `#` links below a candidate it comes from stats
@@ -152,7 +148,7 @@ defmodule Readability.Grab.Score do
 
   # `#` links among the descendants, and some text (the density of an empty element is 0).
   defp hash_links_below?({tag, attrs, _, {nw, _, _, _, _, _, _, hash_links}}) do
-    own = if tag == "a" and Text.hash_url?(attr(attrs, "href")), do: 1, else: 0
+    own = if tag == "a" and Text.hash_url?(DOM.attr_value(attrs, "href")), do: 1, else: 0
     nw > 0 and hash_links - own > 0
   end
 
@@ -200,7 +196,7 @@ defmodule Readability.Grab.Score do
 
   defp add_link(open, {_, attrs, _, _} = a) do
     length = DOM.inner_text_length(a)
-    term = if Text.hash_url?(attr(attrs, "href")), do: length * 0.3, else: length
+    term = if Text.hash_url?(DOM.attr_value(attrs, "href")), do: length * 0.3, else: length
     for {path, sum} <- open, do: {path, sum + term}
   end
 

@@ -221,9 +221,11 @@ defmodule Readability.DOM do
   @spec attr(el(), binary() | atom()) :: term()
   def attr({_, attrs, _, _}, name), do: attr_value(attrs, name)
 
-  defp attr_value([], _name), do: nil
-  defp attr_value([{name, value} | _], name), do: value
-  defp attr_value([_ | rest], name), do: attr_value(rest, name)
+  @doc "`attr/2` on an attribute list."
+  @spec attr_value([{binary() | atom(), term()}], binary()) :: binary() | nil
+  def attr_value([], _name), do: nil
+  def attr_value([{name, value} | _], name), do: value
+  def attr_value([_ | rest], name), do: attr_value(rest, name)
 
   @doc "Element children (`el.children`)."
   @spec element_children(el()) :: [el()]

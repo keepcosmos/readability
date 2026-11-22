@@ -402,16 +402,11 @@ defmodule Readability.Text do
   upper-case ASCII letter.
   """
   @spec lower(binary()) :: binary()
-  def lower(bin) when is_binary(bin) do
-    case up(bin, 0) do
-      nil -> bin
-      pos -> lo(binary_part(bin, pos, byte_size(bin) - pos), binary_part(bin, 0, pos))
-    end
-  end
+  def lower(bin) when is_binary(bin), do: if(upper?(bin), do: lo(bin, <<>>), else: bin)
 
-  defp up(<<c, _::binary>>, pos) when c >= ?A and c <= ?Z, do: pos
-  defp up(<<_, r::binary>>, pos), do: up(r, pos + 1)
-  defp up(<<>>, _pos), do: nil
+  defp upper?(<<c, _::binary>>) when c >= ?A and c <= ?Z, do: true
+  defp upper?(<<_, r::binary>>), do: upper?(r)
+  defp upper?(<<>>), do: false
 
   defp lo(<<c, r::binary>>, acc) when c >= ?A and c <= ?Z, do: lo(r, <<acc::binary, c + 32>>)
   defp lo(<<c, r::binary>>, acc), do: lo(r, <<acc::binary, c>>)

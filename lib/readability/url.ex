@@ -225,12 +225,11 @@ defmodule Readability.URL do
     {auth, rest} = split_authority(input, special)
 
     {url, hostport} =
-      case :binary.matches(auth, "@") do
-        [] ->
+      case last_at(auth, 0, nil) do
+        nil ->
           {url, auth}
 
-        ats ->
-          {at, 1} = List.last(ats)
+        at ->
           hostport = binary_part(auth, at + 1, byte_size(auth) - at - 1)
           if hostport == "", do: fail()
           {user, pass} = userinfo(binary_part(auth, 0, at))
@@ -244,13 +243,18 @@ defmodule Readability.URL do
     {:ok, path_start(rest, url)}
   end
 
+  defp last_at(<<"@", r::binary>>, i, _at), do: last_at(r, i + 1, i)
+  defp last_at(<<_, r::binary>>, i, at), do: last_at(r, i + 1, at)
+  defp last_at(<<>>, _i, at), do: at
+
   # The authority ends at the first "/", "?" or "#" ("\\" too in special URLs).
-  defp split_authority(input, special) do
-    case :binary.match(input, if(special, do: ["/", "?", "#", "\\"], else: ["/", "?", "#"])) do
-      {i, _} -> {binary_part(input, 0, i), binary_part(input, i, byte_size(input) - i)}
-      :nomatch -> {input, <<>>}
-    end
-  end
+  defp split_authority(input, special), do: split_authority(input, input, special, 0)
+
+  defp split_authority(<<c, _::binary>>, input, special, i) when c in ~c"/?#" or (special and c == ?\\),
+    do: {binary_part(input, 0, i), binary_part(input, i, byte_size(input) - i)}
+
+  defp split_authority(<<_, r::binary>>, input, special, i), do: split_authority(r, input, special, i + 1)
+  defp split_authority(<<>>, input, _special, _i), do: {input, <<>>}
 
   defp userinfo(info) do
     case :binary.split(info, ":") do
@@ -485,10 +489,19 @@ defmodule Readability.URL do
   # standard, non-ASCII names aren't converted to Punycode (IDNA) and numbers aren't parsed as
   # IPv4 addresses ("0x7f.1" stays as it is). Readability.js only needs relative links to resolve.
   defp parse_host(host, true) do
-    host = host |> percent_decode() |> Readability.Text.lower()
-    if host == "" or not String.valid?(host) or forbidden_domain?(host), do: fail()
-    host
+    if plain_host?(host) do
+      host
+    else
+      host = host |> percent_decode() |> Readability.Text.lower()
+      if host == "" or not String.valid?(host) or forbidden_domain?(host), do: fail()
+      host
+    end
   end
+
+  # Lower-case letters, digits, "-" and "." only: nothing to do (the common case).
+  defp plain_host?(<<c, r::binary>>) when c in ?a..?z or c in ?0..?9 or c == ?- or c == ?., do: plain_host?(r)
+  defp plain_host?(<<_, _::binary>>), do: false
+  defp plain_host?(<<>>), do: true
 
   defp forbidden_domain?(<<c, _::binary>>) when c in @forbidden_host or c < 0x20 or c == ?% or c == 0x7F, do: true
   defp forbidden_domain?(<<_, r::binary>>), do: forbidden_domain?(r)

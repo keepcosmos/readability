@@ -181,7 +181,7 @@ defmodule Readability.Grab do
   end
 
   defp result(article, last, reset?, base_href) do
-    %{article: article, byline: last.byline, dir: dir(last, reset?), lang: copy(last.lang), base_href: base_href}
+    %{article: article, byline: last.byline, dir: dir(last, reset?), lang: last.lang, base_href: base_href}
   end
 
   # The attempt's tree after `page.innerHTML = pageCacheHtml`
@@ -201,7 +201,6 @@ defmodule Readability.Grab do
     |> :lists.reverse()
     |> Enum.find_value({:base, nil}, fn {path, href} -> if not moved?(path, moved), do: {:base, href} end)
     |> elem(1)
-    |> copy()
   end
 
   # {reversed path, href} of every <base>, last first
@@ -216,9 +215,6 @@ defmodule Readability.Grab do
 
   defp moved?([], _moved), do: false
   defp moved?([_ | parent] = path, moved), do: path in moved or moved?(parent, moved)
-
-  defp copy(nil), do: nil
-  defp copy(bin), do: :binary.copy(bin)
 
   # `_articleDir`: the first `dir` attribute on [parentOfTopCandidate, topCandidate, ...ancestors
   # of parentOfTopCandidate]. After a reset of <body>, the old children of <body> are detached, so
@@ -238,7 +234,7 @@ defmodule Readability.Grab do
 
     Enum.find_value(chain, fn attrs ->
       case List.keyfind(attrs, "dir", 0) do
-        {_, dir} when dir != "" -> :binary.copy(dir)
+        {_, dir} when dir != "" -> dir
         _ -> nil
       end
     end)

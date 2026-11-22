@@ -22,8 +22,7 @@ defmodule Readability.Metadata do
           byline: binary() | nil,
           excerpt: binary() | nil,
           site_name: binary() | nil,
-          published_time: binary() | nil,
-          lang: binary() | nil
+          published_time: binary() | nil
         }
 
   # ---------------------------------------------------------------------------------------------
@@ -273,8 +272,7 @@ defmodule Readability.Metadata do
       byline: output(byline),
       excerpt: output(excerpt),
       site_name: output(site_name),
-      published_time: output(published_time),
-      lang: copy(page.lang)
+      published_time: output(published_time)
     }
   end
 
@@ -282,10 +280,7 @@ defmodule Readability.Metadata do
   defp js_or([last]), do: last
   defp js_or([value | rest]), do: if(truthy?(value), do: value, else: js_or(rest))
 
-  defp output(value), do: value |> Text.unescape_html_entities() |> copy()
-
-  defp copy(nil), do: nil
-  defp copy(bin), do: :binary.copy(bin)
+  defp output(value), do: Text.unescape_html_entities(value)
 
   # `values[name] = content.trim()` for every `<meta>` whose property or name matches; later ones win.
   defp meta_values(metas) do
@@ -309,7 +304,7 @@ defmodule Readability.Metadata do
   # ---------------------------------------------------------------------------------------------
 
   # One pass over the document: `<meta>` elements, `document.title`, `<h1>`s and `<h1>`/`<h2>`s
-  # (all in document order) and `<html lang>`.
+  # (all in document order).
   defp collect(doc) do
     {metas, title, h1s, headings} = collect_list(doc, {[], nil, [], []})
 
@@ -317,8 +312,7 @@ defmodule Readability.Metadata do
       metas: :lists.reverse(metas),
       title: title || "",
       h1s: :lists.reverse(h1s),
-      headings: :lists.reverse(headings),
-      lang: Enum.find_value(doc, fn node -> match?({"html", _, _, _}, node) && DOM.attr(node, "lang") end)
+      headings: :lists.reverse(headings)
     }
   end
 

@@ -331,13 +331,34 @@ defmodule Readability.Clean do
   end
 
   # _clean(e, "object" | "embed" | "footer" | "link" | "aside")
-  defp junk?({tag, attrs, _, _}, video) when tag in ["object", "embed"], do: not video_attr?(attrs, video)
-  defp junk?({tag, _, _, _}, _video), do: tag in ["footer", "link", "aside"]
+  defp junk?({tag, attrs, _, _}, video) do
+    case tag do
+      "object" -> not video_attr?(attrs, video)
+      "embed" -> not video_attr?(attrs, video)
+      "footer" -> true
+      "link" -> true
+      "aside" -> true
+      _ -> false
+    end
+  end
 
   # _clean(e, "iframe" | "input" | "textarea" | "select" | "button"), _cleanHeaders(e)
-  defp late_junk?({"iframe", attrs, _, _}, video, _weight?), do: not video_attr?(attrs, video)
-  defp late_junk?({tag, _, _, _} = el, _video, weight?) when tag in ["h1", "h2"], do: weight? and class_weight(el) < 0
-  defp late_junk?({tag, _, _, _}, _video, _weight?), do: tag in ["input", "textarea", "select", "button"]
+  # A `case` on the tag is one decision tree on the binary; clauses with `tag in [...]` guards
+  # compare one by one (about 10% slower `_prepArticle`, scripts/profile.exs). Same in `own/3` of
+  # Readability.Clean.Conditional.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
+  defp late_junk?({tag, attrs, _, _} = el, video, weight?) do
+    case tag do
+      "iframe" -> not video_attr?(attrs, video)
+      "input" -> true
+      "textarea" -> true
+      "select" -> true
+      "button" -> true
+      "h1" -> weight? and class_weight(el) < 0
+      "h2" -> weight? and class_weight(el) < 0
+      _ -> false
+    end
+  end
 
   # Allow youtube and vimeo videos through as people usually want to see those. (The
   # `innerHTML` check behind `tagName === "object"` is dead code in JS, design §4.4.)
