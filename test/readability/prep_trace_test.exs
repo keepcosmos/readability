@@ -7,7 +7,7 @@ defmodule Readability.PrepTraceTest do
 
   @moduletag :traces
 
-  defp prep(doc), do: doc |> Prep.unwrap_noscript_images() |> Prep.remove_scripts() |> Prep.prep_document()
+  defp prep(doc), do: doc |> Prep.unwrap_noscript_images() |> Prep.prep_document()
 
   test "input -> prepped is exact on every page" do
     failures =

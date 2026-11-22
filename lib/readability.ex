@@ -75,7 +75,7 @@ defmodule Readability do
 
     doc = Prep.unwrap_noscript_images(doc)
     json_ld = if opts.disable_json_ld, do: %{}, else: Metadata.json_ld(doc)
-    doc = doc |> Prep.remove_scripts() |> Prep.prep_document()
+    doc = Prep.prep_document(doc)
     metadata = Metadata.extract(doc, json_ld)
 
     ctx = Map.merge(ctx, %{article_title: metadata.title, metadata_byline: metadata.byline})

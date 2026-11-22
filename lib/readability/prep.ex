@@ -2,9 +2,9 @@ defmodule Readability.Prep do
   @moduledoc false
   # Document preparation: Readability.js's `_unwrapNoscriptImages`, `_removeScripts` and
   # `_prepDocument` (design §3, §4.3). `parse()` reads JSON-LD between the first two, so they stay
-  # separate functions:
+  # separate functions; `prep_document/1` does `_removeScripts` too:
   #
-  #     doc |> unwrap_noscript_images() |> (JSON-LD) |> remove_scripts() |> prep_document()
+  #     doc |> unwrap_noscript_images() |> (JSON-LD) |> prep_document()
   #
   # Input is a document tree from `DOM.from_lazy/1` (stats `nil`); output too. Every pass returns
   # unchanged subtrees as they are.
@@ -20,7 +20,7 @@ defmodule Readability.Prep do
   image, then, for every `<noscript>` holding a single image whose previous element sibling is a
   single image too, replaces that sibling with the noscript's content (keeping the old image's
   `src`/`srcset`/image-URL attributes, as `data-old-*` where they clash). The `<noscript>`
-  elements stay; `remove_scripts/1` drops them.
+  elements stay; `prep_document/1` drops them.
   """
   @spec unwrap_noscript_images(DOM.tree()) :: DOM.tree()
   def unwrap_noscript_images(doc) do
@@ -145,34 +145,18 @@ defmodule Readability.Prep do
   end
 
   # ---------------------------------------------------------------------------------------------
-  # _removeScripts
-  # ---------------------------------------------------------------------------------------------
-
-  @doc "`_removeScripts(doc)`: removes every `<script>` and `<noscript>` element."
-  @spec remove_scripts(DOM.tree()) :: DOM.tree()
-  def remove_scripts(doc) do
-    {doc, nil} =
-      DOM.remove_preorder(doc, nil, fn
-        {tag, _, _, _}, _anc, nil when tag == "script" or tag == "noscript" -> {:remove, nil}
-        _el, _anc, nil -> {:cont, nil}
-      end)
-
-    doc
-  end
-
-  # ---------------------------------------------------------------------------------------------
-  # _prepDocument
+  # _removeScripts, _prepDocument
   # ---------------------------------------------------------------------------------------------
 
   @doc """
-  `_prepDocument()`: removes `<style>` elements, replaces chains of two or more `<br>` in
-  `<body>` with a `<p>` holding the phrasing content that follows (`_replaceBrs`), and renames
-  `<font>` to `<span>`.
+  `_removeScripts()` then `_prepDocument()`: removes `<script>`, `<noscript>` and `<style>`
+  elements, replaces chains of two or more `<br>` in `<body>` with a `<p>` holding the phrasing
+  content that follows (`_replaceBrs`), and renames `<font>` to `<span>`.
 
-  One traversal does all three. It is equivalent to the three JS passes because:
+  One traversal does all four. It is equivalent to the JS passes because:
 
-    * each child list has its `<style>` children dropped before it is looked at, and the
-      phrasing test treats `<style>` descendants of `a`/`del`/`ins` as absent;
+    * each child list has its `<script>`, `<noscript>` and `<style>` children dropped before it
+      is looked at, and the phrasing test treats such descendants of `a`/`del`/`ins` as absent;
     * `_replaceBrs` iterates a document-order snapshot, so when a `<br>` is processed its
       following siblings are unprocessed: here they are tested before they are recursed into;
     * `<font>` is renamed after its children are processed, and a `<font>` is only ever
@@ -188,17 +172,20 @@ defmodule Readability.Prep do
 
   # Returns {:same | new_list, made_p?}; made_p? says a <br> chain became a <p> in this list.
   defp prep_children(list, body?) do
-    case strip_styles(list) do
+    case strip(list) do
       :same -> prep_list(list, body?)
       list -> with {:same, made_p} <- prep_list(list, body?), do: {list, made_p}
     end
   end
 
-  defp strip_styles([]), do: :same
-  defp strip_styles([{"style", _, _, _} | rest]), do: with(:same <- strip_styles(rest), do: rest)
+  # Drops the <script>, <noscript> and <style> elements of a list.
+  defp strip([]), do: :same
 
-  defp strip_styles([node | rest]) do
-    case strip_styles(rest) do
+  defp strip([{tag, _, _, _} | rest]) when tag in ["script", "noscript", "style"],
+    do: with(:same <- strip(rest), do: rest)
+
+  defp strip([node | rest]) do
+    case strip(rest) do
       :same -> :same
       rest -> [node | rest]
     end
@@ -301,12 +288,12 @@ defmodule Readability.Prep do
   defp next_node([node | _]), do: node
   defp next_node([]), do: nil
 
-  # `_isPhrasingContent` on a node whose <style> descendants are still there (but already removed
-  # in JS): only the `a`/`del`/`ins` recursion looks at descendants.
+  # `_isPhrasingContent` on a node whose <script>, <noscript> and <style> descendants are still
+  # there (but already removed in JS): only the `a`/`del`/`ins` recursion looks at descendants.
   defp phrasing?({tag, _, children, _}) when tag in ["a", "del", "ins"], do: all_phrasing?(children)
   defp phrasing?(node), do: DOM.phrasing?(node)
 
   defp all_phrasing?([]), do: true
-  defp all_phrasing?([{"style", _, _, _} | rest]), do: all_phrasing?(rest)
+  defp all_phrasing?([{tag, _, _, _} | rest]) when tag in ["script", "noscript", "style"], do: all_phrasing?(rest)
   defp all_phrasing?([node | rest]), do: phrasing?(node) and all_phrasing?(rest)
 end

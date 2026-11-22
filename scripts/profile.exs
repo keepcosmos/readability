@@ -102,7 +102,7 @@ sample = fn html ->
   {from_lazy, doc} = t.(fn -> DOM.from_lazy(tree) end)
   {noscript, doc} = t.(fn -> Prep.unwrap_noscript_images(doc) end)
   {json_ld_ns, json_ld} = t.(fn -> Metadata.json_ld(doc) end)
-  {prep, doc} = t.(fn -> doc |> Prep.remove_scripts() |> Prep.prep_document() end)
+  {prep, doc} = t.(fn -> Prep.prep_document(doc) end)
   {metadata_ns, metadata} = t.(fn -> Metadata.extract(doc, json_ld) end)
   ctx = %{article_title: metadata.title, metadata_byline: metadata.byline}
 

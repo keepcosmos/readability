@@ -17,7 +17,6 @@ defmodule Readability.PrepPostProcessTest do
   defp prep(html) do
     parse("<html><head></head><body>" <> html <> "</body></html>")
     |> Prep.unwrap_noscript_images()
-    |> Prep.remove_scripts()
     |> Prep.prep_document()
     |> body()
     |> Serializer.inner_html()
