@@ -13,4 +13,7 @@ defmodule TestHelper do
   end
 end
 
-ExUnit.start()
+# Golden traces (scripts/traces.sh) are generated locally, never committed; skip their tests
+# when they're missing.
+traces? = Readability.Test.Traces.available?(:jsdomparser) and Readability.Test.Traces.available?(:lexbor)
+ExUnit.start(exclude: if(traces?, do: [], else: [:traces]))
