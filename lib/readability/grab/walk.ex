@@ -47,35 +47,33 @@ defmodule Readability.Grab.Walk do
   defp truthy?(_), do: true
 
   # Children of one node, left to right. `i` is the index in the output list (removed elements
-  # don't count, text nodes do), so `[i | path]` is final when the child is entered. `text_path`:
-  # see `visit/6`.
+  # don't count, text nodes do), so `[i | path]` is final when the child is entered.
+  #
+  # `text_path` is what an ancestor's emptiness check learned: the elements, from a child of the
+  # current parent down, on the way to the first non-blank text below that ancestor (all of them
+  # non-blank). An element found at its head needs no scan, and its children get the tail.
+  # Without it, the checks of nested elements rescan the same subtree: quadratic in the depth.
   defp walk_list([], _anc, _path, _i, out, acc, _cfg, _text_path), do: {out, acc}
 
   defp walk_list([text | rest], anc, path, i, out, acc, cfg, text_path) when is_binary(text),
     do: walk_list(rest, anc, path, i + 1, [text | out], acc, cfg, text_path)
 
   defp walk_list([el | rest], anc, path, i, out, acc, cfg, text_path) do
-    case visit(el, anc, [i | path], acc, cfg, text_path) do
+    case visit(el, anc, [i | path], acc, cfg, below(el, text_path)) do
       {:removed, acc} -> walk_list(rest, anc, path, i, out, acc, cfg, text_path)
       {node, acc} -> walk_list(rest, anc, path, i + 1, [node | out], acc, cfg, text_path)
     end
   end
 
-  # One iteration of the `while (node)` loop, in the JS order of checks.
-  #
-  # `text_path` is what an ancestor's emptiness check learned: the elements, from a child of the
-  # current parent down, on the way to the first non-blank text below that ancestor (all of them
-  # non-blank). An element found at its head needs no scan, and its children get the tail.
-  # Without it, the checks of nested elements rescan the same subtree: quadratic in the depth.
+  # The text path below `el`, when `el` is on it; nil otherwise.
+  defp below(el, [el | below]), do: below
+  defp below(_el, _text_path), do: nil
+
+  # One iteration of the `while (node)` loop, in the JS order of checks. `text_path`: the part of
+  # the text path below `el` (see `walk_list/8`) or nil.
   defp visit({tag, attrs, _, _} = el, anc, path, acc, cfg, text_path) do
     acc = if tag == "html", do: %{acc | lang: DOM.attr(el, "lang")}, else: acc
     info = scan_attrs(attrs)
-
-    text_path =
-      case text_path do
-        [^el | below] -> below
-        _ -> nil
-      end
 
     cond do
       hidden?(info) ->
@@ -101,13 +99,13 @@ defmodule Readability.Grab.Walk do
 
     cond do
       text_path == :blank and DOM.without_content?(el) -> {:removed, acc}
-      tag == "div" -> div(attrs, wrap_phrasing(children), anc, path, acc, cfg, below(text_path))
-      true -> descend(tag, attrs, children, anc, path, acc, cfg, score_tag?(tag), below(text_path))
+      tag == "div" -> div(attrs, wrap_phrasing(children), anc, path, acc, cfg, known(text_path))
+      true -> descend(tag, attrs, children, anc, path, acc, cfg, score_tag?(tag), known(text_path))
     end
   end
 
-  defp below(text_path) when is_list(text_path), do: text_path
-  defp below(_none_or_blank), do: []
+  defp known(text_path) when is_list(text_path), do: text_path
+  defp known(_nil_or_blank), do: []
 
   # Turns a DIV into a P (or replaces it by its single P child) where JS does, after wrapping its
   # phrasing content into paragraphs. Either way the resulting P is pushed to elementsToScore and
@@ -117,12 +115,9 @@ defmodule Readability.Grab.Walk do
 
     case DOM.single_tag_inside(div, "p") do
       {_, p_attrs, p_children, _} = p ->
-        if DOM.link_density(div) < 0.25 do
-          text_path = with [^p | below] <- text_path, do: below, else: (_ -> [])
-          descend("p", p_attrs, p_children, anc, path, acc, cfg, true, text_path)
-        else
-          div_or_p(div, p, anc, path, acc, cfg, text_path)
-        end
+        if DOM.link_density(div) < 0.25,
+          do: descend("p", p_attrs, p_children, anc, path, acc, cfg, true, known(below(p, text_path))),
+          else: div_or_p(div, p, anc, path, acc, cfg, text_path)
 
       nil ->
         div_or_p(div, nil, anc, path, acc, cfg, text_path)
