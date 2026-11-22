@@ -36,7 +36,7 @@ defmodule Readability.Grab.Walk do
     }
 
     acc = %{seq: 0, to_score: [], byline: byline, title_header?: true, lang: nil}
-    {rev, acc} = walk_list(doc, [], [], 0, [], acc, cfg)
+    {rev, acc} = walk_list(doc, [], [], 0, [], acc, cfg, [])
 
     entries = for {_seq, path, anc, node} <- :lists.keysort(1, acc.to_score), do: {path, anc, node}
     {:lists.reverse(rev), entries, acc.byline, acc.lang}
@@ -48,20 +48,30 @@ defmodule Readability.Grab.Walk do
 
   # Children of one node, left to right. `i` is the index in the output list (removed elements
   # don't count, text nodes do), so `[i | path]` is final when the child is entered.
-  defp walk_list([], _anc, _path, _i, out, acc, _cfg), do: {out, acc}
+  #
+  # `text_path` is what an ancestor's emptiness check learned: the elements, from a child of the
+  # current parent down, on the way to the first non-blank text below that ancestor (all of them
+  # non-blank). An element found at its head needs no scan, and its children get the tail.
+  # Without it, the checks of nested elements rescan the same subtree: quadratic in the depth.
+  defp walk_list([], _anc, _path, _i, out, acc, _cfg, _text_path), do: {out, acc}
 
-  defp walk_list([text | rest], anc, path, i, out, acc, cfg) when is_binary(text),
-    do: walk_list(rest, anc, path, i + 1, [text | out], acc, cfg)
+  defp walk_list([text | rest], anc, path, i, out, acc, cfg, text_path) when is_binary(text),
+    do: walk_list(rest, anc, path, i + 1, [text | out], acc, cfg, text_path)
 
-  defp walk_list([el | rest], anc, path, i, out, acc, cfg) do
-    case visit(el, anc, [i | path], acc, cfg) do
-      {:removed, acc} -> walk_list(rest, anc, path, i, out, acc, cfg)
-      {node, acc} -> walk_list(rest, anc, path, i + 1, [node | out], acc, cfg)
+  defp walk_list([el | rest], anc, path, i, out, acc, cfg, text_path) do
+    case visit(el, anc, [i | path], acc, cfg, below(el, text_path)) do
+      {:removed, acc} -> walk_list(rest, anc, path, i, out, acc, cfg, text_path)
+      {node, acc} -> walk_list(rest, anc, path, i + 1, [node | out], acc, cfg, text_path)
     end
   end
 
-  # One iteration of the `while (node)` loop, in the JS order of checks.
-  defp visit({tag, attrs, children, _} = el, anc, path, acc, cfg) do
+  # The text path below `el`, when `el` is on it; nil otherwise.
+  defp below(el, [el | below]), do: below
+  defp below(_el, _text_path), do: nil
+
+  # One iteration of the `while (node)` loop, in the JS order of checks. `text_path`: the part of
+  # the text path below `el` (see `walk_list/8`) or nil.
+  defp visit({tag, attrs, _, _} = el, anc, path, acc, cfg, text_path) do
     acc = if tag == "html", do: %{acc | lang: DOM.attr(el, "lang")}, else: acc
     info = scan_attrs(attrs)
 
@@ -75,46 +85,57 @@ defmodule Readability.Grab.Walk do
       acc.title_header? and header_duplicates_title?(el, cfg.title) ->
         {:removed, %{acc | title_header?: false}}
 
-      unlikely?(el, info, anc, cfg) ->
+      cfg.strip? and unlikely?(tag, info, anc) ->
         {:removed, acc}
 
-      tag == "div" ->
-        div(attrs, wrap_phrasing(children), anc, path, acc, cfg)
-
       true ->
-        descend(tag, attrs, children, anc, path, acc, cfg, score_tag?(tag))
+        visit_kept(el, anc, path, acc, cfg, text_path)
     end
   end
+
+  # Empty containers go; the rest is processed.
+  defp visit_kept({tag, attrs, children, _} = el, anc, path, acc, cfg, text_path) do
+    text_path = if empty_container_tag?(tag), do: text_path || text_path(children), else: text_path
+
+    cond do
+      text_path == :blank and DOM.without_content?(el) -> {:removed, acc}
+      tag == "div" -> div(attrs, wrap_phrasing(children), anc, path, acc, cfg, known(text_path))
+      true -> descend(tag, attrs, children, anc, path, acc, cfg, score_tag?(tag), known(text_path))
+    end
+  end
+
+  defp known(text_path) when is_list(text_path), do: text_path
+  defp known(_nil_or_blank), do: []
 
   # Turns a DIV into a P (or replaces it by its single P child) where JS does, after wrapping its
   # phrasing content into paragraphs. Either way the resulting P is pushed to elementsToScore and
   # the walk continues with its children; the replacing P child is not checked itself.
-  defp div(attrs, children, anc, path, acc, cfg) do
+  defp div(attrs, children, anc, path, acc, cfg, text_path) do
     div = DOM.raw("div", attrs, children)
 
     case DOM.single_tag_inside(div, "p") do
       {_, p_attrs, p_children, _} = p ->
         if DOM.link_density(div) < 0.25,
-          do: descend("p", p_attrs, p_children, anc, path, acc, cfg, true),
-          else: div_or_p(div, p, anc, path, acc, cfg)
+          do: descend("p", p_attrs, p_children, anc, path, acc, cfg, true, known(below(p, text_path))),
+          else: div_or_p(div, p, anc, path, acc, cfg, text_path)
 
       nil ->
-        div_or_p(div, nil, anc, path, acc, cfg)
+        div_or_p(div, nil, anc, path, acc, cfg, text_path)
     end
   end
 
-  defp div_or_p({_, attrs, children, _} = div, _p, anc, path, acc, cfg) do
+  defp div_or_p({_, attrs, children, _} = div, _p, anc, path, acc, cfg, text_path) do
     if DOM.child_block?(div),
-      do: descend("div", attrs, children, anc, path, acc, cfg, false),
-      else: descend("p", attrs, children, anc, path, acc, cfg, true)
+      do: descend("div", attrs, children, anc, path, acc, cfg, false, text_path),
+      else: descend("p", attrs, children, anc, path, acc, cfg, true, text_path)
   end
 
   # Visits the children and rebuilds the element. `score?`: push it to elementsToScore (at its
   # pre-order position, `seq`).
-  defp descend(tag, attrs, children, anc, path, acc, cfg, score?) do
+  defp descend(tag, attrs, children, anc, path, acc, cfg, score?, text_path) do
     seq = acc.seq
     acc = if score?, do: %{acc | seq: seq + 1}, else: acc
-    {rev, acc} = walk_list(children, [{tag, attrs} | anc], path, 0, [], acc, cfg)
+    {rev, acc} = walk_list(children, [{tag, attrs} | anc], path, 0, [], acc, cfg, text_path)
     node = DOM.el(tag, attrs, :lists.reverse(rev))
     acc = if score?, do: %{acc | to_score: [{seq, path, anc, node} | acc.to_score]}, else: acc
     {node, acc}
@@ -239,10 +260,24 @@ defmodule Readability.Grab.Walk do
 
   defp header_duplicates_title?(_el, _title), do: false
 
-  # Unlikely candidates and roles (with FLAG_STRIP_UNLIKELYS), then empty containers.
-  defp unlikely?({tag, _, _, _} = el, {class, id, _, _, _, _, role, _, _}, anc, cfg) do
-    (cfg.strip? and (unlikely_candidate?(tag, class, id, anc) or role in @unlikely_roles)) or
-      (empty_container_tag?(tag) and DOM.without_content?(el))
+  # Unlikely candidates and roles (with FLAG_STRIP_UNLIKELYS).
+  defp unlikely?(tag, {class, id, _, _, _, _, role, _, _}, anc) do
+    unlikely_candidate?(tag, class, id, anc) or role in @unlikely_roles
+  end
+
+  # The elements on the way to the first non-blank text node among `nodes` and their descendants
+  # (pre-order), the one holding it last: `[]` when it is in `nodes` itself, `:blank` when there
+  # is none (`!textContent.trim()`). Elements with stats end the path (their check is O(1)).
+  defp text_path([]), do: :blank
+  defp text_path([text | rest]) when is_binary(text), do: if(Text.blank?(text), do: text_path(rest), else: [])
+  defp text_path([{_, _, _, nil} = el | rest]), do: text_path_el(el, rest)
+  defp text_path([el | rest]), do: if(DOM.blank?(el), do: text_path(rest), else: [el])
+
+  defp text_path_el({_, _, children, _} = el, rest) do
+    case text_path(children) do
+      :blank -> text_path(rest)
+      below -> [el | below]
+    end
   end
 
   defp unlikely_candidate?(tag, class, id, anc) do

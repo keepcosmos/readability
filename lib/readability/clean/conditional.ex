@@ -25,74 +25,80 @@ defmodule Readability.Clean.Conditional do
   @doc "Runs `_cleanConditionally(article, tag)` (the caller checks `FLAG_CLEAN_CONDITIONALLY`)."
   @spec clean(DOM.el(), DOM.tag(), ctx()) :: DOM.el()
   def clean({atag, aattrs, children, _} = article, tag, ctx) do
-    case search(children, [{atag, aattrs}], tag, ctx) do
+    case search(children, [{atag, aattrs}], false, tag, ctx) do
       :same -> article
       children -> DOM.put_children(article, children)
     end
   end
 
-  # Outside any `tag` element: look for one, count nothing. Returns `:same` or the new list.
-  defp search([], _anc, _tag, _ctx), do: :same
+  # `anc` are the ancestor frames, `in_dt?` whether one of them is a data table
+  # (`_hasAncestorTag(node, "table", -1, isDataTable)`, kept as a flag: scanning all the frames
+  # for each judged node is quadratic in the depth).
 
-  defp search([text | rest], anc, tag, ctx) when is_binary(text) do
-    case search(rest, anc, tag, ctx) do
+  # Outside any `tag` element: look for one, count nothing. Returns `:same` or the new list.
+  defp search([], _anc, _in_dt?, _tag, _ctx), do: :same
+
+  defp search([text | rest], anc, in_dt?, tag, ctx) when is_binary(text) do
+    case search(rest, anc, in_dt?, tag, ctx) do
       :same -> :same
       rest -> [text | rest]
     end
   end
 
-  defp search([{t, attrs, children, _} = el | rest] = list, anc, tag, ctx) do
+  defp search([{t, attrs, children, _} = el | rest] = list, anc, in_dt?, tag, ctx) do
     frames = [{t, attrs} | anc]
+    in_dt_below? = in_dt? or data_table_el?(t, attrs)
 
     node =
       if t == tag do
-        {kids, sub} = count(children, frames, tag, ctx, @zero)
+        {kids, sub} = count(children, frames, in_dt_below?, tag, ctx, @zero)
         el2 = rebuild(el, kids)
 
         cond do
-          remove?(el2, sub, anc, ctx) -> :removed
+          remove?(el2, sub, anc, in_dt?, ctx) -> :removed
           kids == :same -> :same
           true -> el2
         end
       else
-        case search(children, frames, tag, ctx) do
+        case search(children, frames, in_dt_below?, tag, ctx) do
           :same -> :same
           kids -> DOM.put_children(el, kids)
         end
       end
 
-    splice(node, search(rest, anc, tag, ctx), list)
+    splice(node, search(rest, anc, in_dt?, tag, ctx), list)
   end
 
   # Inside a judged node: process and count. Returns `{:same | new_list, acc}`, where `acc` adds
   # the contributions of the kept nodes of the list and their subtrees.
-  defp count([], _anc, _tag, _ctx, acc), do: {:same, acc}
+  defp count([], _anc, _in_dt?, _tag, _ctx, acc), do: {:same, acc}
 
-  defp count([text | rest], anc, tag, ctx, acc) when is_binary(text) do
-    case count(rest, anc, tag, ctx, acc) do
+  defp count([text | rest], anc, in_dt?, tag, ctx, acc) when is_binary(text) do
+    case count(rest, anc, in_dt?, tag, ctx, acc) do
       {:same, _} = same -> same
       {rest, acc} -> {[text | rest], acc}
     end
   end
 
-  defp count([{t, attrs, children, _} = el | rest] = list, anc, tag, ctx, acc) do
+  defp count([{t, attrs, children, _} = el | rest] = list, anc, in_dt?, tag, ctx, acc) do
     frames = [{t, attrs} | anc]
+    in_dt_below? = in_dt? or data_table_el?(t, attrs)
 
     {node, acc} =
       if t == tag do
-        {kids, sub} = count(children, frames, tag, ctx, @zero)
+        {kids, sub} = count(children, frames, in_dt_below?, tag, ctx, @zero)
         el2 = rebuild(el, kids)
 
-        if remove?(el2, sub, anc, ctx),
+        if remove?(el2, sub, anc, in_dt?, ctx),
           do: {:removed, acc},
           else: {if(kids == :same, do: :same, else: el2), own(add(acc, sub), el2, ctx)}
       else
-        {kids, acc} = count(children, frames, tag, ctx, acc)
+        {kids, acc} = count(children, frames, in_dt_below?, tag, ctx, acc)
         el2 = rebuild(el, kids)
         {if(kids == :same, do: :same, else: el2), own(acc, el2, ctx)}
       end
 
-    {rest2, acc} = count(rest, anc, tag, ctx, acc)
+    {rest2, acc} = count(rest, anc, in_dt?, tag, ctx, acc)
     {splice(node, rest2, list), acc}
   end
 
@@ -146,10 +152,11 @@ defmodule Readability.Clean.Conditional do
   defp video_embed?(attrs, {_, regex, _}), do: Enum.any?(attrs, fn {_, v} -> Matchers.video?(v, regex) end)
 
   defp data_table?(attrs), do: :lists.keyfind(:data_table, 1, attrs) == {:data_table, true}
-  defp data_table_frame?({_, attrs}), do: data_table?(attrs)
+  defp data_table_el?("table", attrs), do: data_table?(attrs)
+  defp data_table_el?(_tag, _attrs), do: false
 
   # The `_removeNodes` filter of `_cleanConditionally`, in the JS order of its returns.
-  defp remove?({tag, attrs, _, _} = node, counts, anc, ctx) do
+  defp remove?({tag, attrs, _, _} = node, counts, anc, in_dt?, ctx) do
     {_p, _img, _li, _input, _embeds, video?, _heading_len, _textish?, list_len, data_table_inside?} = counts
     len = DOM.inner_text_length(node)
     # 0 / 0 is NaN (false) in JS; len == 0 implies list_len == 0
@@ -157,7 +164,7 @@ defmodule Readability.Clean.Conditional do
 
     cond do
       tag == "table" and data_table?(attrs) -> false
-      DOM.has_ancestor_tag?(anc, "table", -1, &data_table_frame?/1) -> false
+      in_dt? -> false
       DOM.has_ancestor_tag?(anc, "code") -> false
       data_table_inside? -> false
       true -> judge(node, len, list?, video?, counts, anc, ctx)

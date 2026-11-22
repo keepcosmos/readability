@@ -66,27 +66,34 @@ defmodule Readability.Grab.Select do
     }
   end
 
+  # Every node this looks at is the top candidate or one of its ancestors, so they are taken from
+  # its chain (`chain/2`), collected once: walking down from the root for each of them is
+  # quadratic in the depth.
   defp refine(tree, body, top, top_score, rest, scores, weight?) do
+    chain = chain(tree, top)
+    body = body && {body, length(body)}
+
     # Alternative candidates: when at least 3 of the others score within 75 % of the top one, use
     # their closest common ancestor (below <body>) that holds at least 3 of them.
     alternatives = for {path, score} <- rest, ratio_at_least?(score, top_score, 0.75), do: path
 
-    top =
+    chain =
       if length(alternatives) >= 3,
-        do: common_ancestor(tree, body, tl(top), alternatives) || top,
-        else: top
+        do: common_ancestor(tl(chain), body, alternative_depths(alternatives, top)) || chain,
+        else: chain
 
-    scores = ensure_initialized(scores, tree, top, weight?)
+    scores = ensure_initialized(scores, hd(chain), weight?)
 
     # Climb while the parent's score goes up, without dropping below a third.
+    {top, _, _} = hd(chain)
     top_score = Map.fetch!(scores, top)
-    top = climb(tree, body, tl(top), top, top_score, top_score / 3, scores)
+    chain = climb(tl(chain), body, chain, top_score, top_score / 3, chain_scores(scores, chain))
 
     # Only children: use the parent, so sibling joining sees the real siblings.
-    top = only_child_parent(tree, body, top)
-    scores = ensure_initialized(scores, tree, top, weight?)
+    chain = only_child_parent(chain, body)
+    scores = ensure_initialized(scores, hd(chain), weight?)
 
-    join_siblings(tree, top, scores)
+    join_siblings(chain, scores)
   end
 
   # `a / b >= limit` with JS float semantics: division by (signed) zero gives ±Infinity, 0/0 NaN.
@@ -96,65 +103,81 @@ defmodule Readability.Grab.Select do
 
   defp positive_zero?(z), do: match?(<<0::1, _::63>>, <<z::float>>)
 
-  defp common_ancestor(tree, body, parent, alternatives) do
-    if stop?(tree, body, parent) do
-      nil
-    else
-      if count_containing(alternatives, parent, length(parent), 0) >= 3,
-        do: parent,
-        else: common_ancestor(tree, body, tl(parent), alternatives)
+  # For each alternative candidate, `{depth, shared}`: its depth and the depth of its deepest
+  # common ancestor with the top candidate (the length of the common prefix of the forward paths).
+  # The top candidate's ancestor at depth `d` is an ancestor of the alternative iff
+  # `depth > d and shared >= d`.
+  defp alternative_depths(alternatives, top) do
+    top = :lists.reverse(top)
+    for path <- alternatives, do: {length(path), shared_prefix(:lists.reverse(path), top, 0)}
+  end
+
+  defp shared_prefix([i | a], [i | b], n), do: shared_prefix(a, b, n + 1)
+  defp shared_prefix(_a, _b, n), do: n
+
+  # Returns the chain from the common ancestor up, or nil.
+  defp common_ancestor([], _body, _alternatives), do: nil
+
+  defp common_ancestor([{_, depth, _} = entry | rest] = chain, body, alternatives) do
+    cond do
+      stop?(entry, body) -> nil
+      count_containing(alternatives, depth, 0) >= 3 -> chain
+      true -> common_ancestor(rest, body, alternatives)
     end
   end
 
-  # How many alternative candidates have `ancestor` among their ancestors (stops at 3, like JS).
-  defp count_containing(_paths, _ancestor, _len, 3), do: 3
-  defp count_containing([], _ancestor, _len, n), do: n
+  # How many alternative candidates have the ancestor at `depth` among their ancestors (stops at
+  # 3, like JS).
+  defp count_containing(_alternatives, _depth, 3), do: 3
+  defp count_containing([], _depth, n), do: n
 
-  defp count_containing([path | rest], ancestor, len, n) do
-    n = if descendant?(path, ancestor, len), do: n + 1, else: n
-    count_containing(rest, ancestor, len, n)
+  defp count_containing([{alt_depth, shared} | rest], depth, n) do
+    n = if alt_depth > depth and shared >= depth, do: n + 1, else: n
+    count_containing(rest, depth, n)
   end
 
-  defp descendant?(path, ancestor, len) do
-    depth = length(path)
-    depth > len and Enum.drop(path, depth - len) == ancestor
-  end
+  # The first argument is the chain above the current top candidate, whose chain is `top`.
+  # `scores` are the scores of the chain's nodes, by depth.
+  defp climb([], _body, top, _last_score, _threshold, _scores), do: top
 
-  defp climb(tree, body, parent, top, last_score, threshold, scores) do
-    if stop?(tree, body, parent) do
+  defp climb([{_, depth, _} = entry | rest] = chain, body, top, last_score, threshold, scores) do
+    if stop?(entry, body) do
       top
     else
       case scores do
-        %{^parent => score} when score < threshold -> top
-        %{^parent => score} when score > last_score -> parent
-        %{^parent => score} -> climb(tree, body, tl(parent), top, score, threshold, scores)
-        %{} -> climb(tree, body, tl(parent), top, last_score, threshold, scores)
+        %{^depth => score} when score < threshold -> top
+        %{^depth => score} when score > last_score -> chain
+        %{^depth => score} -> climb(rest, body, top, score, threshold, scores)
+        %{} -> climb(rest, body, top, last_score, threshold, scores)
       end
     end
   end
 
-  defp only_child_parent(tree, body, top) do
-    parent = tl(top)
+  # `%{depth => score}` for the nodes of `chain` that have a score. (Looking up each of them by
+  # path would hash the whole path each time: quadratic in the depth.)
+  defp chain_scores(scores, [{_, depth, _} | _] = chain) do
+    by_depth = chain |> Enum.map(&elem(&1, 0)) |> :lists.reverse() |> List.to_tuple()
 
-    if not stop?(tree, body, parent) and length(DOM.element_children(at(tree, parent))) == 1,
-      do: only_child_parent(tree, body, parent),
-      else: top
+    for {path, score} <- scores, d = length(path), d <= depth, elem(by_depth, d - 1) == path, into: %{}, do: {d, score}
   end
 
-  # The `parentOfTopCandidate.tagName !== "BODY"` loop condition. JS would crash above <body>;
-  # stop at the document instead.
-  defp stop?(_tree, body, body), do: true
-  defp stop?(_tree, _body, []), do: true
-  defp stop?(tree, _body, path), do: tag(at(tree, path)) == "body"
+  defp only_child_parent([_top, {_, _, parent} = entry | _] = chain, body) do
+    if not stop?(entry, body) and length(DOM.element_children(parent)) == 1,
+      do: only_child_parent(tl(chain), body),
+      else: chain
+  end
 
-  defp ensure_initialized(scores, tree, path, weight?) do
+  defp only_child_parent(chain, _body), do: chain
+
+  # The `parentOfTopCandidate.tagName !== "BODY"` loop condition, on a chain entry. JS would crash
+  # above <body>; the chain ends at the document instead. `body` is `{path, depth}` or nil.
+  defp stop?({path, depth, _}, {path_b, depth}) when path == path_b, do: true
+  defp stop?({_, _, node}, _body), do: tag(node) == "body"
+
+  defp ensure_initialized(scores, {path, _, {tag, attrs, _, _}}, weight?) do
     case scores do
-      %{^path => _} ->
-        scores
-
-      %{} ->
-        {tag, attrs, _, _} = at(tree, path)
-        Map.put(scores, path, Score.initial_score(tag, attrs, weight?))
+      %{^path => _} -> scores
+      %{} -> Map.put(scores, path, Score.initial_score(tag, attrs, weight?))
     end
   end
 
@@ -162,14 +185,11 @@ defmodule Readability.Grab.Select do
   # Sibling joining
   # ---------------------------------------------------------------------------------------------
 
-  defp join_siblings(tree, top, scores) do
-    parent = tl(top)
-    {_, top_attrs, _, _} = at(tree, top)
+  defp join_siblings([{top, _, {_, top_attrs, _, _}}, {parent, _, {_, _, children, _}} | _], scores) do
     top_score = Map.fetch!(scores, top)
     top_class = class(top_attrs)
     threshold = max(10, top_score * 0.2)
     bonus = if top_class != "", do: top_score * 0.2, else: 0
-    {_, _, children, _} = at(tree, parent)
 
     appended =
       children
@@ -239,6 +259,20 @@ defmodule Readability.Grab.Select do
 
   defp at_forward(nodes, [i]), do: :lists.nth(i + 1, nodes)
   defp at_forward(nodes, [i | rest]), do: at_forward(elem(:lists.nth(i + 1, nodes), 2), rest)
+
+  @doc """
+  The node at reversed path `rpath` and its ancestors, nearest first, as `{rpath, depth, node}`
+  (`depth` is the length of the path), in one walk down from the root.
+  """
+  @spec chain(DOM.tree(), path()) :: [{path(), pos_integer(), DOM.el()}]
+  def chain(tree, rpath), do: chain_down(tree, :lists.reverse(rpath), [], 1, [])
+
+  defp chain_down(nodes, [i | rest], path, depth, acc) do
+    node = :lists.nth(i + 1, nodes)
+    path = [i | path]
+    acc = [{path, depth, node} | acc]
+    if rest == [], do: acc, else: chain_down(elem(node, 2), rest, path, depth + 1, acc)
+  end
 
   defp tag({tag, _, _, _}), do: tag
 end

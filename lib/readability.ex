@@ -66,6 +66,10 @@ defmodule Readability do
   @spec article(input(), keyword()) :: {:ok, Article.t()} | {:error, reason()}
   def article(html, opts \\ []) do
     opts = Options.validate!(opts)
+    if opts.spawn, do: in_process(fn -> run(html, opts) end, html), else: run(html, opts)
+  end
+
+  defp run(html, opts) do
     doc = html |> parse() |> LazyHTML.to_tree() |> valid_tree(html) |> DOM.from_lazy()
     max = opts.max_elems_to_parse
     count = if max > 0, do: count_elements(doc, 0), else: 0
@@ -79,7 +83,7 @@ defmodule Readability do
   defp extract(doc, ctx, opts) do
     doc = Prep.unwrap_noscript_images(doc)
     json_ld = if opts.disable_json_ld, do: %{}, else: Metadata.json_ld(doc)
-    doc = doc |> Prep.remove_scripts() |> Prep.prep_document()
+    doc = Prep.prep_document(doc)
     metadata = Metadata.extract(doc, json_ld)
 
     ctx = Map.merge(ctx, %{article_title: metadata.title, metadata_byline: metadata.byline})
@@ -118,23 +122,82 @@ defmodule Readability do
     Readerable.readerable?(parse(html), opts)
   end
 
+  # Runs `fun` in a linked process and returns its result (or raises what it raised). The heap
+  # starts at one word per byte of HTML: the tree and its rebuilt copies need about that much,
+  # and growing to it step by step makes the GC copy the tree over and over (design §8: half of
+  # the time on large pages). The garbage goes away with the process, unscanned.
+  defp in_process(fun, html) do
+    caller = self()
+
+    {heap, limit} =
+      case Process.info(caller, :max_heap_size) do
+        {:max_heap_size, %{size: size} = max} when size > 0 -> {div(size, 2), [max_heap_size: max]}
+        _ -> {:infinity, []}
+      end
+
+    heap = if is_binary(html), do: [min_heap_size: min(byte_size(html), heap)], else: []
+
+    worker = fn ->
+      result =
+        try do
+          {:ok, fun.()}
+        catch
+          kind, reason -> {:raise, kind, reason, __STACKTRACE__}
+        end
+
+      send(caller, {self(), result})
+    end
+
+    {pid, ref} = :erlang.spawn_opt(worker, [:link, :monitor | heap ++ limit])
+
+    receive do
+      {^pid, result} ->
+        # No `{:EXIT, pid, :normal}` for a caller that traps exits.
+        Process.unlink(pid)
+        Process.demonitor(ref, [:flush])
+
+        receive do
+          {:EXIT, ^pid, _} -> :ok
+        after
+          0 -> :ok
+        end
+
+        case result do
+          {:ok, value} -> value
+          {:raise, kind, reason, stacktrace} -> :erlang.raise(kind, reason, stacktrace)
+        end
+
+      # Killed (by its `:max_heap_size`, or an exit signal). Without trapping exits the link
+      # has taken the caller down already.
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        receive do
+          {:EXIT, ^pid, _} -> :ok
+        after
+          0 -> :ok
+        end
+
+        exit(reason)
+    end
+  end
+
   defp parse(%LazyHTML{} = lazy), do: lazy
   defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(valid_utf8(html))
   defp parse(html) when is_binary(html), do: LazyHTML.from_document(valid_utf8(html))
 
   # LazyHTML keeps invalid UTF-8 as is; a decoder replaces each malformed sequence with U+FFFD.
-  defp valid_utf8(html), do: if(String.valid?(html), do: html, else: String.replace_invalid(html))
+  defp valid_utf8(html), do: if(String.valid?(html, :fast_ascii), do: html, else: String.replace_invalid(html))
 
   # A `%LazyHTML{}` passed in may have been parsed from invalid UTF-8: scrub its tree the same way.
   defp valid_tree(tree, %LazyHTML{}), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
   defp valid_tree(tree, _html), do: tree
 
   defp valid_list?([]), do: true
-  defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text) and valid_list?(rest)
+  defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text, :fast_ascii) and valid_list?(rest)
   defp valid_list?([{:comment, _} | rest]), do: valid_list?(rest)
 
   defp valid_list?([{tag, attrs, children} | rest]) do
-    String.valid?(tag) and Enum.all?(attrs, fn {name, value} -> String.valid?(name) and String.valid?(value) end) and
+    String.valid?(tag, :fast_ascii) and
+      Enum.all?(attrs, fn {name, value} -> String.valid?(name, :fast_ascii) and String.valid?(value, :fast_ascii) end) and
       valid_list?(children) and valid_list?(rest)
   end
 

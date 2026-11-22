@@ -231,9 +231,9 @@ defmodule Readability.Grab do
           [page_attrs, select.top_attrs]
 
         parent ->
-          ancestors = ancestor_paths(tl_or_empty(parent))
-          ancestors = if reset? and parent != body, do: Enum.filter(ancestors, &below?(&1, body)), else: ancestors
-          [attrs_at(tree, parent), select.top_attrs | Enum.map(ancestors, &attrs_at(tree, &1))]
+          [{_, _, {_, parent_attrs, _, _}} | ancestors] = Select.chain(tree, parent)
+          ancestors = if reset? and parent != body, do: below(ancestors, body), else: ancestors
+          [parent_attrs, select.top_attrs | Enum.map(ancestors, fn {_, _, {_, attrs, _, _}} -> attrs end)]
       end
 
     Enum.find_value(chain, fn attrs ->
@@ -244,15 +244,7 @@ defmodule Readability.Grab do
     end)
   end
 
-  defp tl_or_empty([]), do: []
-  defp tl_or_empty([_ | rest]), do: rest
-
-  defp ancestor_paths([]), do: []
-  defp ancestor_paths([_ | rest] = path), do: [path | ancestor_paths(rest)]
-
-  defp below?(path, body), do: length(path) > length(body)
-
-  defp attrs_at(tree, path), do: elem(Select.at(tree, path), 1)
+  defp below(chain, body), do: Enum.filter(chain, fn {_, depth, _} -> depth > length(body) end)
 
   # ---------------------------------------------------------------------------------------------
   # Document helpers

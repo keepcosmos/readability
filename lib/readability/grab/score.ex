@@ -121,11 +121,12 @@ defmodule Readability.Grab.Score do
 
   # The densities in the order of `paths`.
   defp link_densities(tree, paths) do
-    densities = for path <- paths, do: density_from_stats(at(tree, path))
+    nodes = nodes_at(tree, 0, trie(paths), %{})
+    densities = for path <- paths, do: density_from_stats(Map.fetch!(nodes, path))
 
     if :exact in densities do
-      exact = for {path, :exact} <- Enum.zip(paths, densities), do: {:lists.reverse(path), path}
-      {[], sums} = sums(tree, 0, exact |> Enum.sort() |> trie(), [], %{})
+      exact = for {path, :exact} <- Enum.zip(paths, densities), do: path
+      {[], sums} = sums(tree, 0, trie(exact), [], %{})
       Enum.zip_with(paths, densities, &exact_density(&1, &2, sums))
     else
       densities
@@ -137,9 +138,17 @@ defmodule Readability.Grab.Score do
   defp exact_density(path, :exact, sums), do: Map.fetch!(sums, path)
   defp exact_density(_path, density, _sums), do: density
 
-  defp at(tree, path), do: at_forward(tree, :lists.reverse(path))
-  defp at_forward(nodes, [i]), do: :lists.nth(i + 1, nodes)
-  defp at_forward(nodes, [i | rest]), do: at_forward(elem(:lists.nth(i + 1, nodes), 2), rest)
+  # The nodes at the paths of a trie, in one traversal (looking each one up from the root is
+  # quadratic in the number of siblings and in the depth).
+  defp nodes_at(_nodes, _i, [], acc), do: acc
+
+  defp nodes_at([node | rest], i, [{i, path, sub} | trie], acc) do
+    acc = if path, do: Map.put(acc, path, node), else: acc
+    acc = if sub == [], do: acc, else: nodes_at(elem(node, 2), 0, sub, acc)
+    nodes_at(rest, i + 1, trie, acc)
+  end
+
+  defp nodes_at([_ | rest], i, trie, acc), do: nodes_at(rest, i + 1, trie, acc)
 
   # `#` links among the descendants, and some text (the density of an empty element is 0).
   defp hash_links_below?({tag, attrs, _, {nw, _, _, _, _, _, _, hash_links}}) do
@@ -147,14 +156,16 @@ defmodule Readability.Grab.Score do
     nw > 0 and hash_links - own > 0
   end
 
-  # The forward paths as a trie: a list of `{child_index, candidate_path | nil, trie}` sorted by
-  # index, so the traversal can stop after the last index it needs.
-  defp trie([]), do: []
+  # The (reversed) paths as a trie of forward paths: a list of `{child_index, candidate_path | nil,
+  # trie}` sorted by index, so a traversal can stop after the last index it needs.
+  defp trie(paths), do: paths |> Enum.map(&{:lists.reverse(&1), &1}) |> Enum.sort() |> trie_sorted()
 
-  defp trie([{[i | _], _} | _] = sorted) do
+  defp trie_sorted([]), do: []
+
+  defp trie_sorted([{[i | _], _} | _] = sorted) do
     {group, rest} = Enum.split_while(sorted, &match?({[^i | _], _}, &1))
     candidate = Enum.find_value(group, fn {forward, path} -> if forward == [i], do: path end)
-    [{i, candidate, trie(for({[_ | tail], path} <- group, tail != [], do: {tail, path}))} | trie(rest)]
+    [{i, candidate, trie_sorted(for({[_ | tail], path} <- group, tail != [], do: {tail, path}))} | trie_sorted(rest)]
   end
 
   # `open`: the open sums `{path, sum}`, innermost first.

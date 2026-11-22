@@ -48,6 +48,8 @@ A rewrite: Readability is now a port of Mozilla's
 - Relative links and image sources are made absolute with the `:url` option.
 - Both functions accept a `%LazyHTML{}` document, so a page can be parsed once (with LazyHTML's
   limits, for untrusted input) for both.
+- `Readability.article/2` works in a short-lived process with a heap sized for the page (option
+  `:spawn`, on by default), which keeps garbage collection out of the way.
 - Benchmarks (`benchmarks/benchmark.exs`) against 0.x and the cost of parsing alone.
 
 ### Fixed
