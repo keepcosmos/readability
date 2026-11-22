@@ -1,12 +1,14 @@
 # Readability benchmark: this checkout vs the latest 0.x release on Hex, plus
-# the cost of parsing alone, over pages from Readability.js's test suite.
+# the cost of parsing alone and Readability.js itself, over pages from
+# Readability.js's test suite.
 #
 #     elixir benchmarks/benchmark.exs
 #
 # Each target is installed and benchmarked in its own `elixir` process (via
 # Mix.install), so versions never share a BEAM, and one that fails to install or
-# raises is recorded instead of stopping the run. Writes benchmarks/results.json
-# and benchmarks/RESULTS.md.
+# raises is recorded instead of stopping the run. The `readability-js` target runs
+# benchmarks/readability_js.js under Node and is left out when `node` isn't on the
+# PATH. Writes benchmarks/results.json and benchmarks/RESULTS.md.
 #
 # Environment variables:
 #
@@ -46,6 +48,12 @@ defmodule Bench.Spec do
         apps: [:readability, :lazy_html]
       },
       %{
+        name: "local-inline",
+        description: "This checkout with `spawn: false`: everything in the calling (Benchee) process",
+        deps: [{:readability, path: @repo_root}],
+        apps: [:readability, :lazy_html]
+      },
+      %{
         name: "hex",
         description: "Latest 0.x release on Hex (Floki + mochiweb parser)",
         deps: [{:readability, "~> 0.13.0"}],
@@ -57,7 +65,24 @@ defmodule Bench.Spec do
         deps: [{:lazy_html, "~> 0.1.14"}],
         apps: [:lazy_html]
       }
-    ]
+    ] ++ node_targets()
+  end
+
+  defp node_targets do
+    case System.find_executable("node") do
+      nil ->
+        []
+
+      node ->
+        [
+          %{
+            name: "readability-js",
+            description:
+              "Readability.js (the version this ports) on JSDOMParser under Node, JSDOMParser's parse included; not Benchee: same budget, own timing",
+            node: node
+          }
+        ]
+    end
   end
 end
 
@@ -83,7 +108,7 @@ defmodule Bench.Orchestrator do
     results = %{
       environment: environment,
       inputs: Enum.map(selected_inputs(), &Map.put(&1, :bytes, File.stat!(Bench.Spec.input_path(&1)).size)),
-      targets: Enum.map(targets, &Map.drop(&1, [:deps, :apps]))
+      targets: Enum.map(targets, &Map.drop(&1, [:deps, :apps, :node]))
     }
 
     File.write!(Path.join(output_dir, "results.json"), :json.format(json_safe(results)))
@@ -94,13 +119,13 @@ defmodule Bench.Orchestrator do
 
   defp run_target(target, round, tmp) do
     IO.puts("\n== #{target.name} (round #{round})")
-    out = Path.join(tmp, "#{target.name}-#{round}.etf")
-    {output, status} = System.cmd("elixir", [__ENV__.file, "--worker", target.name, out], stderr_to_stdout: true)
+    out = Path.join(tmp, "#{target.name}-#{round}.out")
+    {output, status} = System.cmd(worker_cmd(target), worker_args(target, out), stderr_to_stdout: true)
 
     case File.read(out) do
       {:ok, binary} ->
         output |> String.split("\n") |> Enum.filter(&String.starts_with?(&1, "  bench ")) |> Enum.each(&IO.puts/1)
-        target |> Map.merge(:erlang.binary_to_term(binary)) |> Map.put(:status, "ok")
+        target |> Map.merge(decode(target, binary)) |> Map.put(:status, "ok")
 
       {:error, _} ->
         error = output |> String.split("\n") |> Enum.reject(&(&1 == "")) |> Enum.take(-5) |> Enum.join(" | ")
@@ -108,6 +133,27 @@ defmodule Bench.Orchestrator do
         Map.merge(target, %{status: "failed", error: String.slice(error, 0, 300), versions: %{}, rows: [], corpus: nil})
     end
   end
+
+  defp worker_cmd(%{node: node}), do: node
+  defp worker_cmd(_target), do: "elixir"
+
+  defp worker_args(%{node: _}, out) do
+    script = Path.join(__DIR__, "readability_js.js")
+    quick = if System.get_env("BENCH_QUICK") == "1", do: "1", else: "0"
+    inputs = Enum.map(selected_inputs(), &"#{&1.name}=#{Bench.Spec.input_path(&1)}")
+    [script, out, quick | inputs] ++ ["--" | Bench.Spec.corpus_paths()]
+  end
+
+  defp worker_args(target, out), do: [__ENV__.file, "--worker", target.name, out]
+
+  # The Node worker writes JSON, the Elixir ones a term.
+  defp decode(%{node: _}, binary), do: binary |> :json.decode() |> atomize()
+  defp decode(_target, binary), do: :erlang.binary_to_term(binary)
+
+  defp atomize(map) when is_map(map), do: Map.new(map, fn {k, v} -> {String.to_atom(k), atomize(v)} end)
+  defp atomize(list) when is_list(list), do: Enum.map(list, &atomize/1)
+  defp atomize(:null), do: nil
+  defp atomize(other), do: other
 
   # A burst of load on the machine during one round shouldn't decide a row.
   defp best_of([first | _] = rounds) do
@@ -233,6 +279,9 @@ defmodule Bench.Worker do
     end
   end
 
+  defp job("local-inline"),
+    do: fn html -> Readability.article(html, url: "http://fakehost/test/page.html", spawn: false) end
+
   defp job("hex"), do: &legacy_job/1
   defp job("parse-only"), do: fn html -> html |> LazyHTML.from_document() |> LazyHTML.to_tree() end
 
@@ -306,7 +355,7 @@ defmodule Bench.Report do
     - Machine: #{env.cpu || "unknown CPU"}, #{env.logical_cpus} logical CPUs, #{env.os}
     - Elixir #{env.elixir}, Erlang/OTP #{env.otp}#{if env.jit, do: " (JIT)", else: ""}
     - Benchee per row: #{env.benchee.warmup} s warmup, #{env.benchee.time} s run time, #{env.benchee.memory_time} s memory. Each target runs in its own BEAM, #{env.rounds} rounds, best median wins.#{if env.quick, do: "\n- **Quick run: don't compare these numbers.**", else: ""}
-    - Memory is what Benchee measures on the BEAM process heap, so it leaves out memory the LazyHTML NIF allocates.
+    - Memory is what Benchee measures on the calling process's heap, so it leaves out memory the LazyHTML NIF allocates, and, for `local`, the worker process `article/2` spawns (see `local-inline` for that).
 
     ## Targets
 
@@ -330,7 +379,42 @@ defmodule Bench.Report do
     |---|#{Enum.map_join(targets, "|", fn _ -> "---:" end)}|
     #{Enum.map_join(inputs, "\n", &result_row(&1, targets))}
     | **corpus** (all pages, sequential) | #{Enum.map_join(targets, " | ", &corpus_cell(&1, targets))} |
+    #{algorithm_section(inputs, targets)}
     """
+  end
+
+  # The time `local` spends beyond parsing (`local` - `parse-only`), against parsing itself.
+  defp algorithm_section(inputs, targets) do
+    with %{} = local <- Enum.find(targets, &(&1.name == "local" and &1.status == "ok")),
+         %{} = parse <- Enum.find(targets, &(&1.name == "parse-only" and &1.status == "ok")) do
+      rows =
+        for input <- inputs,
+            %{status: "ok", median_ns: l} <- [row(local, input.name)],
+            %{status: "ok", median_ns: p} <- [row(parse, input.name)] do
+          "| #{input.name} | #{ms(l - p)} | #{ms(p)} | #{Float.round((l - p) / p, 2)} |"
+        end
+
+      corpus =
+        if local.corpus && parse.corpus do
+          {l, p} = {local.corpus.total_ms, parse.corpus.total_ms}
+          ["| **corpus** | #{l - p} ms | #{p} ms | #{Float.round((l - p) / p, 2)} |"]
+        else
+          []
+        end
+
+      """
+
+      ## Algorithm vs parsing
+
+      `local` minus `parse-only`: the time Readability spends on top of LazyHTML.
+
+      | Input | algorithm | parsing | ratio |
+      |---|---:|---:|---:|
+      #{Enum.join(rows ++ corpus, "\n")}
+      """
+    else
+      _ -> ""
+    end
   end
 
   defp target_row(t) do
@@ -349,9 +433,10 @@ defmodule Bench.Report do
 
   defp cell(nil, _), do: "n/a"
 
-  defp cell(%{status: "ok"} = row, baseline),
-    do:
-      "#{ms(row.median_ns)}, #{Bench.Worker.format_bytes(row.memory_bytes)}#{ratio(row.median_ns, baseline && baseline[:median_ns])}"
+  defp cell(%{status: "ok"} = row, baseline) do
+    memory = if row.memory_bytes, do: ", #{Bench.Worker.format_bytes(row.memory_bytes)}", else: ""
+    "#{ms(row.median_ns)}#{memory}#{ratio(row.median_ns, baseline && baseline[:median_ns])}"
+  end
 
   defp cell(row, _), do: "**#{row.status}**"
 
