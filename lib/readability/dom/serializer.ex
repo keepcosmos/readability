@@ -12,8 +12,9 @@ defmodule Readability.DOM.Serializer do
   # * An HTML `pre`, `textarea` or `listing` whose first child is text starting with LF gets an
   #   extra LF, because the parser drops one.
   # * The namespace is inferred from the ancestors the same way the parser assigns it
-  #   (`svg`/`math` start foreign content; `foreignObject`, `desc`, `title` and MathML text
-  #   integration points switch back), as in `LazyHTML.Tree.to_html/2`.
+  #   (`svg`/`math` start foreign content, `svg` also directly inside MathML `annotation-xml`;
+  #   `foreignObject`, `desc`, `title` and MathML text integration points switch back), as in
+  #   `LazyHTML.Tree.to_html/2`.
   # * Comments do not exist in the tree. Atom-keyed attributes are internal markers
   #   (`{:data_table, _}`) and raise `ArgumentError`: they must never reach the output.
 
@@ -88,7 +89,10 @@ defmodule Readability.DOM.Serializer do
 
   defp newline_sensitive?(tag), do: tag == "pre" or tag == "textarea" or tag == "listing"
 
-  defp element_ns("svg", ns) when ns == :html or ns == :math_text, do: :svg
+  # `:annotation_xml` is the children namespace of a MathML annotation-xml that is not an HTML
+  # integration point: MathML, except that an `svg` start tag there makes an SVG element.
+  defp element_ns("svg", ns) when ns == :html or ns == :math_text or ns == :annotation_xml, do: :svg
+  defp element_ns(_tag, :annotation_xml), do: :math
   defp element_ns("math", ns) when ns == :html or ns == :math_text, do: :math
   defp element_ns(tag, :math_text) when tag == "mglyph" or tag == "malignmark", do: :math
   defp element_ns(_tag, :math_text), do: :html
@@ -101,7 +105,7 @@ defmodule Readability.DOM.Serializer do
 
   defp children_ns("annotation-xml", attrs, :math) do
     encoding = Enum.find_value(attrs, fn {name, value} -> name == "encoding" and String.downcase(value) end)
-    if encoding in ["text/html", "application/xhtml+xml"], do: :html, else: :math
+    if encoding in ["text/html", "application/xhtml+xml"], do: :html, else: :annotation_xml
   end
 
   defp children_ns(_tag, _attrs, ns), do: ns

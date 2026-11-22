@@ -36,6 +36,22 @@ defmodule Readability.DOM.SerializerTest do
       assert Serializer.outer_html([DOM.raw("noscript", [], ["a < b"])]) == "<noscript>a &lt; b</noscript>"
     end
 
+    test "svg directly inside MathML annotation-xml is SVG (so its title is an HTML integration point)" do
+      for html <- [
+            "<math><annotation-xml><svg><title><style>a>b{}</style></title></svg></annotation-xml></math>",
+            "<math><annotation-xml><p><svg><title><style>a>b{}</style></title></svg></p></annotation-xml></math>",
+            ~S(<math><annotation-xml encoding="text/html"><svg><title><style>a>b{}</style></title></svg></annotation-xml></math>),
+            "<math><annotation-xml><math><mi><style>a>b{}</style></mi></math></annotation-xml></math>"
+          ] do
+        tree = frag(html)
+        out = Serializer.outer_html(tree)
+        # (LazyHTML.Tree.to_html/1 gets the first case wrong: it escapes the style)
+        assert frag(out) == tree, "#{html} -> #{out}"
+      end
+
+      assert Serializer.outer_html(frag("<math><annotation-xml><svg><title><style>a>b{}</style>")) =~ "a>b{}"
+    end
+
     test "void elements are only void in the HTML namespace" do
       assert Serializer.outer_html([DOM.raw("svg", [], [DOM.raw("source", [], [])])]) == "<svg><source></source></svg>"
 
