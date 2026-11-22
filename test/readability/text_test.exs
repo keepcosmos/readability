@@ -128,6 +128,19 @@ defmodule Readability.TextTest do
       assert Text.summary(<<0xE2, 0x80>>) == {2, 0, 0, 0, 0, 0}
       assert Text.length(<<?a, 0x80, ?b>>) == 2
     end
+
+    test "long runs of spaces (the 8-space fast path)" do
+      for n <- 1..40, sp = String.duplicate(" ", n) do
+        assert Text.blank?(sp)
+        assert Text.blank?("\n" <> sp <> "\t")
+        refute Text.blank?(sp <> "x")
+        refute Text.blank?(sp <> "\u0085")
+        assert Text.summary(sp) == {0, 1, 1, 1, 0, 0}
+        assert Text.summary("a" <> sp <> ",b") == {3, 1, 0, 0, 1, 0}
+        assert Text.summary("a\n" <> sp <> " b" <> sp) == {2, 2, 0, 1, 0, 0}
+        assert Text.normalized_length("x" <> sp <> "y" <> sp) == 3
+      end
+    end
   end
 
   describe "summary composition (property)" do

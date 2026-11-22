@@ -96,6 +96,9 @@ defmodule Readability.Text do
   def summary(bin) when is_binary(bin), do: s0(bin)
 
   # s0: nothing seen; sn: last char non-ws; sw: last char ws.
+  # Fast path: runs of 8 spaces (indentation) in one step.
+  defp sw(<<"        ", r::binary>>, nw, runs, lead, cm, xc), do: sw(r, nw, runs, lead, cm, xc)
+
   for {pat, guard, _size, kind} <- classes do
     case kind do
       :ws ->
@@ -177,6 +180,9 @@ defmodule Readability.Text do
   @doc "JS `!s.trim()` / `/^\\s*$/.test(s)`: the string is empty or only whitespace."
   @spec blank?(binary()) :: boolean()
   def blank?(bin) when is_binary(bin), do: bl(bin)
+
+  # Fast path: runs of 8 spaces (indentation) in one step.
+  defp bl(<<"        ", r::binary>>), do: bl(r)
 
   for {pat, guard, _size, :ws} <- classes do
     defp bl(unquote(pat)) when unquote(guard), do: bl(unquote(r))
