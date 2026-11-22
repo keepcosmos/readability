@@ -60,7 +60,7 @@ defmodule Readability.Mixfile do
   defp package do
     [
       description: "Extracts the main content and metadata of web pages. A port of Mozilla's Readability.js.",
-      files: ["lib", "mix.exs", "README.md", "LICENSE.md", "CHANGELOG.md"],
+      files: ["lib", "mix.exs", "README.md", "LICENSE.md", "NOTICE", "CHANGELOG.md"],
       maintainers: ["Jaehyun Shin", "Jakub Skałecki"],
       licenses: ["Apache-2.0"],
       links: %{

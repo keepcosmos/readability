@@ -47,7 +47,7 @@ defmodule Readability.Options do
               type: {:or, [{:struct, Regex}, nil]},
               default: nil,
               doc:
-                "Video embeds whose `src` matches this are kept. Defaults to Readability.js's list of common video hosts."
+                "Embeds (`iframe`, `embed`, `object`) are kept when any of their attribute values matches this. Defaults to Readability.js's list of common video hosts."
             ],
             link_density_modifier: [
               type: {:or, [:float, :integer]},

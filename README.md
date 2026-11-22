@@ -11,8 +11,8 @@ other page chrome, plus its title, byline, excerpt and other metadata.
 
 It's a port of Mozilla's [Readability.js](https://github.com/mozilla/readability), the library
 behind Firefox's Reader View, on top of the [LazyHTML](https://hex.pm/packages/lazy_html) parser
-(Lexbor). It gives the same results as Readability.js on all 130 pages of Readability.js's own test
-suite, which runs as part of this library's tests.
+(Lexbor). It passes every check of Readability.js's own test suite (130 pages, comparing the
+extracted content and metadata), which runs as part of this library's tests.
 
 ## Installation
 
@@ -62,10 +62,20 @@ Both take the HTML as a string or as a document parsed with `LazyHTML.from_docum
 yourself to call both without parsing twice, or to set LazyHTML's limits (`:max_depth`,
 `:max_memory`, `:max_attributes`, `:timeout`) for untrusted input.
 
+### Output is not sanitized
+
+Like Readability.js, Readability removes scripts and page chrome, but it is not a sanitizer:
+`content` keeps attributes such as `onclick` or `onerror`, and links can point anywhere. Sanitize
+it (for example with [html_sanitize_ex](https://hex.pm/packages/html_sanitize_ex)) before
+rendering content from untrusted pages.
+
 ### Options
 
 - `:url` - the page's URL. Relative links and image sources in `content` are made absolute
-  against it (and the page's `<base href>`). Without it, they stay as they are.
+  against it and the page's `<base href>`. Without it, they stay as they are, unless the page
+  has an absolute `<base href>`.
+- `:char_threshold` - when the extracted text is shorter, extraction is retried with looser
+  rules; if every attempt is short, the longest one is returned.
 - `:char_threshold` (500), `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
   `:classes_to_preserve` ([]), `:keep_classes` (false), `:disable_json_ld` (false),
   `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See the
@@ -96,6 +106,6 @@ and `benchmarks/benchmark.exs` to run them.
 
 ## License
 
-Copyright (c) 2016 Jaehyun Shin
+Copyright (c) 2016 Jaehyun Shin and contributors. Readability.js is Copyright (c) 2010 Arc90 Inc.
 
-Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md).
+Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) and [NOTICE](NOTICE).

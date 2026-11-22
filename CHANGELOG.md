@@ -35,9 +35,10 @@ A rewrite: Readability is now a port of Mozilla's
 
 ### Added
 
-- Results match Readability.js on all 130 pages of its test suite (content, title, byline,
-  excerpt, site name, direction, language, published time), checked in CI by a conformance
-  suite built on those pages
+- Passes every check of Readability.js's test suite on all 130 of its pages (content as a
+  normalized DOM, attributes, title, byline, excerpt, site name, and direction, language and
+  published time where the page has them), checked in CI by a conformance suite built on those
+  pages
   ([#61](https://github.com/keepcosmos/readability/issues/61),
   [#63](https://github.com/keepcosmos/readability/issues/63)).
 - `Readability.article!/2`, raising `Readability.Error`.
