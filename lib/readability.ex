@@ -67,8 +67,16 @@ defmodule Readability do
   def article(html, opts \\ []) do
     opts = Options.validate!(opts)
     doc = html |> parse() |> LazyHTML.to_tree() |> valid_tree(html) |> DOM.from_lazy()
-    ctx = if opts.max_elems_to_parse > 0, do: %{element_count: count_elements(doc, 0)}, else: %{}
+    max = opts.max_elems_to_parse
+    count = if max > 0, do: count_elements(doc, 0), else: 0
 
+    # `parse()` checks the count before doing anything else
+    if max > 0 and count > max,
+      do: {:error, :too_many_elements},
+      else: extract(doc, %{element_count: count}, opts)
+  end
+
+  defp extract(doc, ctx, opts) do
     doc = Prep.unwrap_noscript_images(doc)
     json_ld = if opts.disable_json_ld, do: %{}, else: Metadata.json_ld(doc)
     doc = doc |> Prep.remove_scripts() |> Prep.prep_document()

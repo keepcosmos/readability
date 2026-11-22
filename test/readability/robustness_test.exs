@@ -76,5 +76,13 @@ defmodule Readability.RobustnessTest do
                  Readability.URL.resolve("https://xn--4c" <> String.duplicate("a", 30_000), nil)
       end)
     end
+
+    test ":max_elems_to_parse is checked before any other work" do
+      html = "<body><div>" <> String.duplicate("<span>a</span>", 100_000) <> "</div>"
+      {full, {:ok, _}} = :timer.tc(fn -> Readability.article(html) end)
+      {limited, result} = :timer.tc(fn -> Readability.article(html, max_elems_to_parse: 1000) end)
+      assert result == {:error, :too_many_elements}
+      assert limited < full / 4, "#{div(limited, 1000)} ms with the limit, #{div(full, 1000)} ms without"
+    end
   end
 end
