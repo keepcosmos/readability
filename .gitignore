@@ -27,3 +27,6 @@ readability-*.tar
 
 # Misc.
 .credo.exs
+
+# macOS
+.DS_Store

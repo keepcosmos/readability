@@ -1,18 +1,27 @@
 defmodule ReadabilityHttpTest do
   use ExUnit.Case
-  import Mock
-  require IEx
+
+  defp with_response(response, fun) do
+    :meck.new(HTTPoison, [:passthrough])
+    :meck.expect(HTTPoison, :get!, fn _url, _headers, _opts -> response end)
+
+    try do
+      fun.()
+    after
+      :meck.unload(HTTPoison)
+    end
+  end
 
   test "blank response is parsed as plain text" do
     url = "https://tools.ietf.org/rfc/rfc2616.txt"
     content = TestHelper.read_fixture("rfc2616.txt")
     response = %HTTPoison.Response{status_code: 200, headers: [], body: content}
 
-    with_mock HTTPoison, get!: fn _url, _headers, _opts -> response end do
+    with_response(response, fn ->
       %Readability.Summary{article_text: result_text} = Readability.summarize(url)
 
       assert result_text =~ ~r/3 Protocol Parameters/
-    end
+    end)
   end
 
   test "text/plain response is parsed as plain text" do
@@ -25,11 +34,11 @@ defmodule ReadabilityHttpTest do
       body: content
     }
 
-    with_mock HTTPoison, get!: fn _url, _headers, _opts -> response end do
+    with_response(response, fn ->
       %Readability.Summary{article_text: result_text} = Readability.summarize(url)
 
       assert result_text =~ ~r/3 Protocol Parameters/
-    end
+    end)
   end
 
   test "*ml responses are parsed as markup" do
@@ -45,11 +54,11 @@ defmodule ReadabilityHttpTest do
         body: content
       }
 
-      with_mock HTTPoison, get!: fn _url, _headers, _opts -> response end do
+      with_response(response, fn ->
         %Readability.Summary{article_html: result_html} = Readability.summarize(url)
 
         assert result_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
-      end
+      end)
     end)
   end
 
@@ -63,11 +72,11 @@ defmodule ReadabilityHttpTest do
       body: content
     }
 
-    with_mock HTTPoison, get!: fn _url, _headers, _opts -> response end do
+    with_response(response, fn ->
       %Readability.Summary{article_html: result_html} = Readability.summarize(url)
 
       assert result_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
-    end
+    end)
   end
 
   test "response with content-type in different case is parsed correctly" do
@@ -81,10 +90,10 @@ defmodule ReadabilityHttpTest do
       body: content
     }
 
-    with_mock HTTPoison, get!: fn _url, _headers, _opts -> response end do
+    with_response(response, fn ->
       %Readability.Summary{article_html: result_html} = Readability.summarize(url)
 
       assert result_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
-    end
+    end)
   end
 end

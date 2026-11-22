@@ -18,14 +18,21 @@ Add `:readability` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:readability, "~> 0.12"}
+    {:readability, "~> 0.13"}
   ]
 end
 ```
 
 After that, run mix deps.get.
 
-Note: Readability requires Elixir 1.10 or higher.
+Readability requires Elixir 1.17 or newer.
+
+`Readability.summarize/2` fetches pages with [HTTPoison](https://hex.pm/packages/httpoison). Readability supports
+HTTPoison 1.8, 2.x and 3.x, but HTTPoison 3 needs OTP 27+. If you are on an older OTP, pin it in your own `mix.exs`:
+
+```elixir
+{:httpoison, "~> 2.0"}
+```
 
 ## Usage
 
