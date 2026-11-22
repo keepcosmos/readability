@@ -127,5 +127,22 @@ defmodule Readability.RobustnessTest do
         assert a.content =~ ~s(href="#{href}"), html
       end
     end
+
+    test "readerable?/2 extracts nested candidates' text in linear time" do
+      spaces = String.duplicate(" ", 200_000)
+      text = String.duplicate("x", 150) <> spaces
+
+      for html <- [
+            String.duplicate("<article>", 2000) <> spaces,
+            "<body>" <> String.duplicate("<div><br>", 2000) <> spaces,
+            "<template></template>" <> String.duplicate("<pre>", 2000) <> spaces,
+            # over the budget, then readerable
+            String.duplicate("<article>", 2000) <> String.duplicate("<p>#{text}</p>", 50)
+          ] do
+        lazy = LazyHTML.from_document(html)
+        expected = Readability.Readerable.readerable?(lazy, exact: true)
+        assert within(300, fn -> Readability.readerable?(lazy) end) == expected
+      end
+    end
   end
 end

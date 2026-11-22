@@ -18,16 +18,31 @@ defmodule Readability.Readerable do
   @default_min_content_length 140
   @default_min_score 20
 
+  # Candidates are scored in order, each one's text extracted when it passes the attribute checks.
+  # That is quadratic for nested candidates (`<article>`s in `<article>`s), so past @text_budget
+  # bytes of extracted text it's compared once with the document's text; beyond 4 times that,
+  # `exact_readerable?/3` (one linear pass over the tree) takes over.
+  @text_budget 4_000_000
+
   @doc """
   `isProbablyReaderable(doc, options)`. `input` is a parsed document (`%LazyHTML{}`) or a
-  `DOM.tree()`. Options: `:min_content_length` (140), `:min_score` (20).
+  `DOM.tree()`. Options: `:min_content_length` (140), `:min_score` (20), and for tests
+  `:exact` (always use `exact_readerable?/3`, below).
   """
   @spec readerable?(LazyHTML.t() | DOM.tree(), keyword() | map()) :: boolean()
   def readerable?(input, opts \\ []) do
     min_length = opts[:min_content_length] || @default_min_content_length
     min_score = opts[:min_score] || @default_min_score
 
+    exact? = opts[:exact] == true
+
     case input do
+      %LazyHTML{} when exact? ->
+        input |> LazyHTML.to_tree() |> DOM.from_lazy() |> exact_readerable?(min_length, min_score)
+
+      tree when exact? ->
+        exact_readerable?(tree, min_length, min_score)
+
       %LazyHTML{} ->
         # `LazyHTML.text/1` includes `<template>` contents, `textContent` does not
         if Enum.empty?(LazyHTML.query(input, "template")),
@@ -44,37 +59,22 @@ defmodule Readability.Readerable do
   # ---------------------------------------------------------------------------------------------
 
   defp lazy_readerable?(doc, min_length, min_score) do
-    # `:not(li p)` replaces `node.matches("li p")`
-    nodes = LazyHTML.query(doc, "p:not(li p), pre, article")
+    phases = [
+      # `:not(li p)` replaces `node.matches("li p")`
+      fn -> lazy_candidates(LazyHTML.query(doc, "p:not(li p), pre, article")) end,
+      fn -> lazy_candidates(doc |> LazyHTML.query("div > br") |> LazyHTML.parent_node()) end
+    ]
 
-    case score_lazy(nodes, 0.0, min_length, min_score) do
-      true ->
-        true
+    budget = {@text_budget, fn -> byte_size(LazyHTML.text(doc)) end}
 
-      score ->
-        score_lazy(doc |> LazyHTML.query("div > br") |> LazyHTML.parent_node(), score, min_length, min_score) == true
+    case score_phases(phases, &text_length(LazyHTML.text(&1), min_length), budget, min_length, min_score) do
+      :over_budget -> doc |> LazyHTML.to_tree() |> DOM.from_lazy() |> exact_readerable?(min_length, min_score)
+      readerable? -> readerable?
     end
   end
 
-  # Returns `true` once the score exceeds `min_score`, otherwise the score so far. Attributes come
-  # in one NIF call for all nodes; text only for the nodes that pass the attribute checks.
-  defp score_lazy(nodes, score, min_length, min_score) do
-    nodes
-    |> Enum.zip(LazyHTML.attributes(nodes))
-    |> score_lazy_list(score, min_length, min_score)
-  end
-
-  defp score_lazy_list([], score, _min_length, _min_score), do: score
-
-  defp score_lazy_list([{node, attrs} | rest], score, min_length, min_score) do
-    with true <- candidate?(attrs),
-         length when length >= min_length <- trimmed_length(LazyHTML.text(node), min_length) do
-      score = score + :math.sqrt(length - min_length)
-      if score > min_score, do: true, else: score_lazy_list(rest, score, min_length, min_score)
-    else
-      _ -> score_lazy_list(rest, score, min_length, min_score)
-    end
-  end
+  # Attributes come in one NIF call for all nodes
+  defp lazy_candidates(nodes), do: Enum.zip(nodes, LazyHTML.attributes(nodes))
 
   # ---------------------------------------------------------------------------------------------
   # DOM tree
@@ -82,12 +82,16 @@ defmodule Readability.Readerable do
 
   defp tree_readerable?(tree, min_length, min_score) do
     {nodes, divs} = collect(tree, false, {[], []})
+    phases = [fn -> tree_candidates(nodes) end, fn -> tree_candidates(divs) end]
+    budget = {@text_budget, fn -> text_bytes(tree, 0) end}
 
-    case score_tree(:lists.reverse(nodes), 0.0, min_length, min_score) do
-      true -> true
-      score -> score_tree(:lists.reverse(divs), score, min_length, min_score) == true
+    case score_phases(phases, &text_length(DOM.text_content(&1), min_length), budget, min_length, min_score) do
+      :over_budget -> exact_readerable?(tree, min_length, min_score)
+      readerable? -> readerable?
     end
   end
+
+  defp tree_candidates(reversed), do: for(el <- :lists.reverse(reversed), do: {el, elem(el, 1)})
 
   # {candidate p/pre/article elements, divs with a br child}, both reversed. `in_li?`: below an `li`.
   defp collect([], _in_li?, acc), do: acc
@@ -125,17 +129,145 @@ defmodule Readability.Readerable do
     collect_div_children(rest, div, in_li?, acc, pending?)
   end
 
-  defp score_tree([], score, _min_length, _min_score), do: score
+  defp text_bytes([], n), do: n
+  defp text_bytes([text | rest], n) when is_binary(text), do: text_bytes(rest, n + byte_size(text))
+  defp text_bytes([{_, _, children, _} | rest], n), do: text_bytes(rest, text_bytes(children, n))
 
-  defp score_tree([{_, attrs, _, _} = el | rest], score, min_length, min_score) do
-    with true <- candidate?(attrs),
-         length when length >= min_length <- trimmed_length(DOM.text_content(el), min_length) do
-      score = score + :math.sqrt(length - min_length)
-      if score > min_score, do: true, else: score_tree(rest, score, min_length, min_score)
-    else
-      _ -> score_tree(rest, score, min_length, min_score)
+  # ---------------------------------------------------------------------------------------------
+  # Scoring
+  # ---------------------------------------------------------------------------------------------
+
+  # `phases` are functions returning `{node, attrs}` candidates; `length` returns a node's
+  # `{text bytes extracted, trimmed text length}`. Returns a boolean or `:over_budget`.
+  defp score_phases(phases, length, budget, min_length, min_score) do
+    Enum.reduce_while(phases, {0.0, budget}, fn phase, {score, budget} ->
+      case score_list(phase.(), length, score, budget, min_length, min_score) do
+        {_score, _budget} = acc -> {:cont, acc}
+        done -> {:halt, done}
+      end
+    end)
+    |> case do
+      {_score, _budget} -> false
+      done -> done
     end
   end
+
+  # Returns `true` once the score exceeds `min_score`, `:over_budget`, or the score so far and the
+  # remaining budget.
+  defp score_list([], _length, score, budget, _min_length, _min_score), do: {score, budget}
+
+  defp score_list([{node, attrs} | rest], length, score, budget, min_length, min_score) do
+    if candidate?(attrs) do
+      {bytes, text_length} = length.(node)
+
+      case spend(budget, bytes) do
+        {:ok, budget} when text_length >= min_length ->
+          score = score + :math.sqrt(text_length - min_length)
+          if score > min_score, do: true, else: score_list(rest, length, score, budget, min_length, min_score)
+
+        {:ok, budget} ->
+          score_list(rest, length, score, budget, min_length, min_score)
+
+        :over_budget ->
+          :over_budget
+      end
+    else
+      score_list(rest, length, score, budget, min_length, min_score)
+    end
+  end
+
+  # The budget is `{bytes left, function measuring the document's text}` (`nil` once measured) or
+  # `:unlimited`.
+  defp spend(:unlimited, _bytes), do: {:ok, :unlimited}
+  defp spend({left, measure}, bytes) when bytes <= left, do: {:ok, {left - bytes, measure}}
+  defp spend({_left, nil}, _bytes), do: :over_budget
+
+  defp spend({left, measure}, bytes) do
+    left = 4 * measure.() - (@text_budget - left + bytes)
+    if left >= 0, do: {:ok, {left, nil}}, else: :over_budget
+  end
+
+  # ---------------------------------------------------------------------------------------------
+  # Exact lengths in one pass
+  # ---------------------------------------------------------------------------------------------
+
+  # Every candidate's `textContent.trim().length` comes from one bottom-up pass: the text of a
+  # subtree is summarized as `{length, leading whitespace, trailing whitespace}` (UTF-16 units;
+  # all three equal for whitespace only).
+  @no_text {0, 0, 0}
+
+  defp exact_readerable?(tree, min_length, min_score) do
+    {_, {_, nodes, divs}} = collect_exact(tree, false, @no_text, {0, [], []})
+    phases = [fn -> :lists.sort(nodes) end, fn -> :lists.sort(divs) end]
+    score_phases(phases, fn {_order, length} -> {0, length} end, :unlimited, min_length, min_score)
+  end
+
+  # Adds the summary of `nodes` to `sum`. The accumulator holds a counter and the candidates as
+  # `{{order, trimmed length}, attrs}`: p/pre/article elements in document order, and divs with a
+  # `br` child in the order of that `br`. `in_li?`: below an `li`.
+  defp collect_exact([], _in_li?, sum, acc), do: {sum, acc}
+
+  defp collect_exact([text | rest], in_li?, sum, acc) when is_binary(text),
+    do: collect_exact(rest, in_li?, cat(sum, text_sum(text)), acc)
+
+  defp collect_exact([{tag, attrs, children, _} | rest], in_li?, sum, {i, nodes, divs}) do
+    {el_sum, {j, nodes, divs}} =
+      if tag == "div",
+        do: exact_div_children(children, attrs, in_li?, @no_text, {i + 1, nodes, divs}, true),
+        else: collect_exact(children, in_li? or tag == "li", @no_text, {i + 1, nodes, divs})
+
+    nodes =
+      case tag do
+        "p" when not in_li? -> [{{i, trimmed(el_sum)}, attrs} | nodes]
+        "pre" -> [{{i, trimmed(el_sum)}, attrs} | nodes]
+        "article" -> [{{i, trimmed(el_sum)}, attrs} | nodes]
+        _ -> nodes
+      end
+
+    collect_exact(rest, in_li?, cat(sum, el_sum), {j, nodes, divs})
+  end
+
+  # A div's children. At its first `br` child the div takes the next number (`pending?`: not
+  # yet); it's added with its length after the last child.
+  defp exact_div_children([], attrs, _in_li?, sum, {i, nodes, divs}, pending?) do
+    divs = if is_integer(pending?), do: [{{pending?, trimmed(sum)}, attrs} | divs], else: divs
+    {sum, {i, nodes, divs}}
+  end
+
+  defp exact_div_children([{"br", _, _, _} | _] = children, attrs, in_li?, sum, {i, nodes, divs}, true),
+    do: exact_div_children(children, attrs, in_li?, sum, {i + 1, nodes, divs}, i)
+
+  defp exact_div_children([child | rest], attrs, in_li?, sum, acc, pending?) do
+    {sum, acc} = collect_exact([child], in_li?, sum, acc)
+    exact_div_children(rest, attrs, in_li?, sum, acc, pending?)
+  end
+
+  defp text_sum(text) do
+    length = Text.length(text)
+
+    case Text.trim(text) do
+      "" ->
+        {length, length, length}
+
+      ^text ->
+        {length, 0, 0}
+
+      _ ->
+        # with a non-whitespace character at one end, `trim` only trims the other one
+        lead = byte_size(text) + 1 - byte_size(Text.trim(text <> "x"))
+        trail = byte_size(text) + 1 - byte_size(Text.trim("x" <> text))
+
+        {length, Text.length(binary_part(text, 0, lead)),
+         Text.length(binary_part(text, byte_size(text) - trail, trail))}
+    end
+  end
+
+  defp cat({l1, a1, t1}, {l2, a2, t2}) do
+    {l1 + l2, if(a1 == l1, do: l1 + a2, else: a1), if(t2 == l2, do: l2 + t1, else: t2)}
+  end
+
+  defp trimmed({length, length, _}), do: 0
+  defp trimmed({length, lead, trail}), do: length - lead - trail
 
   # ---------------------------------------------------------------------------------------------
   # Shared checks
@@ -172,10 +304,10 @@ defmodule Readability.Readerable do
     end
   end
 
-  # `text.trim().length`, or 0 when it is certainly below `min_length` (a UTF-16 unit takes at
-  # least one byte of UTF-8)
-  defp trimmed_length(text, min_length) when byte_size(text) < min_length, do: 0
-  defp trimmed_length(text, _min_length), do: text |> Text.trim() |> Text.length()
+  # `{byte size, text.trim().length}`, the length 0 when it is certainly below `min_length` (a
+  # UTF-16 unit takes at least one byte of UTF-8)
+  defp text_length(text, min_length) when byte_size(text) < min_length, do: {byte_size(text), 0}
+  defp text_length(text, _min_length), do: {byte_size(text), text |> Text.trim() |> Text.length()}
 
   defp attr(attrs, name) do
     case :lists.keyfind(name, 1, attrs) do
