@@ -226,7 +226,7 @@ defmodule Bench.Worker do
 
   # What each target runs: HTML in, readable article (content + metadata) out.
   defp job("local") do
-    if Code.ensure_loaded?(Readability.Article) do
+    if Code.ensure_loaded?(Readability) and function_exported?(Readability, :article!, 2) do
       fn html -> Readability.article(html, url: "http://fakehost/test/page.html") end
     else
       &legacy_job/1

@@ -22,6 +22,8 @@ git -C "$TMP" checkout -q FETCH_HEAD
 rm -rf "$DEST/pages"
 mkdir -p "$DEST/pages"
 cp -R "$TMP/test/test-pages/." "$DEST/pages/"
+mkdir -p "$DEST/js"
+cp "$TMP/Readability.js" "$TMP/Readability-readerable.js" "$TMP/JSDOMParser.js" "$DEST/js/"
 cp "$TMP/LICENSE.md" "$DEST/LICENSE.md"
 echo "$COMMIT" > "$DEST/COMMIT"
 

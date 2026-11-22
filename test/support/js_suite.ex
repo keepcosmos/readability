@@ -44,7 +44,7 @@ defmodule Readability.Test.JSSuite do
 
   def pages, do: @pages_dir |> File.ls!() |> Enum.sort()
 
-  def checks, do: ["content" | Enum.map(@metadata_checks, &elem(&1, 0))]
+  def checks, do: ["content", "attributes" | Enum.map(@metadata_checks, &elem(&1, 0))] ++ ["readerable"]
 
   def load(page) do
     dir = Path.join(@pages_dir, page)
@@ -53,8 +53,13 @@ defmodule Readability.Test.JSSuite do
       page: page,
       source: File.read!(Path.join(dir, "source.html")),
       expected: File.read!(Path.join(dir, "expected.html")),
-      metadata: dir |> Path.join("expected-metadata.json") |> File.read!() |> Jason.decode!()
+      metadata: dir |> Path.join("expected-metadata.json") |> File.read!() |> decode_json()
     }
+  end
+
+  defp decode_json(json) do
+    {value, :ok, ""} = :json.decode(json, :ok, %{null: nil})
+    value
   end
 
   @doc "MapSet of `{page, check}` pairs from known_failures.txt."
@@ -96,7 +101,13 @@ defmodule Readability.Test.JSSuite do
     case extract(data.source) do
       {:ok, result} ->
         checks =
-          Map.new([{"content", check_content(result.content, data.expected)} | metadata_checks(result, data.metadata)])
+          Map.new(
+            [
+              {"content", check_content(result.content, data.expected, :content)},
+              {"attributes", check_content(result.content, data.expected, :attributes)}
+              | metadata_checks(result, data.metadata)
+            ] ++ readerable_check(data)
+          )
 
         %{page: page, error: nil, f1: DOMCompare.text_f1(result.content, data.expected), checks: checks}
 
@@ -106,10 +117,10 @@ defmodule Readability.Test.JSSuite do
     end
   end
 
-  defp check_content(nil, _expected), do: {:fail, "no content"}
+  defp check_content(nil, _expected, _mode), do: {:fail, "no content"}
 
-  defp check_content(actual, expected) do
-    case DOMCompare.compare(actual, expected) do
+  defp check_content(actual, expected, mode) do
+    case DOMCompare.compare(actual, expected, mode) do
       :ok ->
         :pass
 
@@ -127,6 +138,18 @@ defmodule Readability.Test.JSSuite do
     end
   end
 
+  # Only once the implementation has `readerable?/1`.
+  defp readerable_check(%{source: source, metadata: %{"readerable" => expected}}) do
+    if function_exported?(Readability, :readerable?, 1) do
+      actual = apply(Readability, :readerable?, [source])
+      [{"readerable", if(actual == expected, do: :pass, else: {:fail, %{actual: actual, expected: expected}})}]
+    else
+      []
+    end
+  end
+
+  defp readerable_check(_data), do: []
+
   @doc """
   Runs the implementation under test on a page's source and normalizes its output.
   Uses the 1.0 API when it exists and the 0.x API otherwise, so the suite can
@@ -141,7 +164,8 @@ defmodule Readability.Test.JSSuite do
   # Used only by the 1.0 branch below.
   _ = {@url, @classes_to_preserve}
 
-  if Code.ensure_loaded?(Readability.Article) do
+  # ensure_compiled waits for lib/ when both compile in the same run.
+  if match?({:module, _}, Code.ensure_compiled(Readability)) and function_exported?(Readability, :article!, 2) do
     defp do_extract(source) do
       case Readability.article(source, url: @url, classes_to_preserve: @classes_to_preserve) do
         {:ok, article} -> Map.from_struct(article)
