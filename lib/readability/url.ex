@@ -6,15 +6,12 @@ defmodule Readability.URL do
   # Implemented: special schemes (http, https, ws, wss, ftp, file) and non-special ones, opaque
   # paths (`mailto:`, `data:`, `javascript:`), scheme-relative / path-absolute / path-relative /
   # query-only / fragment-only references, dot-segment removal (including `%2e`), `\` as `/` for
-  # special schemes, userinfo, ports (default ports dropped), IPv4 (decimal, octal, hex, fewer
-  # than four parts) and IPv6 hosts, percent-encoding per the WHATWG percent-encode sets, input
-  # trimming and tab/newline removal.
+  # special schemes, userinfo, ports (default ports dropped), IPv6 hosts, Windows drive letters in
+  # `file:` URLs, percent-encoding per the WHATWG percent-encode sets, input trimming and
+  # tab/newline removal.
   #
-  # Approximated: IDNA. ASCII hosts are lower-cased and `xn--` labels are checked to decode;
-  # non-ASCII hosts must be valid UTF-8 after percent-decoding, are NFKC-normalized, lower-cased,
-  # stripped of the common UTS #46 "ignored" code points and Punycode-encoded, which agrees with
-  # UTS #46 for ordinary names. Its mapping table is not implemented and of its validity criteria
-  # only a subset that covers what `new URL` rejects in practice (see `check_label/1`).
+  # Not implemented: IDNA and IPv4 parsing. Domains are percent-decoded and lower-cased (ASCII
+  # letters only) but otherwise kept as written, see `parse_host/2`.
   #
   # Errors are returned where `new URL` throws, so callers can keep the original value as
   # Readability.js does.
@@ -76,15 +73,19 @@ defmodule Readability.URL do
             uri
 
           uri ->
-            case parse(uri, base) do
-              {:ok, url} -> serialize(url)
-              :error -> uri
-            end
+            absolute(uri, base)
         end
 
       # `new URL(uri, invalidBase)` always throws
       :error ->
         & &1
+    end
+  end
+
+  defp absolute(uri, base) do
+    case parse(uri, base) do
+      {:ok, url} -> serialize(url)
+      :error -> uri
     end
   end
 
@@ -334,52 +335,38 @@ defmodule Readability.URL do
   end
 
   # file state, file slash state, file host state
+  defp file_state(<<c1, c2, r::binary>>, url, _base) when c1 in ~c"/\\" and c2 in ~c"/\\", do: file_host(r, url)
+  defp file_state(<<c, r::binary>>, url, base) when c in ~c"/\\", do: {:ok, path_state(r, file_slash(url, base, r))}
+  defp file_state(input, url, nil), do: {:ok, path_state(input, url)}
+
   defp file_state(input, url, base) do
+    url = %{url | host: base.host, path: base.path, query: base.query}
+
     case input do
-      <<c1, c2, r::binary>> when c1 in ~c"/\\" and c2 in ~c"/\\" ->
-        file_host(r, url)
+      <<"?", r::binary>> ->
+        {:ok, query_state(r, url)}
 
-      <<c, r::binary>> when c in ~c"/\\" ->
-        url =
-          if base do
-            url = %{url | host: base.host}
+      <<"#", r::binary>> ->
+        {:ok, %{url | fragment: encode(r, :fragment)}}
 
-            case Enum.reverse(base.path) do
-              [first | _] when is_binary(first) ->
-                if not starts_with_drive_letter?(r) and normalized_drive_letter?(first),
-                  do: %{url | path: [first]},
-                  else: url
-
-              _ ->
-                url
-            end
-          else
-            url
-          end
-
-        {:ok, path_state(r, url)}
-
-      _ when base != nil ->
-        url = %{url | host: base.host, path: base.path, query: base.query}
-
-        case input do
-          <<"?", r::binary>> ->
-            {:ok, query_state(r, url)}
-
-          <<"#", r::binary>> ->
-            {:ok, %{url | fragment: encode(r, :fragment)}}
-
-          <<>> ->
-            {:ok, url}
-
-          _ ->
-            path = if starts_with_drive_letter?(input), do: [], else: shorten(base.path, "file")
-            {:ok, path_state(input, %{url | path: path, query: nil})}
-        end
+      <<>> ->
+        {:ok, url}
 
       _ ->
-        {:ok, path_state(input, url)}
+        path = if starts_with_drive_letter?(input), do: [], else: shorten(base.path, "file")
+        {:ok, path_state(input, %{url | path: path, query: nil})}
     end
+  end
+
+  # "file:/path" against a file base keeps its host, and its drive letter unless the path has one.
+  defp file_slash(url, nil, _rest), do: url
+
+  defp file_slash(url, base, rest) do
+    first = List.last(base.path)
+
+    if normalized_drive_letter?(first) and not starts_with_drive_letter?(rest),
+      do: %{url | host: base.host, path: [first]},
+      else: %{url | host: base.host}
   end
 
   defp file_host(input, url) do
@@ -519,29 +506,18 @@ defmodule Readability.URL do
     encode(host, :c0)
   end
 
+  # A domain is percent-decoded and its ASCII letters lower-cased, and that's all: unlike the
+  # standard, non-ASCII names aren't converted to Punycode (IDNA) and numbers aren't parsed as
+  # IPv4 addresses ("0x7f.1" stays as it is). Readability.js only needs relative links to resolve.
   defp parse_host(host, true) do
-    if plain_host?(host, true, nil, nil), do: host, else: parse_domain(host)
+    host = host |> percent_decode() |> lower()
+    if host == "" or not String.valid?(host) or forbidden_domain?(host), do: fail()
+    host
   end
 
-  # A host of lower-case letters, digits, "-" and "." with no "xn--" label and whose last label
-  # starts with a letter (so it is not an IPv4 address) comes out of the host parser unchanged.
-  # Arguments: at a label start?, first byte of the current label, of the last finished label.
-  defp plain_host?(<<"xn--", _::binary>>, true, _cur, _last), do: false
-  defp plain_host?(<<?., r::binary>>, _start, cur, _last), do: plain_host?(r, true, nil, cur)
-
-  defp plain_host?(<<c, r::binary>>, start, cur, last) when c in ?a..?z or c in ?0..?9 or c == ?-,
-    do: plain_host?(r, false, if(start, do: c, else: cur), last)
-
-  defp plain_host?(<<>>, _start, cur, last), do: (cur || last) in ?a..?z
-  defp plain_host?(_, _start, _cur, _last), do: false
-
-  defp parse_domain(host) do
-    domain = host |> percent_decode() |> domain_to_ascii()
-
-    for <<c <- domain>>, c in @forbidden_host or c < 0x20 or c == ?% or c == 0x7F, do: fail()
-
-    if ends_in_number?(domain), do: ipv4(domain), else: domain
-  end
+  defp forbidden_domain?(<<c, _::binary>>) when c in @forbidden_host or c < 0x20 or c == ?% or c == 0x7F, do: true
+  defp forbidden_domain?(<<_, r::binary>>), do: forbidden_domain?(r)
+  defp forbidden_domain?(<<>>), do: false
 
   defp percent_decode(s) do
     if String.contains?(s, "%"), do: pd(s, <<>>), else: s
@@ -554,267 +530,19 @@ defmodule Readability.URL do
   defp pd(<<c, r::binary>>, acc), do: pd(r, <<acc::binary, c>>)
   defp pd(<<>>, acc), do: acc
 
-  # UTS #46 ToASCII, approximated (see the module comment)
-  defp domain_to_ascii(domain) do
-    result =
-      if ascii?(domain) do
-        domain = lower(domain)
-        for label <- :binary.split(domain, ".", [:global]), do: check_ace(label)
-        domain
-      else
-        # "UTF-8 decode without BOM" turns invalid bytes into U+FFFD, which UTS #46 disallows
-        if not String.valid?(domain), do: fail()
-
-        domain
-        |> String.replace(["。", "．", "｡"], ".")
-        |> drop_ignored()
-        |> :unicode.characters_to_nfkc_binary()
-        |> String.downcase()
-        |> :unicode.characters_to_nfc_binary()
-        |> :binary.split(".", [:global])
-        |> Enum.map_join(".", fn label ->
-          if ascii?(label), do: check_ace(label), else: "xn--" <> punycode_encode(check_label(label))
-        end)
-      end
-
-    if result == "", do: fail(), else: result
-  end
-
-  defp ascii?(s), do: for(<<c <- s>>, c >= 0x80, reduce: true, do: (_ -> false))
-
-  defp check_ace(<<"xn--", encoded::binary>> = label) do
-    case punycode_decode(encoded) do
-      {:ok, decoded} when decoded != "" ->
-        if ascii?(decoded), do: fail()
-        check_label(decoded)
-        label
-
-      _ ->
-        fail()
-    end
-  end
-
-  defp check_ace(label), do: label
-
-  # UTS #46 "ignored" code points (mapped to nothing) that can plausibly appear in a host: soft
-  # hyphen, CGJ, ZWSP, word joiner and invisible operators, variation selectors, BOM, shorthand
-  # format controls.
-  defp drop_ignored(domain) do
-    for <<cp::utf8 <- domain>>, not ignored?(cp), into: "", do: <<cp::utf8>>
-  end
-
-  defp ignored?(cp),
-    do:
-      cp in [0xAD, 0x34F, 0x200B, 0xFEFF] or cp in 0x2060..0x2064 or cp in 0xFE00..0xFE0F or
-        cp in 0x1BCA0..0x1BCA3 or cp in 0xE0100..0xE01EF
-
-  # A subset of the UTS #46 validity criteria (with WHATWG's flags), enough to reject what `new URL`
-  # rejects in practice; the full mapping table is not implemented. A label fails when it starts with
-  # a combining mark, or contains U+FFFD, a control, format (Cf), private-use or surrogate code point,
-  # a line/paragraph separator or a noncharacter, or a ZWJ/ZWNJ outside the CONTEXTJ rules (RFC 5892
-  # A.1/A.2, with the Arabic joining types of U+0620-06FF and U+0750-077F only). Unassigned code
-  # points are accepted: OTP's Unicode version may be older than Node's.
-  defp check_label(label) do
-    cps = String.to_charlist(label)
-    if match?({:mark, _}, category(hd(cps))), do: fail()
-    check_cps(cps, [])
-    label
-  end
-
-  defp check_cps([], _before), do: :ok
-
-  defp check_cps([0x200D | rest], before) do
-    if not virama?(before), do: fail()
-    check_cps(rest, [0x200D | before])
-  end
-
-  defp check_cps([0x200C | rest], before) do
-    if not (virama?(before) or (joins?(before, &joins_left?/1) and joins?(rest, &joins_right?/1))), do: fail()
-    check_cps(rest, [0x200C | before])
-  end
-
-  defp check_cps([cp | rest], before) do
-    if cp == 0xFFFD or cp in 0xFDD0..0xFDEF or (cp &&& 0xFFFE) == 0xFFFE, do: fail()
-
-    case category(cp) do
-      {:other, kind} when kind in [:control, :format, :private, :surrogate] -> fail()
-      {:separator, kind} when kind in [:line, :paragraph] -> fail()
-      _ -> check_cps(rest, [cp | before])
-    end
-  end
-
-  defp category(cp), do: :unicode_util.lookup(cp).category
-  defp virama?([cp | _]), do: :unicode_util.lookup(cp).ccc == 9
-  defp virama?([]), do: false
-
-  # The nearest code point that is not transparent (a non-spacing or enclosing mark) satisfies `fun`.
-  defp joins?([cp | rest], fun) do
-    case category(cp) do
-      {:mark, kind} when kind in [:non_spacing, :enclosing] -> joins?(rest, fun)
-      _ -> fun.(cp)
-    end
-  end
-
-  defp joins?([], _fun), do: false
-
-  # Joining type L or D (can join to the following letter)
-  defp joins_left?(cp),
-    do:
-      cp in [0x620, 0x626, 0x628, 0x649, 0x64A, 0x66E, 0x66F, 0x6CC, 0x6CE, 0x6FF] or cp in 0x62A..0x62E or
-        cp in 0x633..0x63F or cp in 0x641..0x647 or cp in 0x678..0x687 or cp in 0x69A..0x6BF or
-        cp in 0x6C1..0x6C2 or cp in 0x6D0..0x6D1 or cp in 0x6FA..0x6FC or cp in 0x750..0x758 or
-        cp in 0x75C..0x766
-
-  # Joining type R or D (can join to the preceding letter)
-  defp joins_right?(cp),
-    do:
-      cp in [0x620, 0x6D5, 0x6FF] or cp in 0x622..0x63F or cp in 0x641..0x64A or cp in 0x66E..0x66F or
-        cp in 0x671..0x673 or cp in 0x675..0x6D3 or cp in 0x6EE..0x6EF or cp in 0x6FA..0x6FC or
-        cp in 0x750..0x766
-
-  defp ends_in_number?(domain) do
-    parts = :binary.split(domain, ".", [:global])
-
-    parts =
-      case List.last(parts) do
-        "" when length(parts) > 1 -> Enum.drop(parts, -1)
-        _ -> parts
-      end
-
-    last = List.last(parts)
-
-    cond do
-      last == "" -> false
-      for(<<c <- last>>, c not in ?0..?9, reduce: true, do: (_ -> false)) -> true
-      ipv4_number(last) != :error -> true
-      true -> false
-    end
-  end
-
-  defp ipv4(domain) do
-    parts = :binary.split(domain, ".", [:global])
-
-    parts =
-      case List.last(parts) do
-        "" when length(parts) > 1 -> Enum.drop(parts, -1)
-        _ -> parts
-      end
-
-    if length(parts) > 4, do: fail()
-    numbers = Enum.map(parts, fn p -> with :error <- ipv4_number(p), do: fail() end)
-    {init, [last]} = Enum.split(numbers, -1)
-    if Enum.any?(init, &(&1 > 255)), do: fail()
-    if last >= Integer.pow(256, 5 - length(numbers)), do: fail()
-
-    n = Enum.reduce(Enum.with_index(init), last, fn {v, i}, acc -> acc + v * Integer.pow(256, 3 - i) end)
-    Enum.join([n >>> 24, n >>> 16 &&& 255, n >>> 8 &&& 255, n &&& 255], ".")
-  end
-
-  defp ipv4_number(""), do: :error
-
-  defp ipv4_number(s) do
-    {digits, radix} =
-      case s do
-        <<"0", x, r::binary>> when x in ~c"xX" -> {r, 16}
-        <<"0", r::binary>> when r != "" -> {r, 8}
-        _ -> {s, 10}
-      end
-
-    cond do
-      digits == "" -> 0
-      valid_digits?(digits, radix) -> String.to_integer(digits, radix)
-      true -> :error
-    end
-  end
-
-  defp valid_digits?(s, 10), do: for(<<c <- s>>, c not in ?0..?9, reduce: true, do: (_ -> false))
-  defp valid_digits?(s, 8), do: for(<<c <- s>>, c not in ?0..?7, reduce: true, do: (_ -> false))
-
-  defp valid_digits?(s, 16),
-    do: for(<<c <- s>>, not (c in ?0..?9 or c in ?a..?f or c in ?A..?F), reduce: true, do: (_ -> false))
-
-  # IPv6 parser and serializer (WHATWG "IPv6 parser" / "IPv6 serializer")
+  # OTP's strict parser follows the standard's IPv6 parser, except that it accepts zone IDs
+  # ("fe80::1%eth0").
   defp ipv6(s) do
-    {pieces, compress} = ipv6_pieces(s, [], nil)
-    n = length(pieces)
-
-    pieces =
-      cond do
-        compress != nil ->
-          {before, after_} = Enum.split(pieces, compress)
-          before ++ List.duplicate(0, 8 - n) ++ after_
-
-        n != 8 ->
-          fail()
-
-        true ->
-          pieces
-      end
-
-    serialize_ipv6(pieces)
-  end
-
-  defp ipv6_pieces(<<"::", r::binary>>, [], nil), do: ipv6_after_compress(r, [], 0)
-  defp ipv6_pieces(<<":", _::binary>>, [], nil), do: fail()
-  defp ipv6_pieces(s, acc, compress), do: ipv6_piece(s, acc, compress)
-
-  defp ipv6_after_compress(<<>>, acc, compress), do: {Enum.reverse(acc), compress}
-  defp ipv6_after_compress(s, acc, compress), do: ipv6_piece(s, acc, compress)
-
-  # `pieceIndex` of the spec: a "::" takes at least one piece.
-  defp piece_index(acc, nil), do: length(acc)
-  defp piece_index(acc, _compress), do: length(acc) + 1
-
-  defp ipv6_piece(s, acc, compress) do
-    if piece_index(acc, compress) >= 8, do: fail()
-    {value, len, rest} = hex_piece(s, 0, 0)
-
-    case rest do
-      <<".", _::binary>> ->
-        if len == 0 or piece_index(acc, compress) > 6, do: fail()
-        start = byte_size(s) - byte_size(rest) - len
-        [a, b, c, d] = ipv6_v4(binary_part(s, start, byte_size(s) - start))
-        {Enum.reverse(acc, [a <<< 8 ||| b, c <<< 8 ||| d]), compress}
-
-      <<"::", r::binary>> ->
-        if compress != nil or len == 0 or length(acc) == 7, do: fail()
-        acc = [value | acc]
-        ipv6_after_compress(r, acc, length(acc))
-
-      <<":", r::binary>> ->
-        if len == 0 or r == "", do: fail()
-        ipv6_piece(r, [value | acc], compress)
-
-      <<>> ->
-        if len == 0, do: fail()
-        {Enum.reverse([value | acc]), compress}
-
-      _ ->
-        fail()
+    with false <- String.contains?(s, "%"),
+         {:ok, address} <- :inet.parse_ipv6strict_address(:erlang.binary_to_list(s)) do
+      serialize_ipv6(Tuple.to_list(address))
+    else
+      _ -> fail()
     end
   end
 
-  defp hex_piece(<<c, r::binary>>, v, len) when len < 4 and (c in ?0..?9 or c in ?a..?f or c in ?A..?F),
-    do: hex_piece(r, v * 16 + String.to_integer(<<c>>, 16), len + 1)
-
-  defp hex_piece(rest, v, len), do: {v, len, rest}
-
-  defp ipv6_v4(s) do
-    parts = :binary.split(s, ".", [:global])
-    if length(parts) != 4, do: fail()
-
-    Enum.map(parts, fn p ->
-      cond do
-        p == "" or not valid_digits?(p, 10) -> fail()
-        byte_size(p) > 1 and :binary.first(p) == ?0 -> fail()
-        String.to_integer(p) > 255 -> fail()
-        true -> String.to_integer(p)
-      end
-    end)
-  end
-
+  # The longest run (the first of equal ones) of at least two zero pieces becomes "::".
   defp serialize_ipv6(pieces) do
-    # longest run (first wins) of at least two zero pieces
     {start, len} =
       pieces
       |> Enum.with_index()
@@ -834,147 +562,6 @@ defmodule Readability.URL do
       Enum.join(hex, ":")
     end
   end
-
-  ## Punycode (RFC 3492)
-
-  @base 36
-  @tmin 1
-  @tmax 26
-  @skew 38
-  @damp 700
-  @initial_bias 72
-  @initial_n 128
-
-  defp punycode_encode(label) do
-    cps = String.to_charlist(label)
-    basic = for c <- cps, c < 0x80, do: c
-    b = length(basic)
-    out = if b > 0, do: List.to_string(basic) <> "-", else: ""
-    encode_loop(cps, @initial_n, 0, @initial_bias, b, b, out)
-  end
-
-  defp encode_loop(cps, n, delta, bias, h, b, out) do
-    if h >= length(cps) do
-      out
-    else
-      m = cps |> Enum.filter(&(&1 >= n)) |> Enum.min()
-      delta = delta + (m - n) * (h + 1)
-
-      {delta, bias, h, out} =
-        Enum.reduce(cps, {delta, bias, h, out}, fn c, {delta, bias, h, out} ->
-          cond do
-            c < m ->
-              {delta + 1, bias, h, out}
-
-            c == m ->
-              out = out <> encode_digits(delta, @base, bias)
-              bias = adapt(delta, h + 1, h == b)
-              {0, bias, h + 1, out}
-
-            true ->
-              {delta, bias, h, out}
-          end
-        end)
-
-      encode_loop(cps, m + 1, delta + 1, bias, h, b, out)
-    end
-  end
-
-  defp encode_digits(q, k, bias) do
-    t = threshold(k, bias)
-
-    if q < t do
-      <<digit(q)>>
-    else
-      <<digit(t + rem(q - t, @base - t))>> <> encode_digits(div(q - t, @base - t), k + @base, bias)
-    end
-  end
-
-  defp punycode_decode(input) do
-    {basic, encoded} =
-      case :binary.matches(input, "-") do
-        [] ->
-          {"", input}
-
-        ms ->
-          {pos, 1} = List.last(ms)
-          {binary_part(input, 0, pos), binary_part(input, pos + 1, byte_size(input) - pos - 1)}
-      end
-
-    if ascii?(basic) do
-      basic = String.to_charlist(basic)
-      count = length(basic)
-      decode_loop(encoded, {:lists.reverse(basic), [], count}, count, @initial_n, 0, @initial_bias)
-    else
-      :error
-    end
-  catch
-    :url_error -> :error
-  end
-
-  # `out` is a zipper over the decoded code points: the ones before the insertion point (reversed),
-  # the ones after it, and its position. Successive insertions are usually next to each other.
-  defp decode_loop(<<>>, {left, right, _pos}, _count, _n, _i, _bias),
-    do: {:ok, List.to_string(:lists.reverse(left, right))}
-
-  defp decode_loop(input, out, count, n, i, bias) do
-    {i2, rest} = decode_digits(input, i, 1, @base, bias)
-    len = count + 1
-    bias = adapt(i2 - i, len, i == 0)
-    n = n + div(i2, len)
-    i2 = rem(i2, len)
-    if n > 0x10FFFF or n in 0xD800..0xDFFF, do: fail()
-    {left, right, _} = move(out, i2)
-    decode_loop(rest, {[n | left], right, i2 + 1}, len, n, i2 + 1, bias)
-  end
-
-  defp move({_, _, pos} = out, pos), do: out
-  defp move({left, [c | right], pos}, to) when to > pos, do: move({[c | left], right, pos + 1}, to)
-  defp move({[c | left], right, pos}, to), do: move({left, [c | right], pos - 1}, to)
-
-  # Fails on 32-bit overflow like ada (WHATWG URL in Node), which also bounds the digits read.
-  defp decode_digits(<<c, r::binary>>, i, w, k, bias) do
-    d = undigit(c)
-    i = i + d * w
-    t = threshold(k, bias)
-    w = w * (@base - t)
-
-    cond do
-      i > 0x7FFFFFFF -> fail()
-      d < t -> {i, r}
-      w > 0x7FFFFFFF -> fail()
-      true -> decode_digits(r, i, w, k + @base, bias)
-    end
-  end
-
-  defp decode_digits(<<>>, _i, _w, _k, _bias), do: fail()
-
-  defp threshold(k, bias) do
-    cond do
-      k <= bias -> @tmin
-      k >= bias + @tmax -> @tmax
-      true -> k - bias
-    end
-  end
-
-  defp adapt(delta, numpoints, first?) do
-    delta = if first?, do: div(delta, @damp), else: div(delta, 2)
-    delta = delta + div(delta, numpoints)
-    adapt_loop(delta, 0)
-  end
-
-  defp adapt_loop(delta, k) when delta > div((@base - @tmin) * @tmax, 2),
-    do: adapt_loop(div(delta, @base - @tmin), k + @base)
-
-  defp adapt_loop(delta, k), do: k + div((@base - @tmin + 1) * delta, delta + @skew)
-
-  defp digit(d) when d < 26, do: ?a + d
-  defp digit(d), do: ?0 + d - 26
-
-  defp undigit(c) when c in ?a..?z, do: c - ?a
-  defp undigit(c) when c in ?A..?Z, do: c - ?A
-  defp undigit(c) when c in ?0..?9, do: c - ?0 + 26
-  defp undigit(_), do: fail()
 
   ## Percent-encoding
 

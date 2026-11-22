@@ -60,38 +60,30 @@ defmodule Readability.URLTest do
 
   test "agrees with Node's URL on edge cases, except known Node quirks" do
     cases = cases()["edge"]
-    assert length(cases) > 3000
+    assert length(cases) > 2500
     {known, bad} = cases |> disagreements() |> Enum.split_with(&known_difference?/1)
     assert bad == []
     assert length(known) < 50
   end
 
-  # Expected values from Node 24's `new URL(input).href` (`:error` where it throws).
-  test "rejects hosts that UTS #46 disallows instead of rewriting them" do
+  # Readability.js's `new URL` converts these hosts (IDNA, IPv4 parsing) or rejects them.
+  test "domains are percent-decoded and lower-cased, otherwise kept as written" do
     for {input, expected} <- [
+          {"http://MÜNCHEN.de/a/../b", {:ok, "http://mÜnchen.de/b"}},
+          {"https://%C3%A4.com", {:ok, "https://ä.com/"}},
+          {"https://Ex%41mple.com", {:ok, "https://example.com/"}},
+          {"https://xn--a-wbb.com", {:ok, "https://xn--a-wbb.com/"}},
+          {"http://0x7F.1/", {:ok, "http://0x7f.1/"}},
+          {"http://256.0.0.1/", {:ok, "http://256.0.0.1/"}},
           {"https://example.com%80/", :error},
-          {"https://foo\u200D.com", :error},
-          {"https://foo\u200C.com", :error},
-          {"https://\u0301a.com", :error},
-          {"https://a\uFFFD.com", :error},
-          {"https://a\u0085b.com", :error},
-          {"https://a\u2028b.com", :error},
-          {"https://a\uE000.com", :error},
-          {"https://a\u200Eb.com", :error},
-          {"https://xn--ab-m1t.com", :error},
-          {"https://xn--a-wbb.com", :error},
-          # ZWJ after a virama, ZWNJ between joining Arabic letters (also across a mark)
-          {"https://\u0915\u094D\u200D\u0937.com", {:ok, "https://xn--11b2ezcw70k.com/"}},
-          {"https://\u0645\u06CC\u200C\u062E.com", {:ok, "https://xn--tgb9bvy774f.com/"}},
-          {"https://\u0628\u064E\u200C\u0628.com", {:ok, "https://xn--ngba7iz95i.com/"}},
-          {"https://\u0627\u200C\u0628.com", :error},
-          # ignored code points are dropped
-          {"https://\u00E4\u2061.com", {:ok, "https://xn--4ca.com/"}},
-          {"https://a\uFE0F\u00E4.com", {:ok, "https://xn--a-0fa.com/"}},
-          {"https://%C3%A4.com", {:ok, "https://xn--4ca.com/"}}
+          {"https://ex%25ample.com/", :error},
+          {"https://ex%00ample.com/", :error},
+          {"https://%2F/", :error}
         ] do
       assert URL.resolve(input, nil) == expected, inspect(input)
     end
+
+    assert URL.resolve("../c?d", "http://日本語.jp/a/b") == {:ok, "http://日本語.jp/c?d"}
   end
 
   test "IPv6: \"::\" stands for at least one piece" do
@@ -103,7 +95,11 @@ defmodule Readability.URLTest do
           {"http://[1:2:3:4:5:6:7::]/", {:ok, "http://[1:2:3:4:5:6:7:0]/"}},
           {"http://[::2:3:4:5:6:7:8]/", {:ok, "http://[0:2:3:4:5:6:7:8]/"}},
           {"http://[1:2:3::5:6:7:8]/", {:ok, "http://[1:2:3:0:5:6:7:8]/"}},
-          {"http://[::1:2:3:4:5:1.2.3.4]/", {:ok, "http://[0:1:2:3:4:5:102:304]/"}}
+          {"http://[::1:2:3:4:5:1.2.3.4]/", {:ok, "http://[0:1:2:3:4:5:102:304]/"}},
+          {"http://[::1.2.3.04]/", :error},
+          {"http://[fe80::1%25eth0]/", :error},
+          {"http://[fe80::1%eth0]/", :error},
+          {"http://[0001:0:0:0:0:0:0:A]/", {:ok, "http://[1::a]/"}}
         ] do
       assert URL.resolve(input, nil) == expected, input
     end

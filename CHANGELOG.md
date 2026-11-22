@@ -62,6 +62,13 @@ A rewrite: Readability is now a port of Mozilla's
 - Options are validated in one place ([#57](https://github.com/keepcosmos/readability/issues/57)
   no longer applies: `summarize` is gone).
 
+### Differences from Readability.js
+
+- Relative URLs are resolved with a subset of the WHATWG URL Standard: hosts with non-ASCII
+  characters are kept as written (lower-cased only for ASCII letters) instead of being converted
+  to Punycode, and numeric hosts such as `0x7f.1` are not rewritten as IPv4 addresses (or
+  rejected when out of range). Links on such hosts can differ from Readability.js's output.
+
 ### Migrating from 0.x
 
 | 0.x | 1.0 |
