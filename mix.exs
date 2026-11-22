@@ -52,6 +52,7 @@ defmodule Readability.Mixfile do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:meck, "~> 1.2", only: :test},
+      {:stream_data, "~> 1.1", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
       {:html5ever, "~> 0.18", only: :test},
       {:mix_test_watch, "~> 1.2", only: [:dev, :test], runtime: test_watch_runtime}
