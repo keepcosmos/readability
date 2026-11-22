@@ -115,4 +115,4 @@ and `benchmarks/benchmark.exs` to run them.
 
 Copyright (c) 2016 Jaehyun Shin and contributors. Readability.js is Copyright (c) 2010 Arc90 Inc.
 
-Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) and [NOTICE](NOTICE).
+Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md) and [NOTICE](https://github.com/keepcosmos/readability/blob/master/NOTICE).
