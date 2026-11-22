@@ -89,10 +89,6 @@ defmodule Readability.URL do
     end
   end
 
-  @doc "`toAbsoluteURI(uri)` without a prepared absolutizer."
-  @spec to_absolute(binary, binary | nil, binary | nil) :: binary
-  def to_absolute(uri, base_uri, document_uri), do: absolutizer(base_uri, document_uri).(uri)
-
   @doc """
   The `srcset` rewrite of `_fixRelativeUris`: `srcset.replace(srcsetUrl, (_, p1, p2, p3) =>
   toAbsoluteURI(p1) + (p2 || "") + p3)`. `absolutize` is a function from `absolutizer/2`.
@@ -237,14 +233,15 @@ defmodule Readability.URL do
   # authority state + host state + port state; `input` is past the slashes
   defp authority(input, url) do
     special = special?(url.scheme)
-    {auth, rest} = split_authority(input, special, 0)
+    {auth, rest} = split_authority(input, special)
 
     {url, hostport} =
-      case last_at(auth, 0, nil) do
-        nil ->
+      case :binary.matches(auth, "@") do
+        [] ->
           {url, auth}
 
-        at ->
+        ats ->
+          {at, 1} = List.last(ats)
           hostport = binary_part(auth, at + 1, byte_size(auth) - at - 1)
           if hostport == "", do: fail()
           {user, pass} = userinfo(binary_part(auth, 0, at))
@@ -258,20 +255,11 @@ defmodule Readability.URL do
     {:ok, path_start(rest, url)}
   end
 
-  defp last_at(<<"@", r::binary>>, i, _at), do: last_at(r, i + 1, i)
-  defp last_at(<<_, r::binary>>, i, at), do: last_at(r, i + 1, at)
-  defp last_at(<<>>, _i, at), do: at
-
-  defp split_authority(input, special, i) do
-    case input do
-      <<_::binary-size(^i), c, _::binary>> when c in ~c"/?#" or (special and c == ?\\) ->
-        {binary_part(input, 0, i), binary_part(input, i, byte_size(input) - i)}
-
-      <<_::binary-size(^i), _, _::binary>> ->
-        split_authority(input, special, i + 1)
-
-      _ ->
-        {input, <<>>}
+  # The authority ends at the first "/", "?" or "#" ("\\" too in special URLs).
+  defp split_authority(input, special) do
+    case :binary.match(input, if(special, do: ["/", "?", "#", "\\"], else: ["/", "?", "#"])) do
+      {i, _} -> {binary_part(input, 0, i), binary_part(input, i, byte_size(input) - i)}
+      :nomatch -> {input, <<>>}
     end
   end
 
@@ -370,7 +358,7 @@ defmodule Readability.URL do
   end
 
   defp file_host(input, url) do
-    {host, rest} = split_authority(input, true, 0)
+    {host, rest} = split_authority(input, true)
 
     cond do
       drive_letter?(host) ->
@@ -461,8 +449,6 @@ defmodule Readability.URL do
   defp double_dot?(<<"%2", e, "%2", f>>) when (e == ?e or e == ?E) and (f == ?e or f == ?E), do: true
   defp double_dot?(_), do: false
 
-  defp lower(s), do: for(<<c <- s>>, into: <<>>, do: <<if(c in ?A..?Z, do: c + 32, else: c)>>)
-
   # opaque path state (the trailing-space rule follows the current standard, as Node does)
   defp opaque_path(<<"?", r::binary>>, url, acc), do: query_state(r, %{url | path: {:opaque, acc}})
 
@@ -510,7 +496,7 @@ defmodule Readability.URL do
   # standard, non-ASCII names aren't converted to Punycode (IDNA) and numbers aren't parsed as
   # IPv4 addresses ("0x7f.1" stays as it is). Readability.js only needs relative links to resolve.
   defp parse_host(host, true) do
-    host = host |> percent_decode() |> lower()
+    host = host |> percent_decode() |> Readability.Text.lower()
     if host == "" or not String.valid?(host) or forbidden_domain?(host), do: fail()
     host
   end

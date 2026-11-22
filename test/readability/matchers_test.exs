@@ -119,7 +119,7 @@ defmodule Readability.MatchersTest do
   end
 
   test "hashUrl, sentence end and srcsetUrl agree with JS", %{cases: cases} do
-    assert mismatches(for([s, e] <- cases["hash_url"], do: {s, e}), &M.hash_url?/1) == []
+    assert mismatches(for([s, e] <- cases["hash_url"], do: {s, e}), &Readability.Text.hash_url?/1) == []
     assert mismatches(for([s, e] <- cases["sentence_end"], do: {s, e}), &M.sentence_end?/1) == []
 
     srcset = &M.srcset_replace(&1, fn p1, p2, p3 -> ["[", p1, "]", p2 | p3] end)
@@ -144,12 +144,6 @@ defmodule Readability.MatchersTest do
       {us, _} = :timer.tc(fn -> M.srcset_replace(input, fn p1, p2, p3 -> [p1, p2 | p3] end) end)
       assert us < 200_000, "took #{us} µs"
     end
-  end
-
-  test "lower/1 returns the argument when there is nothing to change" do
-    s = "already lower-case ÄÖ"
-    assert :erts_debug.same(M.lower(s), s)
-    assert M.lower("MiXeD Ä") == "mixed Ä"
   end
 
   test "regex/1 compiles once and caches in :persistent_term" do

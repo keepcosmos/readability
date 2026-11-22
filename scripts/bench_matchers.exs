@@ -39,7 +39,7 @@ defmodule BenchMatchers.Alt do
   # Aho-Corasick :binary.match over the ASCII-lower-cased string
   def ac_unlikely_candidate?(class, id) do
     {u, m} = :persistent_term.get({__MODULE__, :ac})
-    s = Readability.Matchers.lower((class || "") <> " " <> (id || ""))
+    s = Readability.Text.lower((class || "") <> " " <> (id || ""))
     :binary.match(s, u) != :nomatch and :binary.match(s, m) == :nomatch
   end
 
@@ -54,7 +54,7 @@ defmodule BenchMatchers.Alt do
   end
 
   def proto_unlikely_candidate?(class, id) do
-    s = Readability.Matchers.lower((class || "") <> " " <> (id || ""))
+    s = Readability.Text.lower((class || "") <> " " <> (id || ""))
     unlikely_scan(s) and not maybe_scan(s)
   end
 end

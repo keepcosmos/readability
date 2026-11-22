@@ -2,7 +2,7 @@ defmodule Readability.Matchers do
   @moduledoc false
   # Readability.js's `REGEXPS` and inline regexes, implemented per design §6.
   #
-  # Per-node tests (class/id keyword sets, image extensions, `shareElements`, `hashUrl`, the
+  # Per-node tests (class/id keyword sets, image extensions, `shareElements`, the
   # lazy-image and `b64DataUrl` patterns) are compile-time generated or hand-written binary
   # matchers. Everything else is a cold regex compiled once into `:persistent_term`, see
   # `regex/1`. Agreement with the JS regexes is tested against Node-generated fixtures.
@@ -11,7 +11,12 @@ defmodule Readability.Matchers do
   # character), so lower-casing ASCII and matching lower-case literals is exact.
   #
   # Not here, because they belong to `Readability.Text` (per-text-node scanners): `whitespace`,
-  # `hasContent`, `normalize`, `tokenize`, `commas`, `split(/\s+/)` and entity unescaping.
+  # `hasContent`, `hashUrl`, `normalize`, `tokenize`, `commas`, `split(/\s+/)` and entity
+  # unescaping. The JS `\s` class and ASCII lower-casing come from there too.
+
+  import Readability.Text, only: [lower: 1, ws_size: 1]
+
+  alias Readability.Text
 
   # ---------------------------------------------------------------------------------------------
   # Keyword sets
@@ -54,18 +59,6 @@ defmodule Readability.Matchers do
     defp unquote(scan)(<<_, rest::binary>>), do: unquote(scan)(rest)
     defp unquote(scan)(<<>>), do: false
   end
-
-  @doc "ASCII lower-case. Returns the argument itself when it has no upper-case ASCII letter."
-  @spec lower(binary) :: binary
-  def lower(s), do: if(upper?(s), do: do_lower(s, <<>>), else: s)
-
-  defp upper?(<<c, _::binary>>) when c in ?A..?Z, do: true
-  defp upper?(<<_, r::binary>>), do: upper?(r)
-  defp upper?(<<>>), do: false
-
-  defp do_lower(<<c, r::binary>>, acc) when c in ?A..?Z, do: do_lower(r, <<acc::binary, c + 32>>)
-  defp do_lower(<<c, r::binary>>, acc), do: do_lower(r, <<acc::binary, c>>)
-  defp do_lower(<<>>, acc), do: acc
 
   @doc "`REGEXPS.unlikelyCandidates.test(s)`"
   def unlikely?(s), do: unlikely_scan(lower(s))
@@ -148,13 +141,6 @@ defmodule Readability.Matchers do
   # ---------------------------------------------------------------------------------------------
   # Small hand-written patterns
   # ---------------------------------------------------------------------------------------------
-
-  @doc "`REGEXPS.hashUrl.test(s)`: `/^#.+/`; JS `.` excludes \\n, \\r, U+2028 and U+2029."
-  @spec hash_url?(binary) :: boolean
-  def hash_url?(<<"#", c, _::binary>>) when c == ?\n or c == ?\r, do: false
-  def hash_url?(<<"#", 0xE2, 0x80, c, _::binary>>) when c == 0xA8 or c == 0xA9, do: false
-  def hash_url?(<<"#", _, _::binary>>), do: true
-  def hash_url?(_), do: false
 
   @doc "`/\\.( |$)/` (`_grabArticle` sibling loop): \". \" anywhere or a final \".\"."
   @spec sentence_end?(binary) :: boolean
@@ -353,17 +339,6 @@ defmodule Readability.Matchers do
     end
   end
 
-  # JS `\s`: TAB LF VT FF CR SP U+00A0 U+1680 U+2000-200A U+2028 U+2029 U+202F U+205F U+3000 U+FEFF.
-  # (A private copy; `Readability.Text` owns the shared one.)
-  defp ws_size(<<c, _::binary>>) when c == 32 or c in 9..13, do: 1
-  defp ws_size(<<0xC2, 0xA0, _::binary>>), do: 2
-  defp ws_size(<<0xE1, 0x9A, 0x80, _::binary>>), do: 3
-  defp ws_size(<<0xE2, 0x80, c, _::binary>>) when c in 0x80..0x8A or c in [0xA8, 0xA9, 0xAF], do: 3
-  defp ws_size(<<0xE2, 0x81, 0x9F, _::binary>>), do: 3
-  defp ws_size(<<0xE3, 0x80, 0x80, _::binary>>), do: 3
-  defp ws_size(<<0xEF, 0xBB, 0xBF, _::binary>>), do: 3
-  defp ws_size(_), do: 0
-
   # {number of whitespace characters skipped, rest}
   defp skip_ws(s), do: skip_ws(s, 0)
 
@@ -475,7 +450,7 @@ defmodule Readability.Matchers do
   @spec meta_property_key(binary) :: binary | nil
   def meta_property_key(property) do
     case Regex.run(regex(:meta_property), property, capture: :first) do
-      [match] -> match |> lower() |> remove_ws(<<>>)
+      [match] -> match |> lower() |> Text.remove_ws()
       nil -> nil
     end
   end
@@ -487,22 +462,7 @@ defmodule Readability.Matchers do
   @spec meta_name_key(binary) :: binary | nil
   def meta_name_key(name) do
     if Regex.match?(regex(:meta_name), name) do
-      name |> lower() |> remove_ws(<<>>) |> :binary.replace(".", ":", [:global])
-    end
-  end
-
-  # only ASCII letters and JS whitespace can be in a matched name besides `-.:_`
-  defp remove_ws(<<>>, acc), do: acc
-
-  defp remove_ws(s, acc) do
-    case ws_size(s) do
-      0 ->
-        <<c, r::binary>> = s
-        remove_ws(r, <<acc::binary, c>>)
-
-      size ->
-        <<_::binary-size(^size), r::binary>> = s
-        remove_ws(r, acc)
+      name |> lower() |> Text.remove_ws() |> :binary.replace(".", ":", [:global])
     end
   end
 

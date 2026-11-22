@@ -72,7 +72,6 @@ defmodule Readability.DOMTest do
       el = parse1("<div>\n  Hello,\u00A0\u00A0<b>big</b>   world\u{1F600} \n</div>")
       assert DOM.text_content(el) == "\n  Hello,\u00A0\u00A0big   world\u{1F600} \n"
       assert DOM.inner_text(el) == "Hello, big world\u{1F600}"
-      assert DOM.inner_text(el, false) == "Hello,\u00A0\u00A0big   world\u{1F600}"
       assert DOM.inner_text_length(el) == 18
       assert DOM.inner_text_length(DOM.with_stats(el)) == 18
       assert DOM.comma_count(el, :ascii) == 1
@@ -183,27 +182,11 @@ defmodule Readability.DOMTest do
       assert DOM.find_all(div, :all) |> length() == 5
     end
 
-    test "find_all_grouped/2 groups by tag in the given order, like JSDOMParser's _getAllNodesWithTag" do
-      div = parse1("<div><p id=1><span id=2></span></p><span id=3></span><p id=4></p></div>")
-      ids = &Enum.map(&1, fn el -> DOM.attr(el, "id") end)
-      assert ids.(DOM.find_all(div, ["span", "p"])) == ["1", "2", "3", "4"]
-      assert ids.(DOM.find_all_grouped(div, ["span", "p"])) == ["2", "3", "1", "4"]
-      assert ids.(DOM.find_all_grouped(div, ["p", "span"])) == ["1", "4", "2", "3"]
-      assert DOM.find_all_grouped(div, ["p"]) == DOM.find_all(div, ["p"])
-      assert DOM.find_all_grouped(div, :all) == DOM.find_all(div, :all)
-      assert ids.(DOM.find_all_grouped([div], ["div", "span"])) == [nil, "2", "3"]
-    end
-
-    test "has_ancestor_tag?/4 inspects max_depth + 1 frames" do
+    test "has_ancestor_tag?/2 inspects 4 frames, like JS's default maxDepth of 3" do
       anc = [{"span", []}, {"b", []}, {"i", []}, {"table", [{:data_table, true}]}, {"div", []}]
       assert DOM.has_ancestor_tag?(anc, "table")
-      assert DOM.has_ancestor_tag?(anc, "table", 3)
-      refute DOM.has_ancestor_tag?(anc, "table", 2)
-      assert DOM.has_ancestor_tag?(anc, "table", 0)
-      refute DOM.has_ancestor_tag?(anc, "div", 3)
-      assert DOM.has_ancestor_tag?(anc, "div", -1)
-      assert DOM.has_ancestor_tag?(anc, "table", -1, fn {_, a} -> :lists.keyfind(:data_table, 1, a) != false end)
-      refute DOM.has_ancestor_tag?(anc, "table", -1, fn _ -> false end)
+      refute DOM.has_ancestor_tag?(anc, "div")
+      assert DOM.has_ancestor_tag?(tl(anc), "div")
       refute DOM.has_ancestor_tag?([], "div")
     end
   end
@@ -298,117 +281,13 @@ defmodule Readability.DOMTest do
   defp remove_tag({tag, _, _, _}, tag, acc), do: {:remove, acc}
   defp remove_tag(_el, _tag, acc), do: {:cont, acc}
 
-  describe "remove_reverse/4" do
-    test "visits in reverse document order, descendants already processed" do
-      div = parse1("<div><p id=1><p2 id=2></p2><p2 id=3></p2></p><p id=4></p></div>")
-
-      {_, order} =
-        DOM.remove_reverse_acc(div, :all, [], fn el, _anc, acc -> {false, [DOM.attr(el, "id") | acc]} end)
-
-      expected = div |> DOM.find_all(:all) |> Enum.map(&DOM.attr(&1, "id"))
-      assert order == expected
-      assert expected == ["1", "2", "3", "4"]
-    end
-
-    test "fun sees the rebuilt node (descendants removed) and unprocessed ancestors" do
-      div = parse1("<div><p><span>x</span></p><p>keep<span>y</span></p></div>")
-      test_pid = self()
-
-      out =
-        DOM.remove_reverse(div, ["p", "span"], fn el, anc ->
-          send(test_pid, {elem(el, 0), DOM.text_content(el), anc})
-          elem(el, 0) == "span" or DOM.blank?(el)
-        end)
-
-      assert out == parse1("<div><p>keep</p></div>")
-      assert_received {"span", "y", [{"p", []}, {"div", []}]}
-      assert_received {"p", "keep", [{"div", []}]}
-      assert_received {"p", "", [{"div", []}]}
-    end
-
-    test "remove_reverse_grouped/4 iterates the grouped snapshot from its end" do
-      div = parse1("<div><p><span>x</span></p></div>")
-      fun = fn el, _anc -> elem(el, 0) == "span" or DOM.blank?(el) end
-
-      # JS: snapshot [span, p]; p is tested first (not blank), then the span is removed
-      assert DOM.remove_reverse_grouped(div, ["span", "p"], fun) == parse1("<div><p></p></div>")
-      assert DOM.remove_reverse(div, ["span", "p"], fun) == parse1("<div></div>")
-      assert DOM.remove_reverse_grouped(div, ["p", "span"], fun) == parse1("<div></div>")
-
-      div = parse1("<div><p id=1><i id=2></i></p><i id=3></i><p id=4></p></div>")
-
-      {out, order} =
-        DOM.remove_reverse_grouped_acc(div, ["p", "i"], [], fn el, _anc, acc -> {false, [DOM.attr(el, "id") | acc]} end)
-
-      assert same?(out, div)
-      # prepending undoes the reverse iteration: we get the snapshot order back
-      assert order == div |> DOM.find_all_grouped(["p", "i"]) |> Enum.map(&DOM.attr(&1, "id"))
-      assert order == ["1", "4", "2", "3"]
-    end
-
-    test "returns identical terms when nothing is removed" do
-      tree = parse("<div><p>a</p><p>b</p></div>")
-      assert same?(DOM.remove_reverse(tree, ["p"], fn _, _ -> false end), tree)
-      assert DOM.remove_reverse(tree, ["p"], fn _, _ -> true end) == parse("<div></div>")
-      assert DOM.remove_reverse(tree, ["div"], fn _, _ -> true end) == []
-    end
-  end
-
-  describe "map_elements/3" do
-    test "is a live walk: elements a callback inserts are visited in the same pass (unlike JS)" do
-      tree = parse("<div><p>a</p></div>")
-      test_pid = self()
-
-      out =
-        DOM.map_elements(tree, ["p"], fn {_, _, children, _} = el ->
-          send(test_pid, {:visited, DOM.text_content(el)})
-          if children == ["a"], do: {:cont, DOM.put_children(el, [DOM.raw("p", [], ["inserted"])])}, else: :cont
-        end)
-
-      assert out == [DOM.raw("div", [], [DOM.raw("p", [], [DOM.raw("p", [], ["inserted"])])])]
-      assert_received {:visited, "a"}
-      # a JS _forEachNode over a snapshot would not see this one
-      assert_received {:visited, "inserted"}
-
-      # {:skip, new_el} avoids it
-      out = DOM.map_elements(tree, ["p"], &{:skip, DOM.put_children(&1, [DOM.raw("p", [], ["x"])])})
-      assert out == [DOM.raw("div", [], [DOM.raw("p", [], [DOM.raw("p", [], ["x"])])])]
-    end
-
-    test "rewrites tags in document order and keeps unchanged parts identical" do
-      tree = parse("<div><font>a</font><p>b<font>c</font></p></div><p>z</p>")
-      out = DOM.map_elements(tree, ["font"], &{:cont, DOM.put_tag(&1, "span")})
-      assert out == parse("<div><span>a</span><p>b<span>c</span></p></div><p>z</p>")
-      assert same?(List.last(out), List.last(tree))
-      assert same?(DOM.map_elements(tree, ["font"], fn _ -> :cont end), tree)
-    end
-
-    test ":skip stops descent, {:cont, new} visits children the callback added" do
-      tree = parse("<svg><g style=x></g></svg><figure style=y></figure>")
-
-      out =
-        DOM.map_elements(tree, :all, fn
-          {"svg", _, _, _} ->
-            :skip
-
-          {"figure", _, children, _} = el ->
-            {:cont, DOM.put_children(DOM.delete_attr(el, "style"), children ++ [DOM.raw("img", [{"style", "z"}], [])])}
-
-          el ->
-            {:cont, DOM.delete_attr(el, "style")}
-        end)
-
-      assert [{"svg", [], [{"g", [{"style", "x"}], [], nil}], nil}, {"figure", [], [{"img", [], [], nil}], nil}] = out
-    end
-  end
-
   describe "random edits keep stats consistent (property)" do
     property "every API edit preserves stats == recomputation" do
       check all(
               el <- DOMGen.element(),
               ops <-
                 list_of(
-                  {member_of([:tag, :href, :remove_pre, :remove_rev, :map, :children]), member_of(DOMGen.tags()),
+                  {member_of([:tag, :href, :remove_pre, :remove_random, :map, :children]), member_of(DOMGen.tags()),
                    member_of(DOMGen.hrefs())},
                   max_length: 6
                 ),
@@ -435,13 +314,25 @@ defmodule Readability.DOMTest do
     end
   end
 
+  # Calls `fun` on the elements with tag `tag` (every element for `:all`), in document order.
+  defp rewrite(root, tag, fun) do
+    {out, nil} =
+      DOM.remove_preorder(root, nil, fn {t, _, _, _} = el, _anc, nil ->
+        if tag == :all or t == tag, do: fun.(el), else: {:cont, nil}
+      end)
+
+    out
+  end
+
   defp edit({:tag, tag, _}, root),
     do:
-      DOM.map_elements(root, :all, fn el -> if :rand.uniform(3) == 1, do: {:cont, DOM.put_tag(el, tag)}, else: :cont end)
+      rewrite(root, :all, fn el ->
+        if :rand.uniform(3) == 1, do: {:cont, DOM.put_tag(el, tag), nil}, else: {:cont, nil}
+      end)
 
   defp edit({:href, tag, href}, root) do
-    DOM.map_elements(root, [tag], fn el ->
-      if href, do: {:cont, DOM.put_attr(el, "href", href)}, else: {:cont, DOM.delete_attr(el, "href")}
+    rewrite(root, tag, fn el ->
+      if href, do: {:cont, DOM.put_attr(el, "href", href), nil}, else: {:cont, DOM.delete_attr(el, "href"), nil}
     end)
   end
 
@@ -450,18 +341,17 @@ defmodule Readability.DOMTest do
     out
   end
 
-  defp edit({:remove_rev, tag, _}, root), do: DOM.remove_reverse(root, [tag], fn _, _ -> :rand.uniform(2) == 1 end)
+  defp edit({:remove_random, tag, _}, root),
+    do: rewrite(root, tag, fn _ -> if :rand.uniform(2) == 1, do: {:remove, nil}, else: {:cont, nil} end)
 
   defp edit({:map, tag, _}, root) do
-    DOM.map_elements(root, [tag], fn {_, _, children, _} = el ->
-      {:cont, DOM.put_children(el, ["new, text" | children])}
-    end)
+    rewrite(root, tag, fn {_, _, children, _} = el -> {:cont, DOM.put_children(el, ["new, text" | children]), nil} end)
   end
 
   defp edit({:children, tag, _}, root) do
     # wrap the children of matching elements into a new raw <p> (el/3 upgrades it)
-    DOM.map_elements(root, [tag], fn {_, _, children, _} = el ->
-      {:skip, DOM.put_children(el, [DOM.raw("p", [], children)])}
+    rewrite(root, tag, fn {_, _, children, _} = el ->
+      {:skip, DOM.put_children(el, [DOM.raw("p", [], children)]), nil}
     end)
   end
 end

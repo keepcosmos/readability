@@ -240,14 +240,11 @@ defmodule Readability.DOM do
   defp tc_list([{_, _, children, _} | rest]), do: [tc_list(children) | tc_list(rest)]
 
   @doc """
-  `_getInnerText(node, normalize?)`: `textContent.trim()`, then (by default) runs of two or more
-  whitespace characters replaced by one space.
+  `_getInnerText(node)`: `textContent.trim()`, then runs of two or more whitespace characters
+  replaced by one space.
   """
-  @spec inner_text(node_(), boolean()) :: binary()
-  def inner_text(node, normalize? \\ true) do
-    text = node |> text_content() |> Text.trim()
-    if normalize?, do: Text.normalize(text), else: text
-  end
+  @spec inner_text(node_()) :: binary()
+  def inner_text(node), do: node |> text_content() |> Text.trim() |> Text.normalize()
 
   @doc "`_getInnerText(node).length` in UTF-16 units. O(1) with stats."
   @spec inner_text_length(node_()) :: non_neg_integer()
@@ -397,23 +394,15 @@ defmodule Readability.DOM do
     do: div_to_p_elem?(tag) or child_block_list?(children) or child_block_list?(rest)
 
   @doc """
-  `_hasAncestorTag(node, tag, max_depth, filter)` over an ancestor frame list (nearest first).
-  Like JS it inspects `max_depth + 1` frames; `max_depth` 0 means the default 3 (`0 || 3`), a
-  negative value means unlimited. `filter` receives the `{tag, attrs}` frame.
+  `_hasAncestorTag(node, tag)` over an ancestor frame list (nearest first). Like JS with its
+  default `maxDepth` of 3, it inspects 4 frames.
   """
-  @spec has_ancestor_tag?([frame()], tag(), integer(), (frame() -> boolean()) | nil) :: boolean()
-  def has_ancestor_tag?(ancestors, tag, max_depth \\ 3, filter \\ nil)
-  def has_ancestor_tag?(ancestors, tag, 0, filter), do: has_ancestor_tag?(ancestors, tag, 3, filter)
-  def has_ancestor_tag?(ancestors, tag, max_depth, filter), do: anc?(ancestors, tag, max_depth, 0, filter)
+  @spec has_ancestor_tag?([frame()], tag()) :: boolean()
+  def has_ancestor_tag?(ancestors, tag), do: anc?(ancestors, tag, 3)
 
-  defp anc?([], _tag, _max, _depth, _filter), do: false
-  defp anc?(_, _tag, max, depth, _filter) when max > 0 and depth > max, do: false
-
-  defp anc?([{tag, _} = frame | rest], tag, max, depth, filter) do
-    if filter == nil or filter.(frame), do: true, else: anc?(rest, tag, max, depth + 1, filter)
-  end
-
-  defp anc?([_ | rest], tag, max, depth, filter), do: anc?(rest, tag, max, depth + 1, filter)
+  defp anc?([{tag, _} | _], tag, _depth), do: true
+  defp anc?([_ | rest], tag, depth) when depth > 0, do: anc?(rest, tag, depth - 1)
+  defp anc?(_ancestors, _tag, _depth), do: false
 
   # ---------------------------------------------------------------------------------------------
   # Read-only queries
@@ -450,7 +439,8 @@ defmodule Readability.DOM do
   descendants.
 
   With more than one tag this is the `querySelectorAll` order, not the order Readability.js
-  sees under JSDOMParser (which the oracle runs): see `find_all_grouped/2`.
+  sees under JSDOMParser (which the oracle runs), grouped by tag. Where that difference is
+  observable, the callers handle it.
   """
   @spec find_all(node_() | tree(), tags()) :: [el()]
   def find_all({_, _, children, _}, tags), do: children |> find_list(tags, []) |> :lists.reverse()
@@ -465,35 +455,17 @@ defmodule Readability.DOM do
     find_list(rest, tags, find_list(children, tags, acc))
   end
 
-  @doc """
-  `_getAllNodesWithTag(node, tags)` exactly as Readability.js computes it on JSDOMParser, which
-  has no `querySelectorAll`: `[].concat(...tags.map(t => node.getElementsByTagName(t)))`, i.e.
-  grouped by tag in the order of `tags` (every `tags[0]` element in document order, then every
-  `tags[1]` element, ...). Same scope as `find_all/2`. Equal to `find_all/2` for a single tag or
-  `:all`.
-
-  Use it where the iteration order is observable: a `_forEachNode` callback that mutates or
-  depends on state, or `_removeNodes` (see `remove_reverse_grouped/4`).
-
-      # <div><p><span>x</span></p></div>
-      find_all_grouped(div, ["span", "p"]) #=> [span, p]
-      find_all(div, ["span", "p"])         #=> [p, span]
-  """
-  @spec find_all_grouped(node_() | tree(), tags()) :: [el()]
-  def find_all_grouped(tree, [_, _ | _] = tags), do: Enum.flat_map(tags, &find_all(tree, [&1]))
-  def find_all_grouped(tree, tags), do: find_all(tree, tags)
-
   defp tag_in?(_tag, :all), do: true
   defp tag_in?(tag, tags), do: :lists.member(tag, tags)
 
   # ---------------------------------------------------------------------------------------------
-  # Traversal combinators
+  # Traversal
   #
-  # All three take a node or a list. Given an ELEMENT they visit its descendants only and return
-  # the element (never removed); given a LIST they visit the listed nodes too and return a list.
-  # Text nodes are never passed to the callback and are kept as they are.
+  # `remove_preorder/5` takes a node or a list. Given an ELEMENT it visits its descendants only
+  # and returns the element (never removed); given a LIST it visits the listed nodes too and
+  # returns a list. Text nodes are never passed to the callback and are kept as they are.
   #
-  # They return the identical (same term) node or list when nothing changed: an unchanged subtree
+  # It returns the identical (same term) node or list when nothing changed: an unchanged subtree
   # is never rebuilt, so its stats are never recomputed. Changed elements are rebuilt with
   # `put_children/2` semantics (stats state preserved).
   # ---------------------------------------------------------------------------------------------
@@ -608,214 +580,6 @@ defmodule Readability.DOM do
   defp splice(:removed, rest, _list), do: rest
   defp splice(node, :same, [_ | t]), do: [node | t]
   defp splice(node, rest, _list), do: [node | rest]
-
-  @doc """
-  Reverse-document-order removal, the equivalent of
-  `_removeNodes(_getAllNodesWithTag(e, tags), fn)`: a snapshot iterated from the last node to the
-  first. When `fun.(el, ancestors)` is called, all of `el`'s descendants and everything after it in
-  document order have been processed already (`el` is passed rebuilt, with up-to-date stats),
-  and none of its ancestors has (`ancestors` are their unprocessed frames). Returning `true`
-  removes `el`.
-
-  Implementation: children right to left, rebuild the element, then decide.
-
-  With more than one tag this is the reverse of the `querySelectorAll` snapshot (`find_all/2`).
-  Readability.js on JSDOMParser iterates the grouped snapshot instead; use
-  `remove_reverse_grouped/4` where the difference is observable.
-
-      # <div><p>x</p><p><p></p></p></div>: remove empty <p>s, innermost first
-      remove_reverse(div, ["p"], fn p, _anc -> DOM.blank?(p) end)
-  """
-  @spec remove_reverse(node_() | tree(), tags(), (el(), [frame()] -> boolean()), [frame()]) :: node_() | tree()
-  def remove_reverse(tree, tags, fun, ancestors \\ []) when is_function(fun, 2) do
-    {tree, nil} = remove_reverse_acc(tree, tags, nil, fn el, anc, nil -> {fun.(el, anc), nil} end, ancestors)
-    tree
-  end
-
-  @doc """
-  `remove_reverse/4` with an accumulator threaded in reverse document order:
-  `fun.(el, ancestors, acc) :: {remove? :: boolean, acc}`. Returns `{tree, acc}`.
-  """
-  @spec remove_reverse_acc(node_() | tree(), tags(), acc, (el(), [frame()], acc -> {boolean(), acc}), [frame()]) ::
-          {node_() | tree(), acc}
-        when acc: term()
-  def remove_reverse_acc(tree, tags, acc, fun, ancestors \\ [])
-
-  def remove_reverse_acc(list, tags, acc, fun, ancestors) when is_list(list) do
-    case rev_list(list, ancestors, tags, acc, fun) do
-      {:same, acc} -> {list, acc}
-      other -> other
-    end
-  end
-
-  def remove_reverse_acc({tag, attrs, children, _} = el, tags, acc, fun, ancestors) do
-    case rev_list(children, [{tag, attrs} | ancestors], tags, acc, fun) do
-      {:same, acc} -> {el, acc}
-      {children, acc} -> {put_children(el, children), acc}
-    end
-  end
-
-  def remove_reverse_acc(text, _tags, acc, _fun, _ancestors) when is_binary(text), do: {text, acc}
-
-  # Tail (later siblings) first, then the head.
-  defp rev_list([], _anc, _tags, acc, _fun), do: {:same, acc}
-
-  defp rev_list([text | rest], anc, tags, acc, fun) when is_binary(text) do
-    case rev_list(rest, anc, tags, acc, fun) do
-      {:same, _} = same -> same
-      {rest, acc} -> {[text | rest], acc}
-    end
-  end
-
-  defp rev_list([el | rest] = list, anc, tags, acc, fun) do
-    {rest2, acc} = rev_list(rest, anc, tags, acc, fun)
-    {node, acc} = rev_node(el, anc, tags, acc, fun)
-    {splice(node, rest2, list), acc}
-  end
-
-  defp rev_node({tag, attrs, children, _} = el, anc, tags, acc, fun) do
-    {node, acc} =
-      case rev_list(children, [{tag, attrs} | anc], tags, acc, fun) do
-        {:same, acc} -> {:same, acc}
-        {children, acc} -> {put_children(el, children), acc}
-      end
-
-    if tag_in?(tag, tags),
-      do: rev_decide(if(node == :same, do: el, else: node), node, anc, acc, fun),
-      else: {node, acc}
-  end
-
-  defp rev_decide(el, result, anc, acc, fun) do
-    case fun.(el, anc, acc) do
-      {true, acc} -> {:removed, acc}
-      {false, acc} -> {result, acc}
-    end
-  end
-
-  @doc """
-  `_removeNodes(_getAllNodesWithTag(e, tags), fn)` with the snapshot order Readability.js has on
-  JSDOMParser (`find_all_grouped/2`): iterated from its end, so the elements of the LAST tag go
-  first (in reverse document order), then those of the previous tag, and so on. Implemented as one
-  `remove_reverse/4` pass per tag, last tag first; with a single tag it is `remove_reverse/4`.
-
-  `fun.(el, ancestors)` sees `el` as the earlier passes left it (descendants of a later tag may
-  already be removed; descendants of an earlier tag are not processed yet), and the current frames
-  of its ancestors.
-
-  One difference from JS: an element whose ancestor was removed by an earlier pass is not visited.
-  JS still calls `fn` on it (it keeps its `parentNode` inside the detached subtree), but removing
-  it there has no visible effect, so only a callback with side effects can tell.
-
-      # <div><p><span>x</span></p></div>, removing spans and blank paragraphs:
-      remove_reverse_grouped(div, ["span", "p"], fn el, _ -> elem(el, 0) == "span" or blank?(el) end)
-      #=> <div><p></p></div>  (p is tested first, while it still holds the span)
-      remove_reverse(div, ["span", "p"], ...)
-      #=> <div></div>
-  """
-  @spec remove_reverse_grouped(node_() | tree(), tags(), (el(), [frame()] -> boolean()), [frame()]) ::
-          node_() | tree()
-  def remove_reverse_grouped(tree, tags, fun, ancestors \\ []) when is_function(fun, 2) do
-    {tree, nil} =
-      remove_reverse_grouped_acc(tree, tags, nil, fn el, anc, nil -> {fun.(el, anc), nil} end, ancestors)
-
-    tree
-  end
-
-  @doc """
-  `remove_reverse_grouped/4` with an accumulator threaded in snapshot order (see
-  `remove_reverse_acc/5`). Returns `{tree, acc}`.
-  """
-  @spec remove_reverse_grouped_acc(
-          node_() | tree(),
-          tags(),
-          acc,
-          (el(), [frame()], acc -> {boolean(), acc}),
-          [frame()]
-        ) :: {node_() | tree(), acc}
-        when acc: term()
-  def remove_reverse_grouped_acc(tree, tags, acc, fun, ancestors \\ [])
-
-  def remove_reverse_grouped_acc(tree, [_, _ | _] = tags, acc, fun, ancestors) do
-    tags
-    |> :lists.reverse()
-    |> Enum.reduce({tree, acc}, fn tag, {tree, acc} -> remove_reverse_acc(tree, [tag], acc, fun, ancestors) end)
-  end
-
-  def remove_reverse_grouped_acc(tree, tags, acc, fun, ancestors),
-    do: remove_reverse_acc(tree, tags, acc, fun, ancestors)
-
-  @doc """
-  Pre-order element rewrite for attribute and tag changes (`_replaceNodeTags`, `_cleanStyles`,
-  `_fixLazyImages`, `_cleanClasses`, `_fixRelativeUris`, ...). `fun.(el)` is called on every
-  element whose tag is in `tags`, in document order, before its children, and returns:
-
-    * `:cont` - unchanged, visit the children;
-    * `{:cont, new_el}` - replace, then visit `new_el`'s children (including children it added);
-    * `:skip` / `{:skip, new_el}` - unchanged / replaced, children not visited (`_cleanStyles`
-      stops at `<svg>`).
-
-  Elements whose tag is not in `tags` are not passed to `fun` but their children are visited.
-
-  This is a live walk, not a snapshot. Readability.js iterates a snapshot taken before the loop
-  (`_forEachNode(_getAllNodesWithTag(...))`), so it never visits elements its callback inserts.
-  Here, after `{:cont, new_el}`, every element in `new_el`'s
-  children whose tag is in `tags` is passed to `fun`, including ones the callback just inserted
-  or moved there. Return `{:skip, new_el}` when the inserted children must not be visited (and
-  visit the original children yourself if needed). Visiting order is document order also for
-  several tags; JSDOMParser's grouped order is `find_all_grouped/2`.
-
-      map_elements(tree, ["font"], &{:cont, DOM.put_tag(&1, "span")})
-  """
-  @spec map_elements(node_() | tree(), tags(), (el() -> :cont | :skip | {:cont | :skip, el()})) :: node_() | tree()
-  def map_elements(list, tags, fun) when is_list(list) do
-    case map_list(list, tags, fun) do
-      :same -> list
-      list -> list
-    end
-  end
-
-  def map_elements({_, _, children, _} = el, tags, fun) do
-    case map_list(children, tags, fun) do
-      :same -> el
-      children -> put_children(el, children)
-    end
-  end
-
-  def map_elements(text, _tags, _fun) when is_binary(text), do: text
-
-  defp map_list([], _tags, _fun), do: :same
-
-  defp map_list([text | rest], tags, fun) when is_binary(text) do
-    case map_list(rest, tags, fun) do
-      :same -> :same
-      rest -> [text | rest]
-    end
-  end
-
-  defp map_list([el | rest] = list, tags, fun) do
-    node = map_node(el, tags, fun)
-    splice(node, map_list(rest, tags, fun), list)
-  end
-
-  defp map_node({tag, _, _, _} = el, tags, fun) do
-    if tag_in?(tag, tags), do: map_apply(el, tags, fun), else: map_children(el, tags, fun)
-  end
-
-  defp map_apply(el, tags, fun) do
-    case fun.(el) do
-      :cont -> map_children(el, tags, fun)
-      :skip -> :same
-      {:skip, new} -> new
-      {:cont, new} -> with :same <- map_children(new, tags, fun), do: new
-    end
-  end
-
-  defp map_children({_, _, children, _} = el, tags, fun) do
-    case map_list(children, tags, fun) do
-      :same -> :same
-      children -> put_children(el, children)
-    end
-  end
 
   # ---------------------------------------------------------------------------------------------
   # Debugging

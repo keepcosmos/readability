@@ -226,8 +226,10 @@ defmodule Readability.TextTest do
   @js_ws [9, 10, 11, 12, 13, 32, 0xA0, 0x1680] ++
            Enum.to_list(0x2000..0x200A) ++ [0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]
 
-  test "whitespace_char?/1 is exactly the JS class" do
-    assert Enum.filter(0..0x10FFFF, &Text.whitespace_char?/1) == @js_ws
+  test "ws_size/1 is exactly the JS class" do
+    code_points = Enum.concat(0..0xD7FF, 0xE000..0x10FFFF)
+    assert Enum.filter(code_points, &(Text.ws_size(<<&1::utf8, "x">>) > 0)) == @js_ws
+    assert Enum.all?(@js_ws, &(Text.ws_size(<<&1::utf8>>) == byte_size(<<&1::utf8>>)))
   end
 
   defp ws?(c), do: c in @js_ws

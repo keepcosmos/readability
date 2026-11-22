@@ -182,7 +182,7 @@ defmodule Readability.Text do
   defp len(<<>>, n), do: n
 
   # ---------------------------------------------------------------------------------------------
-  # blank?/1, has_content?/1, hash_url?/1, whitespace?/1
+  # blank?/1, has_content?/1, hash_url?/1, ws_size/1
   # ---------------------------------------------------------------------------------------------
 
   @doc "JS `!s.trim()` / `/^\\s*$/.test(s)`: the string is empty or only whitespace."
@@ -242,15 +242,13 @@ defmodule Readability.Text do
   def hash_url?(<<?#, _, _::binary>>), do: true
   def hash_url?(_), do: false
 
-  @doc "Whether the code point is JS whitespace."
-  @spec whitespace_char?(non_neg_integer()) :: boolean()
-  def whitespace_char?(c) when c == 32 or (c >= 9 and c <= 13), do: true
-  def whitespace_char?(c) when c == 0xA0 or c == 0x1680 or (c >= 0x2000 and c <= 0x200A), do: true
+  @doc "The byte size of the JS whitespace character `bin` starts with, or 0."
+  @spec ws_size(binary()) :: non_neg_integer()
+  for {pat, guard, size, :ws} <- classes do
+    def ws_size(unquote(stop.(pat))) when unquote(guard), do: unquote(size)
+  end
 
-  def whitespace_char?(c) when c == 0x2028 or c == 0x2029 or c == 0x202F or c == 0x205F or c == 0x3000 or c == 0xFEFF,
-    do: true
-
-  def whitespace_char?(_), do: false
+  def ws_size(_), do: 0
 
   # ---------------------------------------------------------------------------------------------
   # trim/1
