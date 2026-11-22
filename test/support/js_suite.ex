@@ -19,6 +19,11 @@ defmodule Readability.Test.JSSuite do
   @url "http://fakehost/test/page.html"
   @classes_to_preserve ["caption"]
 
+  # ensure_compiled waits for lib/ when both compile in the same run.
+  @api if match?({:module, _}, Code.ensure_compiled(Readability)) and function_exported?(Readability, :article!, 2),
+         do: :v1,
+         else: :v0
+
   @metadata_checks [
     {"title", :title},
     {"byline", :byline},
@@ -139,9 +144,9 @@ defmodule Readability.Test.JSSuite do
     end
   end
 
-  # Only once the implementation has `readerable?/1`.
+  # Only once the implementation has `readerable?/1` (the 1.0 API must have it, see readability_js_test.exs).
   defp readerable_check(%{source: source, metadata: %{"readerable" => expected}}) do
-    if function_exported?(Readability, :readerable?, 1) do
+    if Code.ensure_loaded?(Readability) and function_exported?(Readability, :readerable?, 1) do
       actual = apply(Readability, :readerable?, [source])
       [{"readerable", if(actual == expected, do: :pass, else: {:fail, %{actual: actual, expected: expected}})}]
     else
@@ -155,9 +160,14 @@ defmodule Readability.Test.JSSuite do
   Runs the implementation under test on a page's source and normalizes its output.
   Uses the 1.0 API when it exists and the 0.x API otherwise, so the suite can
   measure the 0.13 baseline too.
+
+  Returns `{:ok, result}`, or `{:error, message}` when no article comes out: the
+  implementation raised, or (1.0 API) returned an error such as `{:error, :not_readable}` or
+  content without text. Every test page has an article, so that is always a failure. (The 0.x
+  baseline returns an empty `<div>` on a few pages; that stays a content failure.)
   """
   def extract(source) do
-    {:ok, do_extract(source)}
+    do_extract(source)
   rescue
     exception -> {:error, Exception.format_banner(:error, exception, __STACKTRACE__) |> String.slice(0, 500)}
   end
@@ -165,24 +175,31 @@ defmodule Readability.Test.JSSuite do
   # Used only by the 1.0 branch below.
   _ = {@url, @classes_to_preserve}
 
-  # ensure_compiled waits for lib/ when both compile in the same run.
-  if match?({:module, _}, Code.ensure_compiled(Readability)) and function_exported?(Readability, :article!, 2) do
+  if @api == :v1 do
     defp do_extract(source) do
       case Readability.article(source, url: @url, classes_to_preserve: @classes_to_preserve) do
-        {:ok, article} -> Map.from_struct(article)
-        {:error, :not_readable} -> %{content: nil}
+        {:ok, article} -> article |> Map.from_struct() |> require_content()
+        {:error, reason} -> {:error, "no article: #{inspect(reason)}"}
       end
+    end
+
+    # Readability.js returns null rather than an article without text.
+    defp require_content(%{content: content} = result) do
+      if is_binary(content) and not DOMCompare.blank?(content |> LazyHTML.from_fragment() |> LazyHTML.text()),
+        do: {:ok, result},
+        else: {:error, "no article: content without text: #{inspect(content, printable_limit: 100)}"}
     end
   else
     defp do_extract(source) do
       content = source |> Readability.article() |> Readability.readable_html()
 
-      %{
-        content: content,
-        title: Readability.title(source),
-        byline: source |> Readability.authors() |> then(&if(&1 in [nil, []], do: nil, else: Enum.join(&1, ", "))),
-        published_time: source |> Readability.published_at() |> then(&(&1 && &1.__struct__.to_iso8601(&1)))
-      }
+      {:ok,
+       %{
+         content: content,
+         title: Readability.title(source),
+         byline: source |> Readability.authors() |> then(&if(&1 in [nil, []], do: nil, else: Enum.join(&1, ", "))),
+         published_time: source |> Readability.published_at() |> then(&(&1 && &1.__struct__.to_iso8601(&1)))
+       }}
     end
   end
 end
