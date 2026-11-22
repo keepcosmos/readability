@@ -107,6 +107,21 @@ defmodule Readability.TextTest do
       assert Text.lower("") == ""
     end
 
+    test "unescape_html_entities/1 saturates huge numeric references (linear time, U+FFFD)" do
+      nines = String.duplicate("9", 50_000)
+      fs = String.duplicate("f", 50_000)
+      zeros = String.duplicate("0", 50_000)
+
+      {us, result} =
+        :timer.tc(fn ->
+          Text.unescape_html_entities("a&##{nines};b&#x#{fs};c&#x#{zeros}41;d&##{zeros}1114111;e&##{nines}")
+        end)
+
+      assert result == "a\uFFFDb\uFFFDcAd\u{10FFFF}e&##{nines}"
+      assert us < 50_000, "took #{us} µs"
+      assert Text.unescape_html_entities("&#1114112;&#x110000;&#x10FFFF;") == "\uFFFD\uFFFD\u{10FFFF}"
+    end
+
     test "unescape_html_entities/1 passes nil and empty through" do
       assert Text.unescape_html_entities(nil) == nil
       assert Text.unescape_html_entities("") == ""

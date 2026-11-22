@@ -50,7 +50,7 @@ defmodule Readability.Options do
                 "Video embeds whose `src` matches this are kept. Defaults to Readability.js's list of common video hosts."
             ],
             link_density_modifier: [
-              type: :float,
+              type: {:or, [:float, :integer]},
               default: 0.0,
               doc: "Added to the link density threshold when deciding whether to remove a block."
             ]
@@ -60,5 +60,9 @@ defmodule Readability.Options do
 
   def docs, do: NimbleOptions.docs(@schema)
 
-  def validate!(opts), do: opts |> NimbleOptions.validate!(@schema) |> Map.new()
+  # Returns a map; `:link_density_modifier` is always a float.
+  def validate!(opts) do
+    opts = opts |> NimbleOptions.validate!(@schema) |> Map.new()
+    %{opts | link_density_modifier: opts.link_density_modifier / 1}
+  end
 end

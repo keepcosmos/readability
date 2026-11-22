@@ -183,6 +183,17 @@ defmodule Readability.DOMTest do
       assert DOM.find_all(div, :all) |> length() == 5
     end
 
+    test "find_all_grouped/2 groups by tag in the given order, like JSDOMParser's _getAllNodesWithTag" do
+      div = parse1("<div><p id=1><span id=2></span></p><span id=3></span><p id=4></p></div>")
+      ids = &Enum.map(&1, fn el -> DOM.attr(el, "id") end)
+      assert ids.(DOM.find_all(div, ["span", "p"])) == ["1", "2", "3", "4"]
+      assert ids.(DOM.find_all_grouped(div, ["span", "p"])) == ["2", "3", "1", "4"]
+      assert ids.(DOM.find_all_grouped(div, ["p", "span"])) == ["1", "4", "2", "3"]
+      assert DOM.find_all_grouped(div, ["p"]) == DOM.find_all(div, ["p"])
+      assert DOM.find_all_grouped(div, :all) == DOM.find_all(div, :all)
+      assert ids.(DOM.find_all_grouped([div], ["div", "span"])) == [nil, "2", "3"]
+    end
+
     test "has_ancestor_tag?/4 inspects max_depth + 1 frames" do
       anc = [{"span", []}, {"b", []}, {"i", []}, {"table", [{:data_table, true}]}, {"div", []}]
       assert DOM.has_ancestor_tag?(anc, "table")
@@ -315,6 +326,26 @@ defmodule Readability.DOMTest do
       assert_received {"p", "", [{"div", []}]}
     end
 
+    test "remove_reverse_grouped/4 iterates the grouped snapshot from its end" do
+      div = parse1("<div><p><span>x</span></p></div>")
+      fun = fn el, _anc -> elem(el, 0) == "span" or DOM.blank?(el) end
+
+      # JS: snapshot [span, p]; p is tested first (not blank), then the span is removed
+      assert DOM.remove_reverse_grouped(div, ["span", "p"], fun) == parse1("<div><p></p></div>")
+      assert DOM.remove_reverse(div, ["span", "p"], fun) == parse1("<div></div>")
+      assert DOM.remove_reverse_grouped(div, ["p", "span"], fun) == parse1("<div></div>")
+
+      div = parse1("<div><p id=1><i id=2></i></p><i id=3></i><p id=4></p></div>")
+
+      {out, order} =
+        DOM.remove_reverse_grouped_acc(div, ["p", "i"], [], fn el, _anc, acc -> {false, [DOM.attr(el, "id") | acc]} end)
+
+      assert same?(out, div)
+      # prepending undoes the reverse iteration: we get the snapshot order back
+      assert order == div |> DOM.find_all_grouped(["p", "i"]) |> Enum.map(&DOM.attr(&1, "id"))
+      assert order == ["1", "4", "2", "3"]
+    end
+
     test "returns identical terms when nothing is removed" do
       tree = parse("<div><p>a</p><p>b</p></div>")
       assert same?(DOM.remove_reverse(tree, ["p"], fn _, _ -> false end), tree)
@@ -324,6 +355,26 @@ defmodule Readability.DOMTest do
   end
 
   describe "map_elements/3" do
+    test "is a live walk: elements a callback inserts are visited in the same pass (unlike JS)" do
+      tree = parse("<div><p>a</p></div>")
+      test_pid = self()
+
+      out =
+        DOM.map_elements(tree, ["p"], fn {_, _, children, _} = el ->
+          send(test_pid, {:visited, DOM.text_content(el)})
+          if children == ["a"], do: {:cont, DOM.put_children(el, [DOM.raw("p", [], ["inserted"])])}, else: :cont
+        end)
+
+      assert out == [DOM.raw("div", [], [DOM.raw("p", [], [DOM.raw("p", [], ["inserted"])])])]
+      assert_received {:visited, "a"}
+      # a JS _forEachNode over a snapshot would not see this one
+      assert_received {:visited, "inserted"}
+
+      # {:skip, new_el} avoids it
+      out = DOM.map_elements(tree, ["p"], &{:skip, DOM.put_children(&1, [DOM.raw("p", [], ["x"])])})
+      assert out == [DOM.raw("div", [], [DOM.raw("p", [], [DOM.raw("p", [], ["x"])])])]
+    end
+
     test "rewrites tags in document order and keeps unchanged parts identical" do
       tree = parse("<div><font>a</font><p>b<font>c</font></p></div><p>z</p>")
       out = DOM.map_elements(tree, ["font"], &{:cont, DOM.put_tag(&1, "span")})

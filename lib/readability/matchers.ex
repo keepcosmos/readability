@@ -251,6 +251,108 @@ defmodule Readability.Matchers do
 
   defp split_at(s, i), do: {binary_part(s, 0, i), binary_part(s, i, byte_size(s) - i)}
 
+  @doc """
+  `srcset.replace(REGEXPS.srcsetUrl, (_, p1, p2, p3) => fun.(p1, p2 || "", p3))` with
+  `srcsetUrl = /(\\S+)(\\s+[\\d.]+[xw])?(\\s*(?:,|$))/g`, in one linear pass (the regex is
+  quadratic on a long run of non-whitespace with no match: it retries at every position).
+
+  How the regex resolves at a run of non-whitespace `s[i..e)` (a match can only start at a
+  run's first character; if it fails there it fails at every later position in the run):
+
+    1. `p1` = the whole run, `p2` = whitespace, `[\\d.]+`, then `x`/`w`, `p3` = whitespace up to
+       a `,` (included) or the end of the string;
+    2. else `p1` = the whole run, no `p2`, `p3` = the whitespace after it up to a `,` (included)
+       or the end of the string;
+    3. else (backtracking `\\S+`) `p1` = the run up to its LAST `,` after `s[i]`, `p3` = `","`;
+    4. else no match: the run is copied and scanning resumes after it.
+
+  Scanning resumes after the match. Text between matches is copied unchanged.
+  """
+  @spec srcset_replace(binary, (binary, binary, binary -> iodata)) :: binary
+  def srcset_replace(srcset, fun), do: IO.iodata_to_binary(srcset_scan(srcset, srcset, 0, 0, fun, []))
+
+  # `s` is the rest of `o` at byte offset `pos`; `copy` is where the pending unchanged text starts.
+  defp srcset_scan(<<>>, o, pos, copy, _fun, acc), do: [acc | binary_part(o, copy, pos - copy)]
+
+  defp srcset_scan(s, o, pos, copy, fun, acc) do
+    case ws_size(s) do
+      0 ->
+        {e, comma, rest} = srcset_run(s, pos, nil)
+
+        case srcset_match(o, pos, e, comma, rest) do
+          nil ->
+            srcset_scan(rest, o, e, copy, fun, acc)
+
+          {p1_end, p2_end, p3_end} ->
+            p1 = binary_part(o, pos, p1_end - pos)
+            p2 = binary_part(o, p1_end, p2_end - p1_end)
+            p3 = binary_part(o, p2_end, p3_end - p2_end)
+            acc = [acc, binary_part(o, copy, pos - copy) | fun.(p1, p2, p3)]
+            <<_::binary-size(^p3_end), rest::binary>> = o
+            srcset_scan(rest, o, p3_end, p3_end, fun, acc)
+        end
+
+      n ->
+        <<_::binary-size(^n), rest::binary>> = s
+        srcset_scan(rest, o, pos + n, copy, fun, acc)
+    end
+  end
+
+  # Ends a run of non-whitespace: {end offset, offset of its last ",", rest at the end}.
+  defp srcset_run(<<c, _::binary>> = s, pos, comma) when c == 32 or c in 9..13, do: {pos, comma, s}
+  defp srcset_run(<<0xC2, 0xA0, _::binary>> = s, pos, comma), do: {pos, comma, s}
+  defp srcset_run(<<0xE1, 0x9A, 0x80, _::binary>> = s, pos, comma), do: {pos, comma, s}
+
+  defp srcset_run(<<0xE2, 0x80, c, _::binary>> = s, pos, comma) when c in 0x80..0x8A or c in [0xA8, 0xA9, 0xAF],
+    do: {pos, comma, s}
+
+  defp srcset_run(<<0xE2, 0x81, 0x9F, _::binary>> = s, pos, comma), do: {pos, comma, s}
+  defp srcset_run(<<0xE3, 0x80, 0x80, _::binary>> = s, pos, comma), do: {pos, comma, s}
+  defp srcset_run(<<0xEF, 0xBB, 0xBF, _::binary>> = s, pos, comma), do: {pos, comma, s}
+  defp srcset_run(<<?,, r::binary>>, pos, _comma), do: srcset_run(r, pos + 1, pos)
+  defp srcset_run(<<_, r::binary>>, pos, comma), do: srcset_run(r, pos + 1, comma)
+  defp srcset_run(<<>>, pos, comma), do: {pos, comma, <<>>}
+
+  # The match of a run starting at `i` and ending at `e` (`rest` follows it), as the end offsets
+  # of p1, p2 and p3, or nil.
+  defp srcset_match(o, i, e, comma, rest) do
+    {ws, after_ws} = skip_ws(rest)
+    f = byte_size(o) - byte_size(after_ws)
+
+    with_descriptor =
+      if ws > 0 do
+        case srcset_descriptor(after_ws, 0) do
+          {d, rest} -> srcset_tail(rest, e, f + d)
+          nil -> nil
+        end
+      end
+
+    cond do
+      with_descriptor != nil -> with_descriptor
+      after_ws == "" -> {e, e, f}
+      match?(<<?,, _::binary>>, after_ws) -> {e, e, f + 1}
+      comma != nil and comma > i -> {comma, comma, comma + 1}
+      true -> nil
+    end
+  end
+
+  # `[\d.]+[xw]`: {length, rest} or nil
+  defp srcset_descriptor(<<c, r::binary>>, n) when c in ?0..?9 or c == ?., do: srcset_descriptor(r, n + 1)
+  defp srcset_descriptor(<<c, r::binary>>, n) when n > 0 and (c == ?x or c == ?w), do: {n + 1, r}
+  defp srcset_descriptor(_, _), do: nil
+
+  # `\s*(?:,|$)` after a descriptor ending at `p2_end`
+  defp srcset_tail(s, p1_end, p2_end) do
+    {_, after_ws} = skip_ws(s)
+    p3_end = p2_end + byte_size(s) - byte_size(after_ws)
+
+    case after_ws do
+      "" -> {p1_end, p2_end, p3_end}
+      <<?,, _::binary>> -> {p1_end, p2_end, p3_end + 1}
+      _ -> nil
+    end
+  end
+
   # JS `\s`: TAB LF VT FF CR SP U+00A0 U+1680 U+2000-200A U+2028 U+2029 U+202F U+205F U+3000 U+FEFF.
   # (A private copy; `Readability.Text` owns the shared one.)
   defp ws_size(<<c, _::binary>>) when c == 32 or c in 9..13, do: 1
@@ -286,7 +388,6 @@ defmodule Readability.Matchers do
 
   # JS `\s` as a code-point class (for patterns compiled with "u") ...
   @ws_u ~S"[\t\n\x{0B}\f\r \x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]"
-  @nws_u ~S"[^\t\n\x{0B}\f\r \x{A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]"
   # ... and as UTF-8 byte sequences, for byte-mode patterns that need ASCII-only `/i`
   @ws_b ~S"(?:[\t\n\x0B\f\r ]|\xC2\xA0|\xE1\x9A\x80|\xE2\x80[\x80-\x8A\xA8\xA9\xAF]|\xE2\x81\x9F|\xE3\x80\x80|\xEF\xBB\xBF)"
   # JS `.` (one UTF-16 code unit except \n \r U+2028 U+2029) in byte mode
@@ -298,8 +399,6 @@ defmodule Readability.Matchers do
     videos:
       {~S"\/\/(www\.)?((dailymotion|youtube|youtube-nocookie|player\.vimeo|v\.qq|bilibili|live" <>
          @dot_b <> ~S"bilibili)\.com|(archive|upload\.wikimedia)\.org|player\.twitch\.tv)", "i"},
-    # `REGEXPS.srcsetUrl`, for `String.replace/3`-style global replacement
-    srcset_url: {"(#{@nws_u}+)(#{@ws_u}+[0-9.]+[xw])?(#{@ws_u}*(?:,|\\z))", "u"},
     ad_words: {~S"^(ad(vertising|vertisement)?|pub(licité)?|werb(ung)?|广告|Реклама|Anuncio)\z", "iu"},
     loading_words: {~S"^((loading|正在加载|Загрузка|chargement|cargando)(…|\.\.\.)?)\z", "iu"},
     # `_getArticleTitle`: `\s[|\-–—\\/>»]\s`, `\s[\\/>»]\s` and `^[^|\-–—\\/>»]*[|\-–—\\/>»]`
@@ -324,13 +423,16 @@ defmodule Readability.Matchers do
 
   @regex_names Keyword.keys(@regexes)
 
+  # The cache key changes with the pattern sources, so a code reload never serves stale regexes.
+  @cache_key {__MODULE__, :erlang.phash2(@regexes)}
+
   @doc """
   A cold regex, compiled once per VM into `:persistent_term`. Names: #{Enum.map_join(@regex_names, ", ", &"`#{&1}`")}.
   JS translation: `$` is `\\z`, `\\s` is the JS class, `/i` without `u` is compiled in byte mode.
   """
   @spec regex(atom) :: Regex.t()
   def regex(name) when name in @regex_names do
-    case :persistent_term.get(__MODULE__, nil) do
+    case :persistent_term.get(@cache_key, nil) do
       nil -> init()
       regexes -> regexes
     end
@@ -340,7 +442,7 @@ defmodule Readability.Matchers do
   defp init do
     # Racing processes compile and store equal values; the last write wins.
     regexes = Map.new(@regexes, fn {name, {source, opts}} -> {name, Regex.compile!(source, opts)} end)
-    :persistent_term.put(__MODULE__, regexes)
+    :persistent_term.put(@cache_key, regexes)
     regexes
   end
 

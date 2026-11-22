@@ -425,6 +425,9 @@ defmodule Readability.DOM do
   `_getAllNodesWithTag`: the elements with a tag in `tags`, in document order. For an element,
   its descendants only (like `querySelectorAll`); for a list, the listed nodes and their
   descendants.
+
+  With more than one tag this is the `querySelectorAll` order, not the order Readability.js
+  sees under JSDOMParser (which the oracle runs): see `find_all_grouped/2`.
   """
   @spec find_all(node_() | tree(), tags()) :: [el()]
   def find_all({_, _, children, _}, tags), do: children |> find_list(tags, []) |> :lists.reverse()
@@ -438,6 +441,24 @@ defmodule Readability.DOM do
     acc = if tag_in?(tag, tags), do: [el | acc], else: acc
     find_list(rest, tags, find_list(children, tags, acc))
   end
+
+  @doc """
+  `_getAllNodesWithTag(node, tags)` exactly as Readability.js computes it on JSDOMParser, which
+  has no `querySelectorAll`: `[].concat(...tags.map(t => node.getElementsByTagName(t)))`, i.e.
+  grouped by tag in the order of `tags` (every `tags[0]` element in document order, then every
+  `tags[1]` element, ...). Same scope as `find_all/2`. Equal to `find_all/2` for a single tag or
+  `:all`.
+
+  Use it where the iteration order is observable: a `_forEachNode` callback that mutates or
+  depends on state, or `_removeNodes` (see `remove_reverse_grouped/4`).
+
+      # <div><p><span>x</span></p></div>
+      find_all_grouped(div, ["span", "p"]) #=> [span, p]
+      find_all(div, ["span", "p"])         #=> [p, span]
+  """
+  @spec find_all_grouped(node_() | tree(), tags()) :: [el()]
+  def find_all_grouped(tree, [_, _ | _] = tags), do: Enum.flat_map(tags, &find_all(tree, [&1]))
+  def find_all_grouped(tree, tags), do: find_all(tree, tags)
 
   defp tag_in?(_tag, :all), do: true
   defp tag_in?(tag, tags), do: :lists.member(tag, tags)
@@ -568,6 +589,10 @@ defmodule Readability.DOM do
 
   Implementation: children right to left, rebuild the element, then decide.
 
+  With more than one tag this is the reverse of the `querySelectorAll` snapshot (`find_all/2`).
+  Readability.js on JSDOMParser iterates the grouped snapshot instead; use
+  `remove_reverse_grouped/4` where the difference is observable.
+
       # <div><p>x</p><p><p></p></p></div>: remove empty <p>s, innermost first
       remove_reverse(div, ["p"], fn p, _anc -> DOM.blank?(p) end)
   """
@@ -638,6 +663,58 @@ defmodule Readability.DOM do
   end
 
   @doc """
+  `_removeNodes(_getAllNodesWithTag(e, tags), fn)` with the snapshot order Readability.js has on
+  JSDOMParser (`find_all_grouped/2`): iterated from its end, so the elements of the LAST tag go
+  first (in reverse document order), then those of the previous tag, and so on. Implemented as one
+  `remove_reverse/4` pass per tag, last tag first; with a single tag it is `remove_reverse/4`.
+
+  `fun.(el, ancestors)` sees `el` as the earlier passes left it (descendants of a later tag may
+  already be removed; descendants of an earlier tag are not processed yet), and the current frames
+  of its ancestors.
+
+  One difference from JS: an element whose ancestor was removed by an earlier pass is not visited.
+  JS still calls `fn` on it (it keeps its `parentNode` inside the detached subtree), but removing
+  it there has no visible effect, so only a callback with side effects can tell.
+
+      # <div><p><span>x</span></p></div>, removing spans and blank paragraphs:
+      remove_reverse_grouped(div, ["span", "p"], fn el, _ -> elem(el, 0) == "span" or blank?(el) end)
+      #=> <div><p></p></div>  (p is tested first, while it still holds the span)
+      remove_reverse(div, ["span", "p"], ...)
+      #=> <div></div>
+  """
+  @spec remove_reverse_grouped(node_() | tree(), tags(), (el(), [frame()] -> boolean()), [frame()]) ::
+          node_() | tree()
+  def remove_reverse_grouped(tree, tags, fun, ancestors \\ []) when is_function(fun, 2) do
+    {tree, nil} =
+      remove_reverse_grouped_acc(tree, tags, nil, fn el, anc, nil -> {fun.(el, anc), nil} end, ancestors)
+
+    tree
+  end
+
+  @doc """
+  `remove_reverse_grouped/4` with an accumulator threaded in snapshot order (see
+  `remove_reverse_acc/5`). Returns `{tree, acc}`.
+  """
+  @spec remove_reverse_grouped_acc(
+          node_() | tree(),
+          tags(),
+          acc,
+          (el(), [frame()], acc -> {boolean(), acc}),
+          [frame()]
+        ) :: {node_() | tree(), acc}
+        when acc: term()
+  def remove_reverse_grouped_acc(tree, tags, acc, fun, ancestors \\ [])
+
+  def remove_reverse_grouped_acc(tree, [_, _ | _] = tags, acc, fun, ancestors) do
+    tags
+    |> :lists.reverse()
+    |> Enum.reduce({tree, acc}, fn tag, {tree, acc} -> remove_reverse_acc(tree, [tag], acc, fun, ancestors) end)
+  end
+
+  def remove_reverse_grouped_acc(tree, tags, acc, fun, ancestors),
+    do: remove_reverse_acc(tree, tags, acc, fun, ancestors)
+
+  @doc """
   Pre-order element rewrite for attribute and tag changes (`_replaceNodeTags`, `_cleanStyles`,
   `_fixLazyImages`, `_cleanClasses`, `_fixRelativeUris`, ...). `fun.(el)` is called on every
   element whose tag is in `tags`, in document order, before its children, and returns:
@@ -648,6 +725,14 @@ defmodule Readability.DOM do
       stops at `<svg>`).
 
   Elements whose tag is not in `tags` are not passed to `fun` but their children are visited.
+
+  This is a live walk, not a snapshot. Readability.js iterates a snapshot taken before the loop
+  (`_forEachNode(_getAllNodesWithTag(...))`), so it never visits elements its callback inserts.
+  Here, after `{:cont, new_el}`, every element in `new_el`'s
+  children whose tag is in `tags` is passed to `fun`, including ones the callback just inserted
+  or moved there. Return `{:skip, new_el}` when the inserted children must not be visited (and
+  visit the original children yourself if needed). Visiting order is document order also for
+  several tags; JSDOMParser's grouped order is `find_all_grouped/2`.
 
       map_elements(tree, ["font"], &{:cont, DOM.put_tag(&1, "span")})
   """

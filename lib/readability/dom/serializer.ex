@@ -10,10 +10,15 @@ defmodule Readability.DOM.Serializer do
   # * Text inside HTML `style script xmp iframe noembed noframes plaintext` is written raw.
   #   `noscript` is serialized as normal content (documents are parsed with scripting disabled).
   # * An HTML `pre`, `textarea` or `listing` whose first child is text starting with LF gets an
-  #   extra LF, because the parser drops one.
+  #   extra LF after its start tag, because an HTML parser drops one there. This is not in today's
+  #   spec (browsers' innerHTML don't do it), but it is what makes `content` match Readability.js:
+  #   JSDOMParser keeps that LF when parsing and writes it back, while our tree (html5ever) has
+  #   lost it. Re-parsing our output gives our tree back. `inner_html/1` of such an element does
+  #   not add it: its own start tag is not written, so no parser drops anything.
   # * The namespace is inferred from the ancestors the same way the parser assigns it
-  #   (`svg`/`math` start foreign content; `foreignObject`, `desc`, `title` and MathML text
-  #   integration points switch back), as in `LazyHTML.Tree.to_html/2`.
+  #   (`svg`/`math` start foreign content, `svg` also directly inside MathML `annotation-xml`;
+  #   `foreignObject`, `desc`, `title` and MathML text integration points switch back), as in
+  #   `LazyHTML.Tree.to_html/2`.
   # * Comments do not exist in the tree. Atom-keyed attributes are internal markers
   #   (`{:data_table, _}`) and raise `ArgumentError`: they must never reach the output.
 
@@ -21,8 +26,16 @@ defmodule Readability.DOM.Serializer do
   @spec inner_html(Readability.DOM.el() | Readability.DOM.tree()) :: binary()
   def inner_html(list) when is_list(list), do: IO.iodata_to_binary(nodes(list, :html, []))
 
-  def inner_html({tag, attrs, children, _}),
-    do: IO.iodata_to_binary(content(tag, attrs, children, element_ns(tag, :html), []))
+  def inner_html({tag, attrs, children, _}) do
+    ns = element_ns(tag, :html)
+
+    iodata =
+      if ns == :html and newline_sensitive?(tag),
+        do: nodes(children, :html, []),
+        else: content(tag, attrs, children, ns, [])
+
+    IO.iodata_to_binary(iodata)
+  end
 
   @doc "Serializes a node (or a list of nodes) like `outerHTML`."
   @spec outer_html(Readability.DOM.node_() | Readability.DOM.tree()) :: binary()
@@ -88,7 +101,10 @@ defmodule Readability.DOM.Serializer do
 
   defp newline_sensitive?(tag), do: tag == "pre" or tag == "textarea" or tag == "listing"
 
-  defp element_ns("svg", ns) when ns == :html or ns == :math_text, do: :svg
+  # `:annotation_xml` is the children namespace of a MathML annotation-xml that is not an HTML
+  # integration point: MathML, except that an `svg` start tag there makes an SVG element.
+  defp element_ns("svg", ns) when ns == :html or ns == :math_text or ns == :annotation_xml, do: :svg
+  defp element_ns(_tag, :annotation_xml), do: :math
   defp element_ns("math", ns) when ns == :html or ns == :math_text, do: :math
   defp element_ns(tag, :math_text) when tag == "mglyph" or tag == "malignmark", do: :math
   defp element_ns(_tag, :math_text), do: :html
@@ -101,7 +117,7 @@ defmodule Readability.DOM.Serializer do
 
   defp children_ns("annotation-xml", attrs, :math) do
     encoding = Enum.find_value(attrs, fn {name, value} -> name == "encoding" and String.downcase(value) end)
-    if encoding in ["text/html", "application/xhtml+xml"], do: :html, else: :math
+    if encoding in ["text/html", "application/xhtml+xml"], do: :html, else: :annotation_xml
   end
 
   defp children_ns(_tag, _attrs, ns), do: ns
