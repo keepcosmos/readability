@@ -38,8 +38,9 @@ article.text_content   #=> "The first paragraph..."
 ```
 
 `Readability.article/2` returns `{:ok, %Readability.Article{}}`, `{:error, :not_readable}` when
-there's no article, or `{:error, :too_many_elements}` when the page has more elements than
-`:max_elems_to_parse`. `Readability.article!/2` returns the article or raises `Readability.Error`.
+there's no article, `{:error, :too_many_elements}` when the page has more elements than
+`:max_elems_to_parse`, or `{:error, :too_deep}` when its elements nest deeper than `:max_depth`.
+`Readability.article!/2` returns the article or raises `Readability.Error`.
 
 An article has these fields, the same as the result of Readability.js's `parse()`:
 
@@ -58,9 +59,10 @@ An article has these fields, the same as the result of Readability.js's `parse()
 `Readability.readerable?/2` is a fast check (Readability.js's `isProbablyReaderable`) of whether
 a page probably has an article, to decide whether to run `article/2` at all.
 
-Both take the HTML as a string or as a document parsed with `LazyHTML.from_document/2`. Parse it
-yourself to call both without parsing twice, or to set LazyHTML's limits (`:max_depth`,
-`:max_memory`, `:max_attributes`, `:timeout`) for untrusted input.
+Both take the HTML as a string or as a document parsed with `LazyHTML.from_document/2`. A string
+is parsed with a depth limit (`:max_depth`, 1000 by default). Parse it yourself to call both
+without parsing twice, or to set all of LazyHTML's limits (`:max_depth`, `:max_memory`,
+`:max_attributes`, `:timeout`) for untrusted input; a parsed document is used as is.
 
 ### Output is not sanitized
 
@@ -76,6 +78,11 @@ rendering content from untrusted pages.
   has an absolute `<base href>`.
 - `:char_threshold` - when the extracted text is shorter, extraction is retried with looser
   rules; if every attempt is short, the longest one is returned.
+- `:max_depth` (1000) - give up on HTML whose elements nest deeper than this (parsing time is
+  quadratic in the depth); `:infinity` for no limit.
+- `:spawn` (true) - do the work in a short-lived process with a heap sized for the page, which
+  keeps garbage collection out of the way and releases the memory at once; `false` runs in the
+  caller.
 - `:char_threshold` (500), `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
   `:classes_to_preserve` ([]), `:keep_classes` (false), `:disable_json_ld` (false),
   `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See the

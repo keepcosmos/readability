@@ -61,6 +61,29 @@ defmodule ReadabilityTest do
       assert Readability.article(@html, max_elems_to_parse: 9) == {:error, :too_many_elements}
     end
 
+    test ":max_depth limits the nesting of a binary, not of a parsed document" do
+      # html, body, 998 divs, p
+      html = "<html><body>" <> String.duplicate("<div>", 998) <> "<p>#{@paragraph}</p>"
+      assert Readability.article(html) == {:error, :too_deep}
+      assert {:ok, _} = Readability.article(html, max_depth: 1001)
+      assert {:ok, _} = Readability.article(html, max_depth: :infinity)
+      assert {:ok, _} = Readability.article(LazyHTML.from_document(html))
+      assert Readability.article(@html, max_depth: 4) == {:error, :too_deep}
+      assert {:ok, _} = Readability.article(@html, max_depth: 5)
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, max_depth: 0) end
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, max_depth: nil) end
+    end
+
+    test "deeply nested documents are rejected quickly" do
+      for n <- [10_000, 100_000] do
+        html = String.duplicate("<div>", n) <> "<p>#{@paragraph}</p>"
+        {micros, result} = :timer.tc(fn -> Readability.article(html) end)
+        assert result == {:error, :too_deep}
+        assert micros < 100_000, "#{n} levels: #{div(micros, 1000)} ms"
+        refute Readability.readerable?(html)
+      end
+    end
+
     test "relative URLs resolve against :url and stay relative without it" do
       {:ok, article} = Readability.article(@html, url: "https://example.com/posts/1")
       assert article.content =~ ~s(href="https://example.com/relative/link")
@@ -98,6 +121,10 @@ defmodule ReadabilityTest do
 
       error = assert_raise Readability.Error, fn -> Readability.article!(@html, max_elems_to_parse: 1) end
       assert error.reason == :too_many_elements
+
+      error = assert_raise Readability.Error, fn -> Readability.article!(@html, max_depth: 2) end
+      assert error.reason == :too_deep
+      assert Exception.message(error) == "the document's elements nest deeper than :max_depth"
     end
   end
 
@@ -111,6 +138,8 @@ defmodule ReadabilityTest do
     test "options" do
       refute Readability.readerable?(@html, min_score: 100)
       refute Readability.readerable?(@html, min_content_length: 1000)
+      refute Readability.readerable?(@html, max_depth: 4)
+      assert Readability.readerable?(@html, max_depth: 5)
       assert_raise NimbleOptions.ValidationError, fn -> Readability.readerable?(@html, min_score: "1") end
       assert_raise NimbleOptions.ValidationError, fn -> Readability.readerable?(@html, char_threshold: 1) end
     end

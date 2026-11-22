@@ -27,7 +27,7 @@ defmodule Readability.RobustnessTest do
         end
 
       {:error, reason} ->
-        assert reason in [:not_readable, :too_many_elements]
+        assert reason in [:not_readable, :too_many_elements, :too_deep]
     end
 
     assert is_boolean(Readability.readerable?(html))
@@ -93,6 +93,7 @@ defmodule Readability.RobustnessTest do
       char_threshold: member_of([1, 100, 500, 10_000]),
       nb_top_candidates: member_of([1, 5, 50]),
       max_elems_to_parse: member_of([0, 1, 50, 1000]),
+      max_depth: member_of([1, 5, 1000, :infinity]),
       classes_to_preserve: member_of([[], ["page", "caption", "x"]]),
       keep_classes: boolean(),
       disable_json_ld: boolean(),
@@ -208,8 +209,9 @@ defmodule Readability.RobustnessTest do
       end
     end
 
-    test "deep nesting (1,000 levels)" do
-      html = String.duplicate("<div>", 1000) <> @para <> String.duplicate("</div>", 1000)
+    test "deep nesting (as deep as :max_depth allows)" do
+      # html, body, 997 divs, p
+      html = String.duplicate("<div>", 997) <> @para <> String.duplicate("</div>", 997)
       assert {:ok, _} = within(1000, fn -> verify(html) end)
     end
 
@@ -235,10 +237,10 @@ defmodule Readability.RobustnessTest do
     end
 
     @tag :slow
-    test "deep nesting (10,000 levels)" do
-      # Quadratic in the depth, like Lexbor's parsing and Readability.js (9 s in Node).
-      html = String.duplicate("<div>", 10_000) <> @para
-      assert {:ok, _} = within(20_000, fn -> verify(html) end)
+    test "deep nesting (10,000 levels, parsed without a depth limit)" do
+      # Readability.js takes 9 s in Node; parsing is quadratic in the depth, so it's done outside.
+      lazy = LazyHTML.from_document(String.duplicate("<div>", 10_000) <> @para)
+      assert {:ok, _} = within(20_000, fn -> verify(lazy) end)
     end
 
     @tag :slow

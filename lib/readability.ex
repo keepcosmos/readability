@@ -27,30 +27,19 @@ defmodule Readability do
 
     * `:not_readable` - nothing that looks like an article was found (Readability.js returns `null`);
     * `:too_many_elements` - the document has more elements than `:max_elems_to_parse`
-      (Readability.js throws).
+      (Readability.js throws);
+    * `:too_deep` - the document's elements nest deeper than `:max_depth`.
   """
-  @type reason :: :not_readable | :too_many_elements
-
-  @readerable_schema NimbleOptions.new!(
-                       min_content_length: [
-                         type: :pos_integer,
-                         default: 140,
-                         doc: "The minimum length of a paragraph's text for it to count."
-                       ],
-                       min_score: [
-                         type: {:or, [:integer, :float]},
-                         default: 20,
-                         doc: "The score, summed over the paragraphs that count, the page must exceed."
-                       ]
-                     )
+  @type reason :: :not_readable | :too_many_elements | :too_deep
 
   @doc """
   Extracts the article from `html`, like Readability.js's `parse()`.
 
   `html` is a binary (a leading UTF-8 byte order mark is ignored) or a `%LazyHTML{}` parsed with
-  `LazyHTML.from_document/2`. Pass a `%LazyHTML{}` to set LazyHTML's parsing limits (`:max_depth`,
-  `:max_memory`, ...) for untrusted input, or to parse once for both `readerable?/2` and
-  `article/2`.
+  `LazyHTML.from_document/2`. A binary is parsed with the `:max_depth` option as LazyHTML's depth
+  limit. A `%LazyHTML{}` is used as is: parse it yourself to choose LazyHTML's limits
+  (`:max_depth`, `:max_memory`, `:timeout`, ...) for untrusted input, or to parse once for both
+  `readerable?/2` and `article/2`.
 
   Options are listed in the [module documentation](#module-options). Invalid options raise
   `NimbleOptions.ValidationError`.
@@ -70,7 +59,14 @@ defmodule Readability do
   end
 
   defp run(html, opts) do
-    doc = html |> parse() |> LazyHTML.to_tree() |> valid_tree(html) |> DOM.from_lazy()
+    case parse(html, opts.max_depth) do
+      {:ok, lazy} -> run_parsed(lazy, html, opts)
+      error -> error
+    end
+  end
+
+  defp run_parsed(lazy, html, opts) do
+    doc = lazy |> LazyHTML.to_tree() |> valid_tree(html) |> DOM.from_lazy()
     max = opts.max_elems_to_parse
     count = if max > 0, do: count_elements(doc, 0), else: 0
 
@@ -110,16 +106,21 @@ defmodule Readability do
   Guesses whether `article/2` would find an article in `html`, much faster than running it.
   A port of Readability.js's `isProbablyReaderable`.
 
-  `html` is a binary or a `%LazyHTML{}`, as in `article/2`.
+  `html` is a binary or a `%LazyHTML{}`, as in `article/2`. A document nested deeper than
+  `:max_depth` isn't readerable.
 
   ## Options
 
-  #{NimbleOptions.docs(@readerable_schema)}
+  #{Options.readerable_docs()}
   """
   @spec readerable?(input(), keyword()) :: boolean()
   def readerable?(html, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @readerable_schema)
-    Readerable.readerable?(parse(html), opts)
+    opts = Options.validate_readerable!(opts)
+
+    case parse(html, opts.max_depth) do
+      {:ok, lazy} -> Readerable.readerable?(lazy, opts)
+      {:error, :too_deep} -> false
+    end
   end
 
   # Runs `fun` in a linked process and returns its result (or raises what it raised). The heap
@@ -180,9 +181,21 @@ defmodule Readability do
     end
   end
 
-  defp parse(%LazyHTML{} = lazy), do: lazy
-  defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(valid_utf8(html))
-  defp parse(html) when is_binary(html), do: LazyHTML.from_document(valid_utf8(html))
+  defp parse(%LazyHTML{} = lazy, _max_depth), do: {:ok, lazy}
+
+  defp parse(html, max_depth) when is_binary(html) do
+    html = html |> strip_bom() |> valid_utf8()
+    {:ok, LazyHTML.from_document(html, if(max_depth == :infinity, do: [], else: [max_depth: max_depth]))}
+  rescue
+    # LazyHTML raises a RuntimeError for every limit; the depth limit is the only one set here.
+    error in RuntimeError ->
+      if String.contains?(error.message, "nest deeper than :max_depth"),
+        do: {:error, :too_deep},
+        else: reraise(error, __STACKTRACE__)
+  end
+
+  defp strip_bom(<<0xEF, 0xBB, 0xBF, html::binary>>), do: html
+  defp strip_bom(html), do: html
 
   # LazyHTML keeps invalid UTF-8 as is; a decoder replaces each malformed sequence with U+FFFD.
   defp valid_utf8(html), do: if(String.valid?(html, :fast_ascii), do: html, else: String.replace_invalid(html))
@@ -271,4 +284,5 @@ defmodule Readability.Error do
   @impl true
   def message(%{reason: :not_readable}), do: "no article found in the document"
   def message(%{reason: :too_many_elements}), do: "the document has more elements than :max_elems_to_parse"
+  def message(%{reason: :too_deep}), do: "the document's elements nest deeper than :max_depth"
 end

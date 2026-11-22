@@ -1,6 +1,21 @@
 defmodule Readability.Options do
   @moduledoc false
 
+  # The deepest of Readability.js's 130 test pages nests 38 elements, generated and mutated test
+  # documents at most as deep, and Blink's parser stops nesting at 512 levels (deeper elements
+  # become siblings), so no page renders deeper than that in Chrome. 1000 leaves plenty of room
+  # and keeps the parser's work per token (proportional to the depth) small; LazyHTML gives up
+  # on deeper input without parsing the rest.
+  @max_depth [
+    type: {:or, [:pos_integer, {:in, [:infinity]}]},
+    default: 1000,
+    doc: """
+    Give up on documents whose elements nest deeper than this (`<html>` is at depth 1): parsing
+    them takes time quadratic in the depth. `:infinity` means no limit. Doesn't apply to a
+    `%LazyHTML{}`, which was parsed with the limits its caller chose.
+    """
+  ]
+
   # Defaults mirror Readability.js. Option names are its options in snake_case,
   # plus `:url`, since there's no document URL to read them from.
   @schema NimbleOptions.new!(
@@ -27,6 +42,7 @@ defmodule Readability.Options do
               default: 0,
               doc: "Give up on pages with more elements than this. `0` means no limit."
             ],
+            max_depth: @max_depth,
             classes_to_preserve: [
               type: {:list, :string},
               default: [],
@@ -66,9 +82,25 @@ defmodule Readability.Options do
             ]
           )
 
-  def schema, do: @schema
+  @readerable_schema NimbleOptions.new!(
+                       min_content_length: [
+                         type: :pos_integer,
+                         default: 140,
+                         doc: "The minimum length of a paragraph's text for it to count."
+                       ],
+                       min_score: [
+                         type: {:or, [:integer, :float]},
+                         default: 20,
+                         doc: "The score, summed over the paragraphs that count, the page must exceed."
+                       ],
+                       max_depth: @max_depth
+                     )
 
   def docs, do: NimbleOptions.docs(@schema)
+
+  def readerable_docs, do: NimbleOptions.docs(@readerable_schema)
+
+  def validate_readerable!(opts), do: opts |> NimbleOptions.validate!(@readerable_schema) |> Map.new()
 
   # Returns a map; `:link_density_modifier` is always a float.
   def validate!(opts) do

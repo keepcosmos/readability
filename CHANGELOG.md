@@ -18,7 +18,7 @@ A rewrite: Readability is now a port of Mozilla's
   with the client you already use and pass the HTML to `Readability.article/2`
   ([#64](https://github.com/keepcosmos/readability/issues/64)).
 - `Readability.article/2` returns `{:ok, %Readability.Article{}}` or
-  `{:error, :not_readable | :too_many_elements}` instead of a Floki tree.
+  `{:error, :not_readable | :too_many_elements | :too_deep}` instead of a Floki tree.
 - Removed `title/1`, `authors/1`, `published_at/1`, `readable_html/1`, `readable_text/1`,
   `raw_html/1`, `parse/1`, `regexes/1`, `mime/1`, `is_response_markup/1`, `default_options/0` and
   `Readability.Summary`. Their results are fields of `Readability.Article`.
@@ -48,6 +48,9 @@ A rewrite: Readability is now a port of Mozilla's
 - Relative links and image sources are made absolute with the `:url` option.
 - Both functions accept a `%LazyHTML{}` document, so a page can be parsed once (with LazyHTML's
   limits, for untrusted input) for both.
+- HTML nested deeper than the `:max_depth` option (1000 levels by default) is rejected while
+  parsing, with `{:error, :too_deep}` from `Readability.article/2` and `false` from
+  `Readability.readerable?/2`: parsing time grows quadratically with the depth.
 - `Readability.article/2` works in a short-lived process with a heap sized for the page (option
   `:spawn`, on by default), which keeps garbage collection out of the way.
 - Benchmarks (`benchmarks/benchmark.exs`) against 0.x and the cost of parsing alone.
