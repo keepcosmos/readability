@@ -902,7 +902,9 @@ defmodule Readability.URL do
       end
 
     if ascii?(basic) do
-      decode_loop(encoded, String.to_charlist(basic), @initial_n, 0, @initial_bias)
+      basic = String.to_charlist(basic)
+      count = length(basic)
+      decode_loop(encoded, {:lists.reverse(basic), [], count}, count, @initial_n, 0, @initial_bias)
     else
       :error
     end
@@ -910,23 +912,39 @@ defmodule Readability.URL do
     :url_error -> :error
   end
 
-  defp decode_loop(<<>>, out, _n, _i, _bias), do: {:ok, List.to_string(out)}
+  # `out` is a zipper over the decoded code points: the ones before the insertion point (reversed),
+  # the ones after it, and its position. Successive insertions are usually next to each other.
+  defp decode_loop(<<>>, {left, right, _pos}, _count, _n, _i, _bias),
+    do: {:ok, List.to_string(:lists.reverse(left, right))}
 
-  defp decode_loop(input, out, n, i, bias) do
+  defp decode_loop(input, out, count, n, i, bias) do
     {i2, rest} = decode_digits(input, i, 1, @base, bias)
-    len = length(out) + 1
+    len = count + 1
     bias = adapt(i2 - i, len, i == 0)
     n = n + div(i2, len)
     i2 = rem(i2, len)
     if n > 0x10FFFF or n in 0xD800..0xDFFF, do: fail()
-    decode_loop(rest, List.insert_at(out, i2, n), n, i2 + 1, bias)
+    {left, right, _} = move(out, i2)
+    decode_loop(rest, {[n | left], right, i2 + 1}, len, n, i2 + 1, bias)
   end
 
+  defp move({_, _, pos} = out, pos), do: out
+  defp move({left, [c | right], pos}, to) when to > pos, do: move({[c | left], right, pos + 1}, to)
+  defp move({[c | left], right, pos}, to), do: move({left, [c | right], pos - 1}, to)
+
+  # Fails on 32-bit overflow like ada (WHATWG URL in Node), which also bounds the digits read.
   defp decode_digits(<<c, r::binary>>, i, w, k, bias) do
     d = undigit(c)
     i = i + d * w
     t = threshold(k, bias)
-    if d < t, do: {i, r}, else: decode_digits(r, i, w * (@base - t), k + @base, bias)
+    w = w * (@base - t)
+
+    cond do
+      i > 0x7FFFFFFF -> fail()
+      d < t -> {i, r}
+      w > 0x7FFFFFFF -> fail()
+      true -> decode_digits(r, i, w, k + @base, bias)
+    end
   end
 
   defp decode_digits(<<>>, _i, _w, _k, _bias), do: fail()

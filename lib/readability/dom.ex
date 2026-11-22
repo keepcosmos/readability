@@ -71,17 +71,40 @@ defmodule Readability.DOM do
   # ---------------------------------------------------------------------------------------------
 
   @doc """
-  Converts `LazyHTML.to_tree/1` output: drops comments, makes `<template>` childless (a DOM does
-  not expose template contents as children) and turns elements into 4-tuples with `nil` stats.
+  Converts `LazyHTML.to_tree/1` output: drops comments, makes HTML `<template>`s childless (a DOM
+  does not expose template contents as children) and turns elements into 4-tuples with `nil` stats.
   """
   @spec from_lazy(list()) :: tree()
-  def from_lazy(tree) when is_list(tree), do: lazy_list(tree)
+  def from_lazy(tree) when is_list(tree), do: lazy_list(tree, :html)
 
-  defp lazy_list([]), do: []
-  defp lazy_list([text | rest]) when is_binary(text), do: [text | lazy_list(rest)]
-  defp lazy_list([{:comment, _} | rest]), do: lazy_list(rest)
-  defp lazy_list([{"template", attrs, _} | rest]), do: [{"template", attrs, [], nil} | lazy_list(rest)]
-  defp lazy_list([{tag, attrs, children} | rest]), do: [{tag, attrs, lazy_list(children), nil} | lazy_list(rest)]
+  # `ns`: the namespace the parser gives these nodes' elements (approximately: an `<svg>` start
+  # tag in MathML is taken as SVG). A `<template>` in SVG or MathML is an ordinary element.
+  defp lazy_list([], _ns), do: []
+  defp lazy_list([text | rest], ns) when is_binary(text), do: [text | lazy_list(rest, ns)]
+  defp lazy_list([{:comment, _} | rest], ns), do: lazy_list(rest, ns)
+  defp lazy_list([{"template", attrs, _} | rest], :html), do: [{"template", attrs, [], nil} | lazy_list(rest, :html)]
+
+  defp lazy_list([{tag, attrs, children} | rest], ns),
+    do: [{tag, attrs, lazy_list(children, children_ns(tag, attrs, ns)), nil} | lazy_list(rest, ns)]
+
+  # The namespace of an element's children: HTML in the HTML integration points of SVG and MathML.
+  defp children_ns("svg", _attrs, _ns), do: :svg
+  defp children_ns("math", _attrs, :html), do: :math
+  defp children_ns(_tag, _attrs, :html), do: :html
+  defp children_ns(tag, _attrs, :svg) when tag in ~w(foreignObject desc title), do: :html
+  defp children_ns(tag, _attrs, :math) when tag in ~w(mi mo mn ms mtext), do: :html
+
+  defp children_ns("annotation-xml", attrs, :math) do
+    case :lists.keyfind("encoding", 1, attrs) do
+      {_, encoding} ->
+        if String.downcase(encoding, :ascii) in ~w(text/html application/xhtml+xml), do: :html, else: :math
+
+      false ->
+        :math
+    end
+  end
+
+  defp children_ns(_tag, _attrs, ns), do: ns
 
   @doc "Builds an element and computes its stats (children without stats get them first)."
   @spec el(tag(), attrs(), [node_()]) :: el()

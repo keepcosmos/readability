@@ -406,8 +406,11 @@ defmodule Readability.Matchers do
     title_hierarchical_separator: {"#{@ws_u}[\\\\/>»]#{@ws_u}", "u"},
     title_first_part: {"^[^#{@title_seps}]*[#{@title_seps}]", "u"},
     # `_getArticleMetadata`
+    # `propertyPattern` without its leading `\s*`: the first match is at the same keyword and its
+    # whitespace is removed anyway, but PCRE retries the `\s*` from every whitespace position
+    # (quadratic on a long whitespace run).
     meta_property:
-      {"#{@ws_b}*(article|dc|dcterm|og|twitter)#{@ws_b}*:#{@ws_b}*" <>
+      {"(article|dc|dcterm|og|twitter)#{@ws_b}*:#{@ws_b}*" <>
          "(author|creator|description|published_time|title|site_name)#{@ws_b}*", "i"},
     meta_name:
       {"^#{@ws_b}*(?:(dc|dcterm|og|twitter|parsely|weibo:(article|webpage))#{@ws_b}*[-.:]#{@ws_b}*)?" <>

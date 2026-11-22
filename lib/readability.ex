@@ -66,9 +66,17 @@ defmodule Readability do
   @spec article(input(), keyword()) :: {:ok, Article.t()} | {:error, reason()}
   def article(html, opts \\ []) do
     opts = Options.validate!(opts)
-    doc = html |> parse() |> LazyHTML.to_tree() |> DOM.from_lazy()
-    ctx = if opts.max_elems_to_parse > 0, do: %{element_count: count_elements(doc, 0)}, else: %{}
+    doc = html |> parse() |> LazyHTML.to_tree() |> valid_tree(html) |> DOM.from_lazy()
+    max = opts.max_elems_to_parse
+    count = if max > 0, do: count_elements(doc, 0), else: 0
 
+    # `parse()` checks the count before doing anything else
+    if max > 0 and count > max,
+      do: {:error, :too_many_elements},
+      else: extract(doc, %{element_count: count}, opts)
+  end
+
+  defp extract(doc, ctx, opts) do
     doc = Prep.unwrap_noscript_images(doc)
     json_ld = if opts.disable_json_ld, do: %{}, else: Metadata.json_ld(doc)
     doc = doc |> Prep.remove_scripts() |> Prep.prep_document()
@@ -77,7 +85,7 @@ defmodule Readability do
     ctx = Map.merge(ctx, %{article_title: metadata.title, metadata_byline: metadata.byline})
 
     with {:ok, grabbed} <- Grab.run(doc, ctx, opts, &Clean.prep_article(&1, &2, opts)) do
-      base_uri = URL.base_uri(opts.url, base_href(doc))
+      base_uri = URL.base_uri(opts.url, grabbed.base_href)
       article = PostProcess.run(grabbed.article, opts.url, base_uri, opts)
       {:ok, build(article, metadata, grabbed)}
     end
@@ -111,21 +119,40 @@ defmodule Readability do
   end
 
   defp parse(%LazyHTML{} = lazy), do: lazy
-  defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(html)
-  defp parse(html) when is_binary(html), do: LazyHTML.from_document(html)
+  defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(valid_utf8(html))
+  defp parse(html) when is_binary(html), do: LazyHTML.from_document(valid_utf8(html))
+
+  # LazyHTML keeps invalid UTF-8 as is; a decoder replaces each malformed sequence with U+FFFD.
+  defp valid_utf8(html), do: if(String.valid?(html), do: html, else: String.replace_invalid(html))
+
+  # A `%LazyHTML{}` passed in may have been parsed from invalid UTF-8: scrub its tree the same way.
+  defp valid_tree(tree, %LazyHTML{}), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
+  defp valid_tree(tree, _html), do: tree
+
+  defp valid_list?([]), do: true
+  defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text) and valid_list?(rest)
+  defp valid_list?([{:comment, _} | rest]), do: valid_list?(rest)
+
+  defp valid_list?([{tag, attrs, children} | rest]) do
+    String.valid?(tag) and Enum.all?(attrs, fn {name, value} -> String.valid?(name) and String.valid?(value) end) and
+      valid_list?(children) and valid_list?(rest)
+  end
+
+  defp scrub_list(nodes) do
+    Enum.map(nodes, fn
+      text when is_binary(text) -> String.replace_invalid(text)
+      {:comment, _} = comment -> comment
+      {tag, attrs, children} -> {String.replace_invalid(tag), scrub_attrs(attrs), scrub_list(children)}
+    end)
+  end
+
+  defp scrub_attrs(attrs),
+    do: for({name, value} <- attrs, do: {String.replace_invalid(name), String.replace_invalid(value)})
 
   # `getElementsByTagName("*").length` on the document as parsed
   defp count_elements([], n), do: n
   defp count_elements([text | rest], n) when is_binary(text), do: count_elements(rest, n)
   defp count_elements([{_, _, children, _} | rest], n), do: count_elements(rest, count_elements(children, n + 1))
-
-  # The `href` of the first `<base>` (JSDOMParser's `baseURI`)
-  defp base_href(doc) do
-    case DOM.find_all(doc, ["base"]) do
-      [base | _] -> DOM.attr(base, "href")
-      [] -> nil
-    end
-  end
 
   defp build(article, metadata, grabbed) do
     text_content = DOM.text_content(article)

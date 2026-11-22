@@ -125,15 +125,10 @@ defmodule Readability.Test.Traces do
 
   @doc """
   The reference conversion of a `LazyHTML.to_tree/1` result to the node shape: comments dropped,
-  `<template>` made childless (design §4.2), stats `nil`. Used by `scripts/parser_parity.exs`.
+  HTML `<template>`s made childless (design §4.2), stats `nil`. Used by `scripts/parser_parity.exs`.
+  The same as `Readability.DOM.from_lazy/1`.
   """
-  def from_lazy(nodes) when is_list(nodes) do
-    for node <- nodes, not match?({:comment, _}, node), do: from_lazy_node(node)
-  end
-
-  defp from_lazy_node(text) when is_binary(text), do: text
-  defp from_lazy_node({"template", attrs, _children}), do: {"template", attrs, [], nil}
-  defp from_lazy_node({tag, attrs, children}), do: {tag, attrs, from_lazy(children), nil}
+  def from_lazy(nodes) when is_list(nodes), do: Readability.DOM.from_lazy(nodes)
 
   @doc """
   Compares two trees (lists of nodes) or two nodes exactly: tags, attributes in order, text
