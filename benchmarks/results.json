@@ -1,0 +1,285 @@
+{
+  "environment": {
+    "benchee": {
+      "memory_time": 1,
+      "reduction_time": 1,
+      "time": 5,
+      "warmup": 2
+    },
+    "commit": "10131b10ecd5720ed8b925d53e7b327bf4037e7e",
+    "cpu": "Apple M1 Pro",
+    "date": "2026-11-22 19:42 UTC",
+    "elixir": "1.20.4",
+    "jit": true,
+    "lib_dirty": false,
+    "logical_cpus": 10,
+    "os": "Darwin 23.5.0 arm64",
+    "otp": "29",
+    "quick": false,
+    "rounds": 2
+  },
+  "inputs": [
+    {
+      "bytes": 64711,
+      "description": "IETF RFC page, mostly one long text block",
+      "name": "small",
+      "page": "ietf-1"
+    },
+    {
+      "bytes": 211946,
+      "description": "News article with typical page chrome",
+      "name": "medium",
+      "page": "telegraph"
+    },
+    {
+      "bytes": 1160848,
+      "description": "News article with heavy markup",
+      "name": "large",
+      "page": "guardian-1"
+    }
+  ],
+  "targets": [
+    {
+      "corpus": {
+        "errors": 0,
+        "pages": 130,
+        "total_ms": 273
+      },
+      "description": "This checkout",
+      "name": "local",
+      "rows": [
+        {
+          "deviation_pct": 10.75338615296777,
+          "input": "small",
+          "ips": 789.0036945590125,
+          "median_ns": 1242645.5,
+          "memory_bytes": 6864.0,
+          "p99_ns": 1504754.2000000004,
+          "reductions": 976.0,
+          "sample_size": 3944,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 11.76664315964971,
+          "input": "medium",
+          "ips": 399.6082126680651,
+          "median_ns": 2455333.0,
+          "memory_bytes": 6960.0,
+          "p99_ns": 3014586.2499999995,
+          "reductions": 976.0,
+          "sample_size": 1998,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 7.371347351929199,
+          "input": "large",
+          "ips": 234.1197080842252,
+          "median_ns": 4183250.0,
+          "memory_bytes": 7040.0,
+          "p99_ns": 5355662.239999998,
+          "reductions": 975.0,
+          "sample_size": 1171,
+          "status": "ok"
+        }
+      ],
+      "status": "ok",
+      "versions": {
+        "lazy_html": "0.1.14",
+        "readability": "1.0.0-dev"
+      }
+    },
+    {
+      "corpus": {
+        "errors": 0,
+        "pages": 130,
+        "total_ms": 345
+      },
+      "description": "This checkout with `spawn: false`: everything in the calling (Benchee) process",
+      "name": "local-inline",
+      "rows": [
+        {
+          "deviation_pct": 18.47022025018581,
+          "input": "small",
+          "ips": 691.5582413886129,
+          "median_ns": 1380750.0,
+          "memory_bytes": 1206256.0,
+          "p99_ns": 1854913.9200000006,
+          "reductions": 207128.0,
+          "sample_size": 3457,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 18.787502692943175,
+          "input": "medium",
+          "ips": 314.56379628647056,
+          "median_ns": 3125458.0,
+          "memory_bytes": 1580824.0,
+          "p99_ns": 4128147.339999999,
+          "reductions": 269206.0,
+          "sample_size": 1573,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 15.466483149755913,
+          "input": "large",
+          "ips": 197.24617674063487,
+          "median_ns": 4992416.0,
+          "memory_bytes": 2157096.0,
+          "p99_ns": 7183331.92,
+          "reductions": 383721.0,
+          "sample_size": 987,
+          "status": "ok"
+        }
+      ],
+      "status": "ok",
+      "versions": {
+        "lazy_html": "0.1.14",
+        "readability": "1.0.0-dev"
+      }
+    },
+    {
+      "corpus": {
+        "errors": 0,
+        "pages": 130,
+        "total_ms": 4407
+      },
+      "description": "Latest 0.x release on Hex (Floki + mochiweb parser)",
+      "name": "hex",
+      "rows": [
+        {
+          "deviation_pct": 10.032795001337549,
+          "input": "small",
+          "ips": 159.36929909822172,
+          "median_ns": 6188417.0,
+          "memory_bytes": 20796480.0,
+          "p99_ns": 8425861.159999998,
+          "reductions": 823356.0,
+          "sample_size": 797,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 7.552783105013505,
+          "input": "medium",
+          "ips": 24.2236746321008,
+          "median_ns": 40375437.5,
+          "memory_bytes": 50705984.0,
+          "p99_ns": 61070900.31999997,
+          "reductions": 2348269.0,
+          "sample_size": 122,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 4.964100783265094,
+          "input": "large",
+          "ips": 10.394749186824752,
+          "median_ns": 9.55895e7,
+          "memory_bytes": 200555624.0,
+          "p99_ns": 114309542.0,
+          "reductions": 5754920.0,
+          "sample_size": 53,
+          "status": "ok"
+        }
+      ],
+      "status": "ok",
+      "versions": {
+        "floki": "0.38.5",
+        "readability": "0.13.0"
+      }
+    },
+    {
+      "corpus": {
+        "errors": 0,
+        "pages": 130,
+        "total_ms": 121
+      },
+      "description": "LazyHTML.from_document + to_tree, the floor for any LazyHTML-based version",
+      "name": "parse-only",
+      "rows": [
+        {
+          "deviation_pct": 20.16876758526587,
+          "input": "small",
+          "ips": 3201.2605685058675,
+          "median_ns": 305333.0,
+          "memory_bytes": 1608.0,
+          "p99_ns": 400279.99999999977,
+          "reductions": 2231.0,
+          "sample_size": 15987,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 17.759812414386595,
+          "input": "medium",
+          "ips": 684.2102615080969,
+          "median_ns": 1348374.5,
+          "memory_bytes": 1608.0,
+          "p99_ns": 1941279.9999999998,
+          "reductions": 6088.0,
+          "sample_size": 3420,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 21.78220130667592,
+          "input": "large",
+          "ips": 447.88684095874817,
+          "median_ns": 2241459.0,
+          "memory_bytes": 1608.0,
+          "p99_ns": 2829874.9999999977,
+          "reductions": 9072.0,
+          "sample_size": 2239,
+          "status": "ok"
+        }
+      ],
+      "status": "ok",
+      "versions": { "lazy_html": "0.1.14" }
+    },
+    {
+      "corpus": {
+        "errors": 0,
+        "pages": 130,
+        "total_ms": 687
+      },
+      "description": "Readability.js (the version this ports) on JSDOMParser under Node, JSDOMParser's parse included; not Benchee: same budget, own timing",
+      "name": "readability-js",
+      "rows": [
+        {
+          "deviation_pct": 18.886023581805063,
+          "input": "small",
+          "ips": 495.5616531419429,
+          "median_ns": 1946209,
+          "memory_bytes": null,
+          "p99_ns": 2690042,
+          "reductions": null,
+          "sample_size": 2478,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 14.411557911791448,
+          "input": "medium",
+          "ips": 163.86205721695228,
+          "median_ns": 5725208,
+          "memory_bytes": null,
+          "p99_ns": 9618458,
+          "reductions": null,
+          "sample_size": 820,
+          "status": "ok"
+        },
+        {
+          "deviation_pct": 9.642291110181118,
+          "input": "large",
+          "ips": 183.26244976600134,
+          "median_ns": 5229458,
+          "memory_bytes": null,
+          "p99_ns": 7466167,
+          "reductions": null,
+          "sample_size": 917,
+          "status": "ok"
+        }
+      ],
+      "status": "ok",
+      "versions": {
+        "Readability.js": "ab4027a",
+        "node": "24.5.0"
+      }
+    }
+  ]
+}
