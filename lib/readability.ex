@@ -1,268 +1,184 @@
 defmodule Readability do
   @moduledoc """
-  Readability library for extracting & curating articles.
+  Extracts the main content of a web page: a port of Mozilla's
+  [Readability.js](https://github.com/mozilla/readability), the library behind Firefox's Reader
+  View, on top of [LazyHTML](https://hexdocs.pm/lazy_html).
 
-  ## Example
+      {:ok, article} = Readability.article(html, url: "https://example.com/post")
+      article.title
+      article.content       #=> "<div id=\\"readability-page-1\\" class=\\"page\\">…</div>"
+      article.text_content
 
-  ```elixir
-  @type html :: binary
+  See `Readability.Article` for the fields. Fetching the page is up to you.
 
-  # Just pass url
-  %Readability.Summary{title: title, authors: authors, article_html: article} = Readability.summarize(url)
+  ## Options
 
-  # Extract title
-  Readability.title(html)
-
-  # Extract published at
-  Readability.published_at(html)
-
-  # Extract authors.
-  Readability.authors(html)
-
-  # Extract only text from article
-  article = html
-            |> Readability.article
-            |> Readability.readable_text
-
-  # Extract article with transformed html
-  article = html
-            |> Readability.article
-            |> Readability.raw_html
-  ```
+  #{Readability.Options.docs()}
   """
 
-  alias Readability.ArticleBuilder
-  alias Readability.AuthorFinder
-  alias Readability.Helper
-  alias Readability.PublishedAtFinder
-  alias Readability.Summary
-  alias Readability.TitleFinder
+  alias Readability.{Article, Clean, DOM, Grab, Metadata, Options, PostProcess, Prep, Readerable, Text, URL}
+  alias Readability.DOM.Serializer
 
-  @default_options [
-    retry_length: 250,
-    min_text_length: 25,
-    remove_unlikely_candidates: true,
-    weight_classes: true,
-    clean_conditionally: true,
-    remove_empty_nodes: true,
-    min_image_width: 130,
-    min_image_height: 80,
-    ignore_image_format: [],
-    blacklist: nil,
-    whitelist: nil,
-    page_url: nil
-  ]
+  @typedoc "An HTML document, as a string or parsed with `LazyHTML.from_document/2`."
+  @type input :: String.t() | LazyHTML.t()
 
-  @markup_mimes ~r/^(application|text)\/[a-z\-_\.\+]+ml(;\s*charset=.*)?$/i
+  @typedoc """
+  Why there's no article:
 
-  @type html_tree :: tuple | list
-  @type raw_html :: binary
-  @type url :: binary
-  @type options :: list
-  @type headers :: list[tuple]
+    * `:not_readable` - nothing that looks like an article was found (Readability.js returns `null`);
+    * `:too_many_elements` - the document has more elements than `:max_elems_to_parse`
+      (Readability.js throws).
+  """
+  @type reason :: :not_readable | :too_many_elements
+
+  @readerable_schema NimbleOptions.new!(
+                       min_content_length: [
+                         type: :pos_integer,
+                         default: 140,
+                         doc: "The minimum length of a paragraph's text for it to count."
+                       ],
+                       min_score: [
+                         type: {:or, [:integer, :float]},
+                         default: 20,
+                         doc: "The score, summed over the paragraphs that count, the page must exceed."
+                       ]
+                     )
 
   @doc """
-  Summarize the primary readable content of a webpage.
+  Extracts the article from `html`, like Readability.js's `parse()`.
+
+  `html` is a binary (a leading UTF-8 byte order mark is ignored) or a `%LazyHTML{}` parsed with
+  `LazyHTML.from_document/2`. Pass a `%LazyHTML{}` to set LazyHTML's parsing limits (`:max_depth`,
+  `:max_memory`, ...) for untrusted input, or to parse once for both `readerable?/2` and
+  `article/2`.
+
+  Options are listed in the [module documentation](#module-options). Invalid options raise
+  `NimbleOptions.ValidationError`.
+
+      iex> html = "<html><body><article><p>#{String.duplicate("Some text here. ", 40)}</p></article></body></html>"
+      iex> {:ok, article} = Readability.article(html)
+      iex> article.length
+      640
+
+      iex> Readability.article("<html><body></body></html>")
+      {:error, :not_readable}
   """
-  @spec summarize(url, options) :: Summary.t()
-  def summarize(url, opts \\ []) do
-    opts = Keyword.merge(opts, page_url: url)
-    httpoison_options = Application.get_env(:readability, :httpoison_options, [])
-    %{status_code: _, body: raw, headers: headers} = HTTPoison.get!(url, [], httpoison_options)
+  @spec article(input(), keyword()) :: {:ok, Article.t()} | {:error, reason()}
+  def article(html, opts \\ []) do
+    opts = Options.validate!(opts)
+    doc = html |> parse() |> LazyHTML.to_tree() |> DOM.from_lazy()
+    ctx = if opts.max_elems_to_parse > 0, do: %{element_count: count_elements(doc, 0)}, else: %{}
 
-    case is_response_markup(headers) do
-      true ->
-        html_tree = Helper.normalize(raw, url: url)
-        article_tree = ArticleBuilder.build(html_tree, opts)
+    doc = Prep.unwrap_noscript_images(doc)
+    json_ld = if opts.disable_json_ld, do: %{}, else: Metadata.json_ld(doc)
+    doc = doc |> Prep.remove_scripts() |> Prep.prep_document()
+    metadata = Metadata.extract(doc, json_ld)
 
-        %Summary{
-          title: title(html_tree),
-          authors: authors(html_tree),
-          published_at: published_at(html_tree),
-          article_html: readable_html(article_tree),
-          article_text: readable_text(article_tree)
-        }
+    ctx = Map.merge(ctx, %{article_title: metadata.title, metadata_byline: metadata.byline})
 
-      _ ->
-        %Summary{title: nil, authors: nil, article_html: nil, article_text: raw}
+    with {:ok, grabbed} <- Grab.run(doc, ctx, opts, &Clean.prep_article(&1, &2, opts)) do
+      base_uri = URL.base_uri(opts.url, base_href(doc))
+      article = PostProcess.run(grabbed.article, opts.url, base_uri, opts)
+      {:ok, build(article, metadata, grabbed)}
     end
   end
 
   @doc """
-  Extract MIME Type from headers.
-
-  ## Example
-
-      iex> mime = Readability.mime(headers_list)
-      "text/html"
-
+  Like `article/2`, but returns the article or raises `Readability.Error`.
   """
-  @spec mime(headers) :: String.t()
-  def mime(headers \\ []) do
-    headers
-    |> Enum.find(
-      # default
-      {"Content-Type", "text/plain"},
-      fn {key, _} -> String.downcase(key) == "content-type" end
-    )
-    |> elem(1)
-  end
-
-  @doc """
-  Returns true if Content-Type in provided headers list is a markup type,
-  else false.
-
-  ## Example
-
-      iex> Readability.is_response_markup?([{"Content-Type", "text/html"}])
-      true
-
-  """
-  @spec is_response_markup(headers) :: boolean
-  def is_response_markup(headers) do
-    mime(headers) =~ @markup_mimes
-  end
-
-  @doc """
-  Extract title
-
-  ## Example
-
-      iex> title = Readability.title(html_str)
-      "Some title in html"
-
-  """
-  @spec title(binary | html_tree) :: binary
-  def title(raw_html) when is_binary(raw_html) do
-    raw_html
-    |> Floki.parse_document!()
-    |> title
-  end
-
-  def title(html_tree), do: TitleFinder.title(html_tree)
-
-  @doc """
-  Extract authors.
-
-  ## Example
-
-      iex> authors = Readability.authors(html_str)
-      ["José Valim", "chrismccord"]
-
-  """
-  @spec authors(binary | html_tree) :: list[binary]
-  def authors(html) when is_binary(html), do: html |> Floki.parse_document!() |> authors
-  def authors(html_tree), do: AuthorFinder.find(html_tree)
-
-  @doc """
-  Extract published_at
-
-  ## Example
-
-      iex> datetime = Readability.published_at(html_str)
-      %DateTime{}
-
-  """
-  @spec published_at(binary | html_tree) :: %DateTime{} | %Date{} | nil
-  def published_at(raw_html) when is_binary(raw_html) do
-    raw_html
-    |> Floki.parse_document!()
-    |> published_at()
-  end
-
-  def published_at(html_tree), do: PublishedAtFinder.find(html_tree)
-
-  @doc """
-  Using a variety of metrics (content score, classname, element types), find the content that is
-  most likely to be the stuff a user wants to read.
-
-  ## Example
-
-      iex> article_tree = Redability(html_str)
-      # returns article that is tuple
-
-  """
-  @spec article(binary, options) :: html_tree
-  def article(raw_html, opts \\ []) do
-    opts = Keyword.merge(@default_options, opts)
-
-    raw_html
-    |> Helper.normalize()
-    |> ArticleBuilder.build(opts)
-  end
-
-  @doc """
-  Returns attributes, tags cleaned HTML.
-  """
-  @spec readable_html(html_tree) :: binary
-  def readable_html(html_tree) do
-    html_tree
-    |> Helper.remove_attrs(regexes(:protect_attrs))
-    |> raw_html
-  end
-
-  @doc """
-  Returns only text binary from `html_tree`.
-  """
-  @spec readable_text(html_tree) :: binary
-  def readable_text(html_tree) do
-    # @TODO: Remove image caption when extract only text
-    tags_to_br = ~r/<\/(p|div|article|h\d)/i
-    html_str = html_tree |> raw_html
-
-    tags_to_br
-    |> Regex.replace(html_str, &"\n#{&1}")
-    |> Floki.parse_fragment!()
-    |> Floki.text()
-    |> String.trim()
-  end
-
-  @doc """
-  Returns raw HTML binary from `html_tree`.
-  """
-  @spec raw_html(html_tree) :: binary
-  def raw_html(html_tree) do
-    html_tree |> Floki.raw_html(encode: false)
-  end
-
-  @deprecated "Use `Floki.parse_document/1` or `Floki.parse_fragment/1` instead."
-  def parse(raw_html) when is_binary(raw_html) do
-    with {:ok, document} <- Floki.parse_document(raw_html) do
-      document
+  @spec article!(input(), keyword()) :: Article.t()
+  def article!(html, opts \\ []) do
+    case article(html, opts) do
+      {:ok, article} -> article
+      {:error, reason} -> raise Readability.Error, reason: reason
     end
   end
 
-  def regexes(:unlikely_candidate),
-    do:
-      ~r/combx|comment|community|disqus|extra|foot|header|hidden|lightbox|modal|menu|meta|nav|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup/i
+  @doc """
+  Guesses whether `article/2` would find an article in `html`, much faster than running it.
+  A port of Readability.js's `isProbablyReaderable`.
 
-  def regexes(:ok_maybe_its_a_candidate), do: ~r/and|article|body|column|main|shadow/i
+  `html` is a binary or a `%LazyHTML{}`, as in `article/2`.
 
-  def regexes(:positive),
-    do: ~r/article|body|content|entry|hentry|main|page|pagination|post|text|blog|story/i
+  ## Options
 
-  def regexes(:negative),
-    do:
-      ~r/hidden|^hid|combx|comment|com-|contact|foot|footer|footnote|link|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|utility|widget/i
+  #{NimbleOptions.docs(@readerable_schema)}
+  """
+  @spec readerable?(input(), keyword()) :: boolean()
+  def readerable?(html, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @readerable_schema)
+    Readerable.readerable?(parse(html), opts)
+  end
 
-  def regexes(:div_to_p_elements), do: ~r/<(a|blockquote|dl|div|img|ol|p|pre|table|ul)/i
+  defp parse(%LazyHTML{} = lazy), do: lazy
+  defp parse(<<0xEF, 0xBB, 0xBF, html::binary>>), do: LazyHTML.from_document(html)
+  defp parse(html) when is_binary(html), do: LazyHTML.from_document(html)
 
-  def regexes(:replace_brs), do: ~r/(<br[^>]*>[ \n\r\t]*){2,}/i
+  # `getElementsByTagName("*").length` on the document as parsed
+  defp count_elements([], n), do: n
+  defp count_elements([text | rest], n) when is_binary(text), do: count_elements(rest, n)
+  defp count_elements([{_, _, children, _} | rest], n), do: count_elements(rest, count_elements(children, n + 1))
 
-  def regexes(:replace_fonts), do: ~r/<(\/?)font[^>]*>/i
+  # The `href` of the first `<base>` (JSDOMParser's `baseURI`)
+  defp base_href(doc) do
+    case DOM.find_all(doc, ["base"]) do
+      [base | _] -> DOM.attr(base, "href")
+      [] -> nil
+    end
+  end
 
-  def regexes(:replace_xml_version), do: ~r/<\?xml.*\?>/i
+  defp build(article, metadata, grabbed) do
+    text_content = DOM.text_content(article)
 
-  def regexes(:normalize), do: ~r/\s{2,}/
+    %Article{
+      title: copy(metadata.title),
+      byline: copy(js_or(metadata.byline, grabbed.byline)),
+      dir: copy(grabbed.dir),
+      lang: copy(grabbed.lang),
+      content: Serializer.inner_html(article),
+      text_content: copy(text_content),
+      length: Text.length(text_content),
+      excerpt: copy(excerpt(metadata.excerpt, article)),
+      site_name: copy(js_or(metadata.site_name, nil)),
+      published_time: copy(metadata.published_time)
+    }
+  end
 
-  def regexes(:video),
-    do: ~r/\/\/(www\.)?(dailymotion|youtube|youtube-nocookie|player\.vimeo)\.com/i
+  # `a || b` on strings or nulls
+  defp js_or(a, b) when a in [nil, ""], do: b
+  defp js_or(a, _b), do: a
 
-  def regexes(:protect_attrs), do: ~r/^(?!id|rel|for|summary|title|href|src|alt|srcdoc)/i
+  # Without an excerpt in the metadata, the trimmed text of the article's first paragraph.
+  defp excerpt(excerpt, article) when excerpt in [nil, ""] do
+    case first_p(elem(article, 2)) do
+      nil -> excerpt
+      p -> p |> DOM.text_content() |> Text.trim()
+    end
+  end
 
-  def regexes(:img_tag_src), do: ~r/(<img.*src=['"])([^'"]+)(['"][^>]*>)/Ui
+  defp excerpt(excerpt, _article), do: excerpt
 
-  def regexes(_key), do: nil
+  defp first_p([]), do: nil
+  defp first_p([{"p", _, _, _} = p | _]), do: p
+  defp first_p([{_, _, children, _} | rest]), do: first_p(children) || first_p(rest)
+  defp first_p([_text | rest]), do: first_p(rest)
 
-  def default_options, do: @default_options
+  # Strings from the parser's tree keep the whole parsed document alive.
+  defp copy(nil), do: nil
+  defp copy(bin), do: :binary.copy(bin)
+end
+
+defmodule Readability.Error do
+  @moduledoc """
+  Raised by `Readability.article!/2` when there's no article. `:reason` is one of
+  `t:Readability.reason/0`.
+  """
+
+  defexception [:reason]
+
+  @type t :: %__MODULE__{reason: Readability.reason()}
+
+  @impl true
+  def message(%{reason: :not_readable}), do: "no article found in the document"
+  def message(%{reason: :too_many_elements}), do: "the document has more elements than :max_elems_to_parse"
 end

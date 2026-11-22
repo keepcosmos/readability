@@ -11,16 +11,9 @@ defmodule Readability.JSSuiteTest do
 
   @known_failures JSSuite.known_failures()
 
-  test "the 1.0 API comes with readerable?/1, so the readerable check runs" do
-    if v1?() do
-      assert Code.ensure_loaded?(Readability) and function_exported?(Readability, :readerable?, 1),
-             "Readability.article!/2 exists but Readability.readerable?/1 doesn't"
-    end
-  end
-
   test "a page without an article is an extraction error, not a content mismatch" do
-    # nil raises in both APIs; the 1.0 API has no article for an empty page
-    for source <- [nil | if(v1?(), do: [""], else: [])] do
+    # nil raises; an empty page has no article
+    for source <- [nil, ""] do
       result = JSSuite.run(%{page: "empty", source: source, expected: "<p>x</p>", metadata: %{}})
       assert is_binary(result.error)
       assert Enum.all?(result.checks, &match?({_, {:fail, _}}, &1))
@@ -45,9 +38,6 @@ defmodule Readability.JSSuiteTest do
       assert problems == [], Enum.join(problems, "\n\n")
     end
   end
-
-  # Whether the 1.0 API is under test (see JSSuite.extract/1).
-  defp v1?, do: Code.ensure_loaded?(Readability) and function_exported?(Readability, :article!, 2)
 
   defp problem(check, :pass, true = _known?),
     do: "#{check}: passes now, remove `#{@page} #{check}` from known_failures.txt"

@@ -1,102 +1,118 @@
 defmodule ReadabilityTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
-  test "readability for NY Times" do
-    html = TestHelper.read_fixture("nytimes.html")
-    opts = [clean_conditionally: false]
-    nytimes = Readability.article(html, opts)
+  alias Readability.Article
 
-    nytimes_html = Readability.readable_html(nytimes)
+  doctest Readability
 
-    assert nytimes_html =~
-             ~r/^<div><div><figure id=\"media-100000004245260\"><div><img src=\"https/
+  @pages Path.expand("fixtures/readability_js/pages", __DIR__)
 
-    assert nytimes_html =~ ~r/major priorities.<\/p><\/div><\/div>$/
+  @paragraph String.duplicate("This sentence is part of a fairly long paragraph, written for tests. ", 10)
+  @html """
+  <html lang="en"><head><title>Some title</title></head>
+  <body><article><h1>Some title</h1>
+  <p><a href="/relative/link">link</a> #{@paragraph}</p>
+  <p><img src="image.png"> #{@paragraph}</p>
+  </article></body></html>
+  """
 
-    nytimes_text = Readability.readable_text(nytimes)
-    assert nytimes_text =~ ~r/^Buddhist monks performing as part of/
-    assert nytimes_text =~ ~r/one of her major priorities.$/
-  end
+  defp page(name), do: File.read!(Path.join([@pages, name, "source.html"]))
 
-  test "readability for BBC" do
-    html = TestHelper.read_fixture("bbc.html")
-    bbc = Readability.article(html)
+  describe "article/2" do
+    test "returns the article with its metadata" do
+      assert {:ok, %Article{} = article} = Readability.article(@html)
+      assert article.title == "Some title"
+      assert article.lang == "en"
+      assert article.content =~ ~r/^<div id="readability-page-1" class="page">/
+      assert article.text_content =~ "fairly long paragraph"
+      assert article.length == Readability.Text.length(article.text_content)
+      assert String.starts_with?(article.excerpt, "link This sentence")
+    end
 
-    bbc_html = Readability.readable_html(bbc)
+    test "invalid options raise" do
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, char_threshold: 0) end
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, unknown: 1) end
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, url: :nope) end
+    end
 
-    assert bbc_html =~ ~r/^<div><div><figure><span><img alt=\"A Microsoft logo/
-    assert bbc_html =~ ~r/connected computing devices\".<\/p><\/div><\/div>$/
+    test "a parsed document gives the same article as its HTML" do
+      html = page("ars-1")
+      opts = [url: "http://fakehost/test/page.html"]
+      assert Readability.article(LazyHTML.from_document(html), opts) == Readability.article(html, opts)
+    end
 
-    bbc_text = Readability.readable_text(bbc)
-    # @TODO: Remove image caption when extract only text
-    # assert bbc_text =~ ~r/^Microsoft\'s quarterly profit has missed analysts/
-    assert bbc_text =~ ~r/connected computing devices\".$/
-  end
+    test "a leading byte order mark is ignored" do
+      assert Readability.article(<<0xEF, 0xBB, 0xBF>> <> @html) == Readability.article(@html)
+    end
 
-  test "readability for medium" do
-    html = TestHelper.read_fixture("medium.html")
-    medium = Readability.article(html)
+    test "a document without an article is not readable" do
+      assert Readability.article("") == {:error, :not_readable}
+      assert Readability.article("<html><body><div> <br> </div></body></html>") == {:error, :not_readable}
+    end
 
-    medium_html = Readability.readable_html(medium)
+    test "short content is still an article, like in Readability.js" do
+      assert {:ok, %Article{text_content: "Too short."}} =
+               Readability.article("<html><body><p>Too short.</p></body></html>")
+    end
 
-    assert medium_html =~ ~r/^<div><div><p id=\"3476\"><strong><em>Background:/
-    assert medium_html =~ ~r/recommend button!<\/em><\/h3><\/div><\/div>$/
+    test "max_elems_to_parse counts the elements of the document as parsed" do
+      # html, head, title, body, article, h1, p, a, p, img
+      assert {:ok, _} = Readability.article(@html, max_elems_to_parse: 10)
+      assert Readability.article(@html, max_elems_to_parse: 9) == {:error, :too_many_elements}
+    end
 
-    medium_text = Readability.readable_text(medium)
+    test "relative URLs resolve against :url and stay relative without it" do
+      {:ok, article} = Readability.article(@html, url: "https://example.com/posts/1")
+      assert article.content =~ ~s(href="https://example.com/relative/link")
+      assert article.content =~ ~s(src="https://example.com/posts/image.png")
 
-    assert medium_text =~ ~r/^Background: I’ve spent the past 6/
-    assert medium_text =~ ~r/a lot to me if you hit the recommend button!$/
-  end
+      {:ok, article} = Readability.article(@html)
+      assert article.content =~ ~s(href="/relative/link")
+      assert article.content =~ ~s(src="image.png")
+    end
 
-  test "readability for buzzfeed" do
-    html = TestHelper.read_fixture("buzzfeed.html")
-    buzzfeed = Readability.article(html)
+    test "returned strings don't reference the parser's binaries" do
+      # the excerpt of the last one comes from a paragraph that is a single text node
+      sources =
+        Enum.map(~w(ars-1 nytimes-1 wikipedia lemonde-1), &{&1, page(&1)}) ++ [{"inline", "<p>#{@paragraph}</p>"}]
 
-    buzzfeed_html = Readability.readable_html(buzzfeed)
+      for {name, html} <- sources do
+        {:ok, article} = Readability.article(html, url: "http://fakehost/test/page.html")
 
-    assert buzzfeed_html =~ ~r/^<div><div><p>The FBI no longer needs Apple’s help/
-    assert buzzfeed_html =~ ~r/encrypted devices.<\/p><hr\/><hr\/><hr\/><hr\/><\/div><\/div>$/
-
-    buzzfeed_text = Readability.readable_text(buzzfeed)
-
-    assert buzzfeed_text =~ ~r/^The FBI no longer needs Apple’s help/
-    assert buzzfeed_text =~ ~r/issue of court orders and encrypted devices.$/
-  end
-
-  test "readability for pubmed" do
-    html = TestHelper.read_fixture("pubmed.html")
-    pubmed = Readability.article(html)
-
-    pubmed_html = Readability.readable_html(pubmed)
-
-    assert pubmed_html =~
-             ~r/^<div><div><h4>BACKGROUND AND OBJECTIVES: <\/h4><p><abstracttext>Although strict blood pressure/
-
-    assert pubmed_html =~
-             ~r/different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.<\/abstracttext><\/p><\/div><\/div>$/
-
-    pubmed_text = Readability.readable_text(pubmed)
-
-    assert pubmed_text =~ ~r/^BACKGROUND AND OBJECTIVES: \nAlthough strict blood pressure/
-
-    assert pubmed_text =~
-             ~r/with different mechanisms yielded potent antihypertensive efficacy with safety and decreased plasma BNP levels.$/
-  end
-
-  test "correctly processing DOCTYPE when using html5ever parser" do
-    # Since html5ever requires Elixir 1.13 or later, we won't run it on ealier Elixir versions
-    if Version.match?(System.version(), ">=1.13.0") do
-      original_parser = Application.get_env(:floki, :html_parser) || Floki.HTMLParser.Mochiweb
-      Application.put_env(:floki, :html_parser, Floki.HTMLParser.Html5ever)
-
-      try do
-        html = TestHelper.read_fixture("medium.html")
-        html |> Readability.article() |> Readability.readable_html()
-      after
-        Application.put_env(:floki, :html_parser, original_parser)
+        for {field, value} <- Map.from_struct(article), is_binary(value) do
+          assert :binary.referenced_byte_size(value) == byte_size(value), "#{name}: #{field}"
+        end
       end
-    else
-      :ok
+    end
+  end
+
+  describe "article!/2" do
+    test "returns the article" do
+      assert %Article{title: "Some title"} = Readability.article!(@html)
+    end
+
+    test "raises Readability.Error without one" do
+      error = assert_raise Readability.Error, fn -> Readability.article!("") end
+      assert error.reason == :not_readable
+      assert Exception.message(error) == "no article found in the document"
+
+      error = assert_raise Readability.Error, fn -> Readability.article!(@html, max_elems_to_parse: 1) end
+      assert error.reason == :too_many_elements
+    end
+  end
+
+  describe "readerable?/2" do
+    test "takes HTML or a parsed document" do
+      assert Readability.readerable?(@html)
+      assert Readability.readerable?(LazyHTML.from_document(@html))
+      refute Readability.readerable?("<html><body><p>Too short.</p></body></html>")
+    end
+
+    test "options" do
+      refute Readability.readerable?(@html, min_score: 100)
+      refute Readability.readerable?(@html, min_content_length: 1000)
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.readerable?(@html, min_score: "1") end
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.readerable?(@html, char_threshold: 1) end
     end
   end
 end
