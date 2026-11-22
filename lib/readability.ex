@@ -85,7 +85,7 @@ defmodule Readability do
     ctx = Map.merge(ctx, %{article_title: metadata.title, metadata_byline: metadata.byline})
 
     with {:ok, grabbed} <- Grab.run(doc, ctx, opts, &Clean.prep_article(&1, &2, opts)) do
-      base_uri = URL.base_uri(opts.url, base_href(doc))
+      base_uri = URL.base_uri(opts.url, grabbed.base_href)
       article = PostProcess.run(grabbed.article, opts.url, base_uri, opts)
       {:ok, build(article, metadata, grabbed)}
     end
@@ -153,14 +153,6 @@ defmodule Readability do
   defp count_elements([], n), do: n
   defp count_elements([text | rest], n) when is_binary(text), do: count_elements(rest, n)
   defp count_elements([{_, _, children, _} | rest], n), do: count_elements(rest, count_elements(children, n + 1))
-
-  # The `href` of the first `<base>` (JSDOMParser's `baseURI`)
-  defp base_href(doc) do
-    case DOM.find_all(doc, ["base"]) do
-      [base | _] -> DOM.attr(base, "href")
-      [] -> nil
-    end
-  end
 
   defp build(article, metadata, grabbed) do
     text_content = DOM.text_content(article)

@@ -21,7 +21,13 @@ defmodule Readability.Grab do
           optional(:element_count) => non_neg_integer()
         }
 
-  @type result :: %{article: DOM.el(), byline: binary() | nil, dir: binary() | nil, lang: binary() | nil}
+  @type result :: %{
+          article: DOM.el(),
+          byline: binary() | nil,
+          dir: binary() | nil,
+          lang: binary() | nil,
+          base_href: binary() | nil
+        }
 
   @type prep_article :: (DOM.el(), Flags.t() -> DOM.el())
 
@@ -40,7 +46,8 @@ defmodule Readability.Grab do
   attempt's flags.
 
   Returns the article (`<div id="readability-content">` holding the `readability-page-1` page),
-  `_articleByline` (raw; `nil` or a string), `_articleDir` and `_articleLang`.
+  `_articleByline` (raw; `nil` or a string), `_articleDir`, `_articleLang` and the `href` of the
+  first `<base>` of the document as `_grabArticle` leaves it (where `doc.baseURI` comes from).
   """
   @spec run(DOM.tree(), ctx(), map(), prep_article()) ::
           {:ok, result()} | {:error, :not_readable} | {:error, :too_many_elements}
@@ -82,12 +89,13 @@ defmodule Readability.Grab do
     attempt = attempt(start, flags, byline, state)
 
     if attempt.text_length >= state.opts.char_threshold do
-      {{:ok, result(attempt.article, attempt, false)}, :lists.reverse(failed, [attempt])}
+      base_href = base_href(attempt.tree, moved(attempt))
+      {{:ok, result(attempt.article, attempt, false, base_href)}, :lists.reverse(failed, [attempt])}
     else
       failed = [attempt | failed]
 
       case next_flags(flags) do
-        nil -> {fallback(failed), :lists.reverse(failed)}
+        nil -> {fallback(failed, state), :lists.reverse(failed)}
         flags -> retry(attempt, flags, failed, state)
       end
     end
@@ -110,13 +118,7 @@ defmodule Readability.Grab do
     body_score = attempt.body && attempt.score.scores[attempt.body]
     state = %{state | page: DOM.raw("body", attrs, restored), restored: restored, body_score: body_score}
 
-    start =
-      case attempt.body do
-        nil -> attempt.tree
-        path -> replace(attempt.tree, :lists.reverse(path), state.page)
-      end
-
-    loop(start, flags, attempt.byline, failed, state)
+    loop(reset(attempt, state.page), flags, attempt.byline, failed, state)
   end
 
   defp attempt(start, flags, byline, %{ctx: ctx, opts: opts} = state) do
@@ -167,7 +169,7 @@ defmodule Readability.Grab do
 
   # All attempts too short: the longest article (the earliest on ties) unless it is empty. `dir`
   # still comes from the last attempt, after its <body> was reset.
-  defp fallback([last | _] = failed) do
+  defp fallback([last | _] = failed, state) do
     best =
       Enum.reduce(failed, fn attempt, best ->
         if attempt.text_length >= best.text_length, do: attempt, else: best
@@ -175,12 +177,45 @@ defmodule Readability.Grab do
 
     if best.text_length == 0,
       do: {:error, :not_readable},
-      else: {:ok, result(best.article, last, true)}
+      else: {:ok, result(best.article, last, true, base_href(reset(last, state.page), []))}
   end
 
-  defp result(article, last, reset?) do
-    %{article: article, byline: last.byline, dir: dir(last, reset?), lang: copy(last.lang)}
+  defp result(article, last, reset?, base_href) do
+    %{article: article, byline: last.byline, dir: dir(last, reset?), lang: copy(last.lang), base_href: base_href}
   end
+
+  # The attempt's tree after `page.innerHTML = pageCacheHtml`
+  defp reset(%{body: nil, tree: tree}, _page), do: tree
+  defp reset(%{body: path, tree: tree}, page), do: replace(tree, :lists.reverse(path), page)
+
+  # The paths of the subtrees `_grabArticle` moved out of the document into the article: the
+  # appended siblings, or all of <body>'s children for a created top candidate.
+  defp moved(%{select: %{created?: true}, body: nil}), do: []
+  defp moved(%{select: %{created?: true}, body: body}), do: [body]
+  defp moved(%{select: %{appended: appended}}), do: for({path, _tag} <- appended, do: path)
+
+  # `doc.baseURI` reads the `href` of the first <base> in the document, skipping `moved` subtrees.
+  defp base_href(tree, moved) do
+    tree
+    |> bases([], 0, [])
+    |> :lists.reverse()
+    |> Enum.find_value({:base, nil}, fn {path, href} -> if not moved?(path, moved), do: {:base, href} end)
+    |> elem(1)
+    |> copy()
+  end
+
+  # {reversed path, href} of every <base>, last first
+  defp bases([], _parent, _i, acc), do: acc
+  defp bases([text | rest], parent, i, acc) when is_binary(text), do: bases(rest, parent, i + 1, acc)
+
+  defp bases([{"base", _, _, _} = base | rest], parent, i, acc),
+    do: bases(rest, parent, i + 1, [{[i | parent], DOM.attr(base, "href")} | acc])
+
+  defp bases([{_, _, children, _} | rest], parent, i, acc),
+    do: bases(rest, parent, i + 1, bases(children, [i | parent], 0, acc))
+
+  defp moved?([], _moved), do: false
+  defp moved?([_ | parent] = path, moved), do: path in moved or moved?(parent, moved)
 
   defp copy(nil), do: nil
   defp copy(bin), do: :binary.copy(bin)

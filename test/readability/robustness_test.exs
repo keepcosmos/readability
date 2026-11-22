@@ -98,5 +98,34 @@ defmodule Readability.RobustnessTest do
       assert {:ok, a} = check(html)
       assert a.text_content =~ "Sentinel"
     end
+
+    # Expected links checked against Readability.js (scripts/differential.exs FILE...).
+    test "the base URL comes from the document as the grab leaves it" do
+      link = ~s(<a href="rel/link">link</a>)
+      article = "<article>#{@para}#{link}#{@para}#{@para}</article>"
+
+      cases = [
+        # removed by the walk as an unlikely candidate
+        {~s(<head><base class="menu" href="https://cdn.example/a/"></head><body>#{article}</body>),
+         "http://fakehost/test/rel/link"},
+        {~s(<head><base href="https://cdn.example/a/"></head><body>#{article}</body>),
+         "https://cdn.example/a/rel/link"},
+        {~s(<head><base class="menu" href="https://cdn.example/a/"><base href="https://cdn.example/b/"></head><body>#{article}</body>),
+         "https://cdn.example/b/rel/link"},
+        # moved into the article
+        {~s(<body><article><base href="https://cdn.example/a/">#{@para}#{link}#{@para}#{@para}</article><base href="https://cdn.example/b/"></body>),
+         "https://cdn.example/b/rel/link"},
+        # all attempts too short: <body> is reset, what the walk removed outside it stays removed
+        {~s(<head><base class="menu" href="https://cdn.example/a/"></head><body><div>short #{link}</div></body>),
+         "http://fakehost/test/rel/link"},
+        {~s(<body><div><base href="https://cdn.example/a/">short #{link}</div></body>),
+         "https://cdn.example/a/rel/link"}
+      ]
+
+      for {html, href} <- cases do
+        assert {:ok, a} = check(html, url: "http://fakehost/test/page.html")
+        assert a.content =~ ~s(href="#{href}"), html
+      end
+    end
   end
 end
