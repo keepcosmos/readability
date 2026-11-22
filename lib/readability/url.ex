@@ -11,8 +11,10 @@ defmodule Readability.URL do
   # trimming and tab/newline removal.
   #
   # Approximated: IDNA. ASCII hosts are lower-cased and `xn--` labels are checked to decode;
-  # non-ASCII hosts are NFKC-normalized, lower-cased and Punycode-encoded, which agrees with
-  # UTS #46 for ordinary names but skips its validity checks and mapping table.
+  # non-ASCII hosts must be valid UTF-8 after percent-decoding, are NFKC-normalized, lower-cased,
+  # stripped of the common UTS #46 "ignored" code points and Punycode-encoded, which agrees with
+  # UTS #46 for ordinary names. Its mapping table is not implemented and of its validity criteria
+  # only a subset that covers what `new URL` rejects in practice (see `check_label/1`).
   #
   # Errors are returned where `new URL` throws, so callers can keep the original value as
   # Readability.js does.
@@ -525,17 +527,18 @@ defmodule Readability.URL do
         for label <- :binary.split(domain, ".", [:global]), do: check_ace(label)
         domain
       else
-        domain = String.replace_invalid(domain)
+        # "UTF-8 decode without BOM" turns invalid bytes into U+FFFD, which UTS #46 disallows
+        if not String.valid?(domain), do: fail()
 
         domain
         |> String.replace(["。", "．", "｡"], ".")
-        |> String.replace(["­", "͏", "​", "⁠", "﻿"], "")
+        |> drop_ignored()
         |> :unicode.characters_to_nfkc_binary()
         |> String.downcase()
         |> :unicode.characters_to_nfc_binary()
         |> :binary.split(".", [:global])
         |> Enum.map_join(".", fn label ->
-          if ascii?(label), do: check_ace(label), else: "xn--" <> punycode_encode(label)
+          if ascii?(label), do: check_ace(label), else: "xn--" <> punycode_encode(check_label(label))
         end)
       end
 
@@ -546,12 +549,93 @@ defmodule Readability.URL do
 
   defp check_ace(<<"xn--", encoded::binary>> = label) do
     case punycode_decode(encoded) do
-      {:ok, decoded} when decoded != "" -> if ascii?(decoded), do: fail(), else: label
-      _ -> fail()
+      {:ok, decoded} when decoded != "" ->
+        if ascii?(decoded), do: fail()
+        check_label(decoded)
+        label
+
+      _ ->
+        fail()
     end
   end
 
   defp check_ace(label), do: label
+
+  # UTS #46 "ignored" code points (mapped to nothing) that can plausibly appear in a host: soft
+  # hyphen, CGJ, ZWSP, word joiner and invisible operators, variation selectors, BOM, shorthand
+  # format controls.
+  defp drop_ignored(domain) do
+    for <<cp::utf8 <- domain>>, not ignored?(cp), into: "", do: <<cp::utf8>>
+  end
+
+  defp ignored?(cp),
+    do:
+      cp in [0xAD, 0x34F, 0x200B, 0xFEFF] or cp in 0x2060..0x2064 or cp in 0xFE00..0xFE0F or
+        cp in 0x1BCA0..0x1BCA3 or cp in 0xE0100..0xE01EF
+
+  # A subset of the UTS #46 validity criteria (with WHATWG's flags), enough to reject what `new URL`
+  # rejects in practice; the full mapping table is not implemented. A label fails when it starts with
+  # a combining mark, or contains U+FFFD, a control, format (Cf), private-use or surrogate code point,
+  # a line/paragraph separator or a noncharacter, or a ZWJ/ZWNJ outside the CONTEXTJ rules (RFC 5892
+  # A.1/A.2, with the Arabic joining types of U+0620-06FF and U+0750-077F only). Unassigned code
+  # points are accepted: OTP's Unicode version may be older than Node's.
+  defp check_label(label) do
+    cps = String.to_charlist(label)
+    if match?({:mark, _}, category(hd(cps))), do: fail()
+    check_cps(cps, [])
+    label
+  end
+
+  defp check_cps([], _before), do: :ok
+
+  defp check_cps([0x200D | rest], before) do
+    if not virama?(before), do: fail()
+    check_cps(rest, [0x200D | before])
+  end
+
+  defp check_cps([0x200C | rest], before) do
+    if not (virama?(before) or (joins?(before, &joins_left?/1) and joins?(rest, &joins_right?/1))), do: fail()
+    check_cps(rest, [0x200C | before])
+  end
+
+  defp check_cps([cp | rest], before) do
+    if cp == 0xFFFD or cp in 0xFDD0..0xFDEF or (cp &&& 0xFFFE) == 0xFFFE, do: fail()
+
+    case category(cp) do
+      {:other, kind} when kind in [:control, :format, :private, :surrogate] -> fail()
+      {:separator, kind} when kind in [:line, :paragraph] -> fail()
+      _ -> check_cps(rest, [cp | before])
+    end
+  end
+
+  defp category(cp), do: :unicode_util.lookup(cp).category
+  defp virama?([cp | _]), do: :unicode_util.lookup(cp).ccc == 9
+  defp virama?([]), do: false
+
+  # The nearest code point that is not transparent (a non-spacing or enclosing mark) satisfies `fun`.
+  defp joins?([cp | rest], fun) do
+    case category(cp) do
+      {:mark, kind} when kind in [:non_spacing, :enclosing] -> joins?(rest, fun)
+      _ -> fun.(cp)
+    end
+  end
+
+  defp joins?([], _fun), do: false
+
+  # Joining type L or D (can join to the following letter)
+  defp joins_left?(cp),
+    do:
+      cp in [0x620, 0x626, 0x628, 0x649, 0x64A, 0x66E, 0x66F, 0x6CC, 0x6CE, 0x6FF] or cp in 0x62A..0x62E or
+        cp in 0x633..0x63F or cp in 0x641..0x647 or cp in 0x678..0x687 or cp in 0x69A..0x6BF or
+        cp in 0x6C1..0x6C2 or cp in 0x6D0..0x6D1 or cp in 0x6FA..0x6FC or cp in 0x750..0x758 or
+        cp in 0x75C..0x766
+
+  # Joining type R or D (can join to the preceding letter)
+  defp joins_right?(cp),
+    do:
+      cp in [0x620, 0x6D5, 0x6FF] or cp in 0x622..0x63F or cp in 0x641..0x64A or cp in 0x66E..0x66F or
+        cp in 0x671..0x673 or cp in 0x675..0x6D3 or cp in 0x6EE..0x6EF or cp in 0x6FA..0x6FC or
+        cp in 0x750..0x766
 
   defp ends_in_number?(domain) do
     parts = :binary.split(domain, ".", [:global])
@@ -642,19 +726,23 @@ defmodule Readability.URL do
   defp ipv6_after_compress(<<>>, acc, compress), do: {Enum.reverse(acc), compress}
   defp ipv6_after_compress(s, acc, compress), do: ipv6_piece(s, acc, compress)
 
+  # `pieceIndex` of the spec: a "::" takes at least one piece.
+  defp piece_index(acc, nil), do: length(acc)
+  defp piece_index(acc, _compress), do: length(acc) + 1
+
   defp ipv6_piece(s, acc, compress) do
-    if length(acc) == 8, do: fail()
+    if piece_index(acc, compress) >= 8, do: fail()
     {value, len, rest} = hex_piece(s, 0, 0)
 
     case rest do
       <<".", _::binary>> ->
-        if len == 0 or length(acc) > 6, do: fail()
+        if len == 0 or piece_index(acc, compress) > 6, do: fail()
         start = byte_size(s) - byte_size(rest) - len
         [a, b, c, d] = ipv6_v4(binary_part(s, start, byte_size(s) - start))
         {Enum.reverse(acc, [a <<< 8 ||| b, c <<< 8 ||| d]), compress}
 
       <<"::", r::binary>> ->
-        if compress != nil or len == 0, do: fail()
+        if compress != nil or len == 0 or length(acc) == 7, do: fail()
         acc = [value | acc]
         ipv6_after_compress(r, acc, length(acc))
 

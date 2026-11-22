@@ -66,6 +66,49 @@ defmodule Readability.URLTest do
     assert length(known) < 50
   end
 
+  # Expected values from Node 24's `new URL(input).href` (`:error` where it throws).
+  test "rejects hosts that UTS #46 disallows instead of rewriting them" do
+    for {input, expected} <- [
+          {"https://example.com%80/", :error},
+          {"https://foo\u200D.com", :error},
+          {"https://foo\u200C.com", :error},
+          {"https://\u0301a.com", :error},
+          {"https://a\uFFFD.com", :error},
+          {"https://a\u0085b.com", :error},
+          {"https://a\u2028b.com", :error},
+          {"https://a\uE000.com", :error},
+          {"https://a\u200Eb.com", :error},
+          {"https://xn--ab-m1t.com", :error},
+          {"https://xn--a-wbb.com", :error},
+          # ZWJ after a virama, ZWNJ between joining Arabic letters (also across a mark)
+          {"https://\u0915\u094D\u200D\u0937.com", {:ok, "https://xn--11b2ezcw70k.com/"}},
+          {"https://\u0645\u06CC\u200C\u062E.com", {:ok, "https://xn--tgb9bvy774f.com/"}},
+          {"https://\u0628\u064E\u200C\u0628.com", {:ok, "https://xn--ngba7iz95i.com/"}},
+          {"https://\u0627\u200C\u0628.com", :error},
+          # ignored code points are dropped
+          {"https://\u00E4\u2061.com", {:ok, "https://xn--4ca.com/"}},
+          {"https://a\uFE0F\u00E4.com", {:ok, "https://xn--a-0fa.com/"}},
+          {"https://%C3%A4.com", {:ok, "https://xn--4ca.com/"}}
+        ] do
+      assert URL.resolve(input, nil) == expected, inspect(input)
+    end
+  end
+
+  test "IPv6: \"::\" stands for at least one piece" do
+    for {input, expected} <- [
+          {"http://[1:2:3:4:5:6:7:8::]/", :error},
+          {"http://[::1:2:3:4:5:6:7:8]/", :error},
+          {"http://[1:2:3:4::5:6:7:8]/", :error},
+          {"http://[::1:2:3:4:5:6:1.2.3.4]/", :error},
+          {"http://[1:2:3:4:5:6:7::]/", {:ok, "http://[1:2:3:4:5:6:7:0]/"}},
+          {"http://[::2:3:4:5:6:7:8]/", {:ok, "http://[0:2:3:4:5:6:7:8]/"}},
+          {"http://[1:2:3::5:6:7:8]/", {:ok, "http://[1:2:3:0:5:6:7:8]/"}},
+          {"http://[::1:2:3:4:5:1.2.3.4]/", {:ok, "http://[0:1:2:3:4:5:102:304]/"}}
+        ] do
+      assert URL.resolve(input, nil) == expected, input
+    end
+  end
+
   test "url?/1" do
     assert URL.url?("http://example.com/a")
     assert URL.url?("mailto:x@example.com")
