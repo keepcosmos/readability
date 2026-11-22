@@ -495,6 +495,10 @@ defmodule Readability.DOM do
 
   `acc` is threaded through all calls in document order. Returns `{tree, acc}`.
 
+  With `stats: :drop`, rebuilt elements (the changed ones and their ancestors) get `nil` stats
+  instead of recomputed ones, which rescans their text children: for a pass after which nothing
+  reads stats.
+
       # <div><p>a</p><span>b</span></div> -> drop every <span>, count visited elements
       remove_preorder(div, 0, fn
         {"span", _, _, _}, _anc, n -> {:remove, n + 1}
@@ -502,70 +506,73 @@ defmodule Readability.DOM do
       end)
       #=> {<div><p>a</p></div>, 2}
   """
-  @spec remove_preorder(node_() | tree(), acc, (el(), [frame()], acc -> term()), [frame()]) ::
+  @spec remove_preorder(node_() | tree(), acc, (el(), [frame()], acc -> term()), [frame()], :keep | :drop) ::
           {node_() | tree(), acc}
         when acc: term()
-  def remove_preorder(tree, acc, fun, ancestors \\ [])
+  def remove_preorder(tree, acc, fun, ancestors \\ [], stats \\ :keep)
 
-  def remove_preorder(list, acc, fun, ancestors) when is_list(list) do
-    case pre_list(list, ancestors, acc, fun) do
+  def remove_preorder(list, acc, fun, ancestors, stats) when is_list(list) do
+    case pre_list(list, ancestors, acc, fun, stats) do
       {:same, acc} -> {list, acc}
       {list, acc} -> {list, acc}
     end
   end
 
-  def remove_preorder({tag, attrs, children, _} = el, acc, fun, ancestors) do
-    case pre_list(children, [{tag, attrs} | ancestors], acc, fun) do
+  def remove_preorder({tag, attrs, children, _} = el, acc, fun, ancestors, stats) do
+    case pre_list(children, [{tag, attrs} | ancestors], acc, fun, stats) do
       {:same, acc} -> {el, acc}
-      {children, acc} -> {put_children(el, children), acc}
+      {children, acc} -> {rebuild(el, children, stats), acc}
     end
   end
 
-  def remove_preorder(text, acc, _fun, _ancestors) when is_binary(text), do: {text, acc}
+  def remove_preorder(text, acc, _fun, _ancestors, _stats) when is_binary(text), do: {text, acc}
+
+  defp rebuild(el, children, :keep), do: put_children(el, children)
+  defp rebuild({tag, attrs, _, _}, children, :drop), do: {tag, attrs, children, nil}
 
   # Returns {:same | new_list, acc}. Head first, so acc follows document order.
-  defp pre_list([], _anc, acc, _fun), do: {:same, acc}
+  defp pre_list([], _anc, acc, _fun, _stats), do: {:same, acc}
 
-  defp pre_list([text | rest], anc, acc, fun) when is_binary(text) do
-    case pre_list(rest, anc, acc, fun) do
+  defp pre_list([text | rest], anc, acc, fun, stats) when is_binary(text) do
+    case pre_list(rest, anc, acc, fun, stats) do
       {:same, _} = same -> same
       {rest, acc} -> {[text | rest], acc}
     end
   end
 
-  defp pre_list([el | rest] = list, anc, acc, fun) do
-    {node, acc} = pre_node(el, anc, acc, fun)
-    {rest2, acc} = pre_list(rest, anc, acc, fun)
+  defp pre_list([el | rest] = list, anc, acc, fun, stats) do
+    {node, acc} = pre_node(el, anc, acc, fun, stats)
+    {rest2, acc} = pre_list(rest, anc, acc, fun, stats)
     {splice(node, rest2, list), acc}
   end
 
-  defp pre_node(el, anc, acc, fun) do
+  defp pre_node(el, anc, acc, fun, stats) do
     case fun.(el, anc, acc) do
-      {:cont, acc} -> pre_children(el, anc, acc, fun)
-      {:cont, new, acc} -> pre_children_replaced(new, anc, acc, fun)
+      {:cont, acc} -> pre_children(el, anc, acc, fun, stats)
+      {:cont, new, acc} -> pre_children_replaced(new, anc, acc, fun, stats)
       {:skip, acc} -> {:same, acc}
       {:skip, new, acc} -> {new, acc}
       {:remove, acc} -> {:removed, acc}
-      {:revisit, new, acc} -> pre_revisit(new, anc, acc, fun)
+      {:revisit, new, acc} -> pre_revisit(new, anc, acc, fun, stats)
     end
   end
 
-  defp pre_children({tag, attrs, children, _} = el, anc, acc, fun) do
-    case pre_list(children, [{tag, attrs} | anc], acc, fun) do
+  defp pre_children({tag, attrs, children, _} = el, anc, acc, fun, stats) do
+    case pre_list(children, [{tag, attrs} | anc], acc, fun, stats) do
       {:same, _} = same -> same
-      {children, acc} -> {put_children(el, children), acc}
+      {children, acc} -> {rebuild(el, children, stats), acc}
     end
   end
 
-  defp pre_children_replaced(new, anc, acc, fun) do
-    case pre_children(new, anc, acc, fun) do
+  defp pre_children_replaced(new, anc, acc, fun, stats) do
+    case pre_children(new, anc, acc, fun, stats) do
       {:same, acc} -> {new, acc}
       changed -> changed
     end
   end
 
-  defp pre_revisit(new, anc, acc, fun) do
-    case pre_node(new, anc, acc, fun) do
+  defp pre_revisit(new, anc, acc, fun, stats) do
+    case pre_node(new, anc, acc, fun, stats) do
       {:same, acc} -> {new, acc}
       other -> other
     end

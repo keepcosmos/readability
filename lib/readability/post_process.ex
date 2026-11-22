@@ -41,6 +41,9 @@ defmodule Readability.PostProcess do
   either way.
 
   `opts` is the validated options map; `:keep_classes` and `:classes_to_preserve` are used.
+
+  Nothing reads stats after this pass, so rebuilt elements get none (`DOM.raw/3`): recomputing
+  them would rescan their text.
   """
   @spec run(DOM.el(), binary() | nil, binary() | nil, map()) :: DOM.el()
   def run({_, _, _, _} = article, doc_uri, base_uri, opts) do
@@ -53,7 +56,7 @@ defmodule Readability.PostProcess do
     # `remove_preorder/4`, so only steps 1 and 4 apply to it.
     {root, _} = fix_js_links(article)
     {root, _} = clean_class(root, ctx.preserve)
-    {root, _} = DOM.remove_preorder(root, ctx, &visit/3)
+    {root, _} = DOM.remove_preorder(root, ctx, &visit/3, [], :drop)
     root
   end
 
@@ -86,9 +89,11 @@ defmodule Readability.PostProcess do
   defp fix_js_links({_, _, children, _} = el) do
     case js_list(children) do
       :same -> {el, false}
-      children -> {DOM.put_children(el, children), true}
+      children -> {raw_children(el, children), true}
     end
   end
+
+  defp raw_children({tag, attrs, _, _}, children), do: DOM.raw(tag, attrs, children)
 
   defp js_list([]), do: :same
 
@@ -101,7 +106,7 @@ defmodule Readability.PostProcess do
     end
   end
 
-  defp js_node({"a", attrs, children, st}), do: if(js_href?(attrs), do: unlink(children, st), else: :same)
+  defp js_node({"a", attrs, children, _}), do: if(js_href?(attrs), do: unlink(children), else: :same)
   defp js_node(_node), do: :same
 
   defp js_href?(attrs) do
@@ -111,9 +116,8 @@ defmodule Readability.PostProcess do
     end
   end
 
-  defp unlink([text], _st) when is_binary(text), do: text
-  defp unlink(children, nil), do: DOM.raw("span", [], children)
-  defp unlink(children, _st), do: DOM.el("span", [], children)
+  defp unlink([text]) when is_binary(text), do: text
+  defp unlink(children), do: DOM.raw("span", [], children)
 
   defp fix_uris(el, nil), do: {el, false}
 
