@@ -11,6 +11,7 @@ defmodule Readability.Mixfile do
       elixir: "~> 1.17",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
       test_coverage: [tool: ExCoveralls],
       package: package(),
       deps: deps(),
@@ -35,17 +36,22 @@ defmodule Readability.Mixfile do
     []
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp deps do
     # https://github.com/lpil/mix-test.watch/pull/140#issuecomment-1853912030
     test_watch_runtime = match?(["test.watch" | _], System.argv())
 
     [
+      {:lazy_html, "~> 0.1.14"},
       {:floki, "~> 0.30"},
       {:httpoison, "~> 1.8 or ~> 2.0 or ~> 3.0"},
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:meck, "~> 1.2", only: :test},
+      {:jason, "~> 1.4", only: [:dev, :test]},
       {:excoveralls, "~> 0.18", only: :test},
       {:html5ever, "~> 0.18", only: :test},
       {:mix_test_watch, "~> 1.2", only: [:dev, :test], runtime: test_watch_runtime}
