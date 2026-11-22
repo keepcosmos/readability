@@ -31,5 +31,6 @@
   "quic": {:hex, :quic, "3.3.0", "4a55908709f9d5f21f9e38a1bbd136a5756e202e6ee89ed5b74b5db069721482", [:rebar3], [{:idna, "~> 8.0", [hex: :idna, repo: "hexpm", optional: false]}], "hexpm", "8be3af3c8fe9b11a60c7443c6173019264dd2147da62759bc772cd9233e16bec"},
   "rustler_precompiled": {:hex, :rustler_precompiled, "0.10.1", "2895d3a3239d612c13c18945c0a693e07de4e8f9bc2b6b2297cba3d6576f9eea", [:mix], [{:rustler, "~> 0.28", [hex: :rustler, repo: "hexpm", optional: true]}], "hexpm", "0efa66bc2a4206aec64a2c422ca0b1d69bdc411c7b359ec928feb889357b4abb"},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.9", "4ff292dc16e728fde1235cf5fa6bcd3ca01864004526f71a4a70935509d1a7f1", [:make, :mix, :rebar3], [], "hexpm", "19f24ad715ef6255d530b2f0db8b2d2191ae435b6527234e943f523e84ed0895"},
+  "stream_data": {:hex, :stream_data, "1.4.0", "026f929db613aabea6208012ae9b8970d3fd5f88b3bdf26831bc536f98c42036", [:mix], [], "hexpm", "2b0ee3a340dcce1c8cf6302a763ee757d1e01c54d6e16d9069062509d68b1dc9"},
   "webtransport": {:hex, :webtransport, "0.5.13", "5786cae0a6a39d2a9bb11f7c94b208707a736a33c4de4b4e02268dfd0c0f984f", [:rebar3], [{:h2, "~> 0.18.0", [hex: :h2, repo: "hexpm", optional: false]}, {:quic, "~> 3.3.0", [hex: :quic, repo: "hexpm", optional: false]}], "hexpm", "97c89ab850110df2edc000c37e880fedc629954e12e2a3beed7ef804b55a165b"},
 }
