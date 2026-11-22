@@ -53,6 +53,16 @@ defmodule Readability.Options do
               type: {:or, [:float, :integer]},
               default: 0.0,
               doc: "Added to the link density threshold when deciding whether to remove a block."
+            ],
+            spawn: [
+              type: :boolean,
+              default: true,
+              doc: """
+              Do the work in a short-lived linked process whose heap is sized for the input, so
+              that the garbage collector has little to do and the memory is released at once
+              (about a quarter faster). Exceptions are re-raised in the caller, and the caller's
+              `:max_heap_size` applies to the process. `false` runs everything in the caller.
+              """
             ]
           )
 

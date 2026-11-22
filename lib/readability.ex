@@ -66,6 +66,10 @@ defmodule Readability do
   @spec article(input(), keyword()) :: {:ok, Article.t()} | {:error, reason()}
   def article(html, opts \\ []) do
     opts = Options.validate!(opts)
+    if opts.spawn, do: in_process(fn -> extract(html, opts) end, html), else: extract(html, opts)
+  end
+
+  defp extract(html, opts) do
     doc = html |> parse() |> LazyHTML.to_tree() |> DOM.from_lazy()
     ctx = if opts.max_elems_to_parse > 0, do: %{element_count: count_elements(doc, 0)}, else: %{}
 
@@ -108,6 +112,64 @@ defmodule Readability do
   def readerable?(html, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @readerable_schema)
     Readerable.readerable?(parse(html), opts)
+  end
+
+  # Runs `fun` in a linked process and returns its result (or raises what it raised). The heap
+  # starts at one word per byte of HTML: the tree and its rebuilt copies need about that much,
+  # and growing to it step by step makes the GC copy the tree over and over (design §8: half of
+  # the time on large pages). The garbage goes away with the process, unscanned.
+  defp in_process(fun, html) do
+    caller = self()
+
+    {heap, limit} =
+      case Process.info(caller, :max_heap_size) do
+        {:max_heap_size, %{size: size} = max} when size > 0 -> {div(size, 2), [max_heap_size: max]}
+        _ -> {:infinity, []}
+      end
+
+    heap = if is_binary(html), do: [min_heap_size: min(byte_size(html), heap)], else: []
+
+    worker = fn ->
+      result =
+        try do
+          {:ok, fun.()}
+        catch
+          kind, reason -> {:raise, kind, reason, __STACKTRACE__}
+        end
+
+      send(caller, {self(), result})
+    end
+
+    {pid, ref} = :erlang.spawn_opt(worker, [:link, :monitor | heap ++ limit])
+
+    receive do
+      {^pid, result} ->
+        # No `{:EXIT, pid, :normal}` for a caller that traps exits.
+        Process.unlink(pid)
+        Process.demonitor(ref, [:flush])
+
+        receive do
+          {:EXIT, ^pid, _} -> :ok
+        after
+          0 -> :ok
+        end
+
+        case result do
+          {:ok, value} -> value
+          {:raise, kind, reason, stacktrace} -> :erlang.raise(kind, reason, stacktrace)
+        end
+
+      # Killed (by its `:max_heap_size`, or an exit signal). Without trapping exits the link
+      # has taken the caller down already.
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        receive do
+          {:EXIT, ^pid, _} -> :ok
+        after
+          0 -> :ok
+        end
+
+        exit(reason)
+    end
   end
 
   defp parse(%LazyHTML{} = lazy), do: lazy
