@@ -5,158 +5,97 @@
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/readability/)
 [![Total Download](https://img.shields.io/hexpm/dt/readability.svg)](https://hex.pm/packages/readability)
 [![License](https://img.shields.io/hexpm/l/readability.svg)](https://github.com/keepcosmos/readability/blob/master/LICENSE.md)
-[![Coverage Status](https://coveralls.io/repos/github/keepcosmos/readability/badge.svg?branch=master)](https://coveralls.io/github/keepcosmos/readability?branch=master)
 
-Readability is a tool for extracting and curating the primary readable content of a webpage.
+Readability extracts the main content of a web page: the article without navigation, ads and
+other page chrome, plus its title, byline, excerpt and other metadata.
+
+It's a port of Mozilla's [Readability.js](https://github.com/mozilla/readability), the library
+behind Firefox's Reader View, on top of the [LazyHTML](https://hex.pm/packages/lazy_html) parser
+(Lexbor). It gives the same results as Readability.js on all 130 pages of Readability.js's own test
+suite, which runs as part of this library's tests.
 
 ## Installation
-
-The package can be installed as:
-
-Add `:readability` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:readability, "~> 0.13"}
+    {:readability, "~> 1.0"}
   ]
 end
 ```
 
-After that, run mix deps.get.
-
-Readability requires Elixir 1.17 or newer.
-
-`Readability.summarize/2` fetches pages with [HTTPoison](https://hex.pm/packages/httpoison). Readability supports
-HTTPoison 1.8, 2.x and 3.x, but HTTPoison 3 needs OTP 27+. If you are on an older OTP, pin it in your own `mix.exs`:
-
-```elixir
-{:httpoison, "~> 2.0"}
-```
+Readability requires Elixir 1.17 or newer and OTP 27 or newer.
 
 ## Usage
 
-### Examples
-
-#### Just pass a url
-
 ```elixir
-url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
-summary = Readability.summarize(url)
+{:ok, article} = Readability.article(html, url: "https://example.com/blog/post")
 
-summary.title
-#=> "Why I’m betting on Elixir"
-
-summary.published_at
-#=> ~U[2015-02-23 16:53:27.006Z]
-
-summary.authors
-#=> ["Ken Mazaika"]
-
-summary.article_html
-#=>
-# <div><div><p id=\"3476\"><strong><em>Background: </em></strong><em>I’ve spent...
-# ...
-# ...button!</em></h3></div></div>
-
-summary.article_text
-#=>
-# Background: I’ve spent the past 6 years building web applications in Ruby and.....
-# ...
-# ... value in this article, it would mean a lot to me if you hit the recommend button!
+article.title          #=> "A blog post"
+article.byline         #=> "Jane Doe"
+article.content        #=> "<div id=\"readability-page-1\" class=\"page\"><p>The first paragraph..."
+article.text_content   #=> "The first paragraph..."
 ```
 
-#### From raw html
+`Readability.article/2` returns `{:ok, %Readability.Article{}}`, `{:error, :not_readable}` when
+there's no article, or `{:error, :too_many_elements}` when the page has more elements than
+`:max_elems_to_parse`. `Readability.article!/2` returns the article or raises `Readability.Error`.
 
-```elixir
-### Extract the title.
-Readability.title(html)
+An article has these fields, the same as the result of Readability.js's `parse()`:
 
-### Extract the published at
-Readability.published_at(html)
+| field | |
+|---|---|
+| `title` | the article title |
+| `byline` | the author line, or `nil` |
+| `content` | the article as HTML |
+| `text_content` | the article's text |
+| `length` | the length of `text_content` (UTF-16 code units, like JS) |
+| `excerpt` | the page's description, or the article's first paragraph |
+| `site_name` | the name of the site, or `nil` |
+| `published_time` | the publication time from the page's metadata, as found (not parsed), or `nil` |
+| `dir`, `lang` | the text direction and language, or `nil` |
 
-### Extract authors.
-Readability.authors(html)
+`Readability.readerable?/2` is a fast check (Readability.js's `isProbablyReaderable`) of whether
+a page probably has an article, to decide whether to run `article/2` at all.
 
-### Extract the primary content with transformed html.
-html
-|> Readability.article
-|> Readability.readable_html
-
-### Extract only text from the primary content.
-html
-|> Readability.article
-|> Readability.readable_text
-
-### you can extract the primary images with Floki
-html
-|> Readability.article
-|> Floki.find("img")
-|> Floki.attribute("src")
-```
+Both take the HTML as a string or as a document parsed with `LazyHTML.from_document/2`. Parse it
+yourself to call both without parsing twice, or to set LazyHTML's limits (`:max_depth`,
+`:max_memory`, `:max_attributes`, `:timeout`) for untrusted input.
 
 ### Options
 
-If the result is different from your expectations, you can add options to customize it.
+- `:url` - the page's URL. Relative links and image sources in `content` are made absolute
+  against it (and the page's `<base href>`). Without it, they stay as they are.
+- `:char_threshold` (500), `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
+  `:classes_to_preserve` ([]), `:keep_classes` (false), `:disable_json_ld` (false),
+  `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See the
+  [documentation](https://hexdocs.pm/readability/Readability.html#module-options).
 
-#### Example
+### Fetching pages
+
+Readability doesn't fetch pages. Use the HTTP client you already have, for example
+[Req](https://hex.pm/packages/req):
 
 ```elixir
-url = "https://medium.com/@kenmazaika/why-im-betting-on-elixir-7c8f847b58"
-summary = Readability.summarize(url, [clean_conditionally: false])
+url = "https://example.com/blog/post"
+html = Req.get!(url).body
+{:ok, article} = Readability.article(html, url: url)
 ```
 
-- `:min_text_length` \\\\ 25
-- `:remove_unlikely_candidates` \\\\ true
-- `:weight_classes` \\\\ true
-- `:clean_conditionally` \\\\ true
-- `:retry_length` \\\\ 250
+## Performance
 
-**You can find other algorithm and regex options in `readability.ex`**
+Readability works on LazyHTML's tree with precomputed text statistics instead of a DOM, and avoids
+regular expressions on hot paths. See [benchmarks/RESULTS.md](https://github.com/keepcosmos/readability/blob/master/benchmarks/RESULTS.md) for numbers
+and `benchmarks/benchmark.exs` to run them.
 
-## Test
+## Credits
 
-To run the test suite:
+- [Mozilla Readability.js](https://github.com/mozilla/readability) (Apache-2.0), of which this is
+  a port, and whose test pages are the test suite.
+- Readability was created by [Jaehyun Shin](https://github.com/keepcosmos).
 
-    $ mix test
-
-## Todo
-
-- [x] Extract authors
-- [x] More configurable
-- [x] Summarize function
-- [ ] Convert relative paths into absolute paths of `img#src` and `a#href`
-
-## Contributions are welcome!
-
-Check out [the main features milestone](https://github.com/keepcosmos/readability/milestones) and features of related projects below
-
-**Contributing**
-
-1. **Fork** the repo on GitHub
-2. **Clone** the project to your own machine
-3. **Commit** changes to your own branch
-4. **Push** your work back up to your fork
-5. Submit a **Pull request** so that we can review your changes
-
-NOTE: Be sure to merge the latest from "upstream" before making a pull request!
-
-## Related and Inspired Projects
-
-- [readability.js](https://github.com/mozilla/readability) is a standalone version of the readability library used for Firefox Reader View.
-- [newspaper](https://github.com/codelucas/newspaper) is an advanced news extraction, article extraction, and content curation library for Python.
-- [ruby-readability](https://github.com/cantino/ruby-readability) is a tool for extracting the primary readable content of a webpage.
-
-## Copyright and License
+## License
 
 Copyright (c) 2016 Jaehyun Shin
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Licensed under the Apache License, Version 2.0. See [LICENSE.md](LICENSE.md).

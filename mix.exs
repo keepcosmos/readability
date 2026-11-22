@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/keepcosmos/readability"
-  @version "0.13.0"
+  @version "1.0.0-dev"
 
   def project do
     [
@@ -57,7 +57,7 @@ defmodule Readability.Mixfile do
 
   defp package do
     [
-      description: "Readability library for extracting and curating articles.",
+      description: "Extracts the main content and metadata of web pages. A port of Mozilla's Readability.js.",
       files: ["lib", "mix.exs", "README.md", "LICENSE.md", "CHANGELOG.md"],
       maintainers: ["Jaehyun Shin", "Jakub Skałecki"],
       licenses: ["Apache-2.0"],
@@ -77,6 +77,9 @@ defmodule Readability.Mixfile do
       ],
       main: "readme",
       source_url: @source_url,
+      # 0.x functions named in the changelog
+      skip_code_autolink_to: ~w(Readability.summarize/2 Readability.title/1 Readability.authors/1
+        Readability.published_at/1 Readability.readable_html/1 Readability.readable_text/1),
       source_ref: "v#{@version}",
       formatters: ["html"]
     ]

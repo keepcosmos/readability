@@ -5,6 +5,72 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased (1.0.0)
+
+A rewrite: Readability is now a port of Mozilla's
+[Readability.js](https://github.com/mozilla/readability) on top of
+[LazyHTML](https://hex.pm/packages/lazy_html). The API is new; see the migration table below
+([#71](https://github.com/keepcosmos/readability/issues/71)).
+
+### Breaking
+
+- No HTTP client: `Readability.summarize/2` and the `httpoison` dependency are gone. Fetch pages
+  with the client you already use and pass the HTML to `Readability.article/2`
+  ([#64](https://github.com/keepcosmos/readability/issues/64)).
+- `Readability.article/2` returns `{:ok, %Readability.Article{}}` or
+  `{:error, :not_readable | :too_many_elements}` instead of a Floki tree.
+- Removed `title/1`, `authors/1`, `published_at/1`, `readable_html/1`, `readable_text/1`,
+  `raw_html/1`, `parse/1`, `regexes/1`, `mime/1`, `is_response_markup/1`, `default_options/0` and
+  `Readability.Summary`. Their results are fields of `Readability.Article`.
+- Floki is replaced by LazyHTML (Lexbor, a spec-compliant HTML parser). `floki` is no longer a
+  dependency, and there's no parser to choose
+  ([#68](https://github.com/keepcosmos/readability/issues/68) no longer applies).
+- New options, named after Readability.js's (`:url`, `:char_threshold`, `:nb_top_candidates`,
+  `:max_elems_to_parse`, `:classes_to_preserve`, `:keep_classes`, `:disable_json_ld`,
+  `:allowed_video_regex`, `:link_density_modifier`), validated with NimbleOptions: unknown or
+  invalid options raise. The 0.x options are gone.
+- `byline` is a string (Readability.js's byline), not a list of authors, and `published_time` is
+  the string found in the page's metadata, not a parsed `DateTime`.
+- Requires OTP 27 or newer.
+
+### Added
+
+- Results match Readability.js on all 130 pages of its test suite (content, title, byline,
+  excerpt, site name, direction, language, published time), checked in CI by a conformance
+  suite built on those pages
+  ([#61](https://github.com/keepcosmos/readability/issues/61),
+  [#63](https://github.com/keepcosmos/readability/issues/63)).
+- `Readability.article!/2`, raising `Readability.Error`.
+- `Readability.readerable?/2`, a port of Readability.js's `isProbablyReaderable`.
+- Article fields: `excerpt`, `site_name`, `dir`, `lang`, `length`; metadata from JSON-LD and
+  `<meta>` tags.
+- Relative links and image sources are made absolute with the `:url` option.
+- Both functions accept a `%LazyHTML{}` document, so a page can be parsed once (with LazyHTML's
+  limits, for untrusted input) for both.
+- Benchmarks (`benchmarks/benchmark.exs`) against 0.x and the cost of parsing alone.
+
+### Fixed
+
+- `content` is serialized per the HTML standard, so text is escaped
+  ([#62](https://github.com/keepcosmos/readability/issues/62)).
+- Options are validated in one place ([#57](https://github.com/keepcosmos/readability/issues/57)
+  no longer applies: `summarize` is gone).
+
+### Migrating from 0.x
+
+| 0.x | 1.0 |
+|---|---|
+| `Readability.summarize(url)` | fetch the page, then `Readability.article(html, url: url)` |
+| `Readability.readable_html(Readability.article(html))` | `{:ok, a} = Readability.article(html)`, then `a.content` |
+| `Readability.readable_text(Readability.article(html))` | `a.text_content` |
+| `Readability.title(html)` | `a.title` |
+| `Readability.authors(html)` | `a.byline` (a string) |
+| `Readability.published_at(html)` | `a.published_time` (a string) |
+| `summary.article_html` / `summary.article_text` | `a.content` / `a.text_content` |
+| options `:page_url` | `:url` |
+| other 0.x options (`:retry_length`, `:min_text_length`, `:weight_classes`, ...) | none; see `Readability` for the new ones |
+| `Floki` operations on the result | parse `a.content` with `LazyHTML.from_fragment/1` (or Floki) |
+
 ## [0.13.0] - 2026-11-22
 
 ### Breaking
