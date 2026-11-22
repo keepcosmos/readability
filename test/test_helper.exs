@@ -10,4 +10,5 @@ if missing_traces != [] do
   """)
 end
 
-ExUnit.start(exclude: if(missing_traces == [], do: [], else: [:traces]))
+# :slow tests (seconds each, test/readability/robustness_test.exs) run with `mix test --include slow`.
+ExUnit.start(exclude: [:slow | if(missing_traces == [], do: [], else: [:traces])])
