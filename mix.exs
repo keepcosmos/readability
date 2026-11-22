@@ -43,7 +43,7 @@ defmodule Readability.Mixfile do
 
     [
       {:floki, "~> 0.24"},
-      {:httpoison, "~> 1.8 or ~> 2.0"},
+      {:httpoison, "~> 1.8 or ~> 2.0 or ~> 3.0"},
       {:ex_doc, "~> 0.31", only: :dev},
       {:credo, "~> 1.6", only: [:dev, :test]},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
