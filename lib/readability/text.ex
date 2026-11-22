@@ -508,14 +508,19 @@ defmodule Readability.Text do
     nume(rest, o, next, next, [acc, binary_part(o, cs, pos - cs), <<n::utf8>>])
   end
 
-  # Returns {value, digit_count} when at least one digit is followed by ";", else nil.
-  defp hex(<<c, r::binary>>, n, d) when c in ?0..?9, do: hex(r, (n <<< 4) + c - ?0, d + 1)
-  defp hex(<<c, r::binary>>, n, d) when c in ?a..?f, do: hex(r, (n <<< 4) + c - ?a + 10, d + 1)
-  defp hex(<<c, r::binary>>, n, d) when c in ?A..?F, do: hex(r, (n <<< 4) + c - ?A + 10, d + 1)
+  # Returns {value, digit_count} when at least one digit is followed by ";", else nil. The value
+  # saturates at 0x110000 (any value above U+10FFFF becomes U+FFFD), so it stays a small integer.
+  @over 0x110000
+  defp hex(<<c, r::binary>>, n, d) when c in ?0..?9, do: hex(r, sat((n <<< 4) + c - ?0), d + 1)
+  defp hex(<<c, r::binary>>, n, d) when c in ?a..?f, do: hex(r, sat((n <<< 4) + c - ?a + 10), d + 1)
+  defp hex(<<c, r::binary>>, n, d) when c in ?A..?F, do: hex(r, sat((n <<< 4) + c - ?A + 10), d + 1)
   defp hex(<<?;, _::binary>>, n, d) when d > 0, do: {n, d}
   defp hex(_, _n, _d), do: nil
 
-  defp dec(<<c, r::binary>>, n, d) when c in ?0..?9, do: dec(r, n * 10 + c - ?0, d + 1)
+  defp dec(<<c, r::binary>>, n, d) when c in ?0..?9, do: dec(r, sat(n * 10 + c - ?0), d + 1)
   defp dec(<<?;, _::binary>>, n, d) when d > 0, do: {n, d}
   defp dec(_, _n, _d), do: nil
+
+  defp sat(n) when n > @over, do: @over
+  defp sat(n), do: n
 end
