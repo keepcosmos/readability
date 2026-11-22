@@ -122,7 +122,7 @@ defmodule Readability.Grab do
     {tree, entries, byline, lang} = Walk.run(start, flags, byline, ctx)
     body = with {path, _} <- find_body(tree), do: path
     initialized = if body && state.body_score, do: %{body => state.body_score}, else: %{}
-    score = Score.run(entries, flags, opts.nb_top_candidates, &Select.at(tree, &1), initialized)
+    score = Score.run(entries, flags, opts.nb_top_candidates, tree, initialized)
 
     # A removed <body> is still `page`, with the children it had when it was removed.
     page_children = elem(if(body, do: Select.at(tree, body), else: state.page), 2)

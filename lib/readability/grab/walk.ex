@@ -134,44 +134,62 @@ defmodule Readability.Grab.Walk do
   # itemprop}. Like getAttribute, the first occurrence of a name wins.
   # ---------------------------------------------------------------------------------------------
 
-  @no_attrs {nil, nil, nil, false, nil, nil, nil, nil, nil}
+  defp scan_attrs(attrs), do: scan_attrs(attrs, nil, nil, nil, false, nil, nil, nil, nil, nil)
 
-  defp scan_attrs([]), do: @no_attrs
-  defp scan_attrs(attrs), do: scan_attrs(attrs, @no_attrs)
+  defp scan_attrs([], class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop),
+    do: {class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop}
 
-  defp scan_attrs([], info), do: info
+  defp scan_attrs([{name, value} | rest], class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop) do
+    case name do
+      "class" when class == nil ->
+        scan_attrs(rest, value, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
 
-  defp scan_attrs([{name, value} | rest], info) do
-    info =
-      case name do
-        "class" -> put_new(info, 0, value)
-        "id" -> put_new(info, 1, value)
-        "style" -> put_new(info, 2, value)
-        "hidden" -> put_elem(info, 3, true)
-        "aria-hidden" -> put_new(info, 4, value)
-        "aria-modal" -> put_new(info, 5, value)
-        "role" -> put_new(info, 6, value)
-        "rel" -> put_new(info, 7, value)
-        "itemprop" -> put_new(info, 8, value)
-        _ -> info
-      end
+      "id" when id == nil ->
+        scan_attrs(rest, class, value, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
 
-    scan_attrs(rest, info)
+      "style" when style == nil ->
+        scan_attrs(rest, class, id, value, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
+
+      "hidden" ->
+        scan_attrs(rest, class, id, style, true, aria_hidden, aria_modal, role, rel, itemprop)
+
+      "aria-hidden" when aria_hidden == nil ->
+        scan_attrs(rest, class, id, style, hidden?, value, aria_modal, role, rel, itemprop)
+
+      "aria-modal" when aria_modal == nil ->
+        scan_attrs(rest, class, id, style, hidden?, aria_hidden, value, role, rel, itemprop)
+
+      "role" when role == nil ->
+        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, value, rel, itemprop)
+
+      "rel" when rel == nil ->
+        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, role, value, itemprop)
+
+      "itemprop" when itemprop == nil ->
+        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, role, rel, value)
+
+      _ ->
+        scan_attrs(rest, class, id, style, hidden?, aria_hidden, aria_modal, role, rel, itemprop)
+    end
   end
-
-  defp put_new(info, i, value), do: if(elem(info, i) == nil, do: put_elem(info, i, value), else: info)
 
   # ---------------------------------------------------------------------------------------------
   # Predicates
   # ---------------------------------------------------------------------------------------------
 
-  # `_isProbablyVisible`, with JSDOMParser's `style` (design §4.2).
+  # `_isProbablyVisible`, with JSDOMParser's `style` (design §4.2). A style without the words
+  # "display" and "visibility" cannot hide.
   defp visible?(style, hidden?, aria_hidden, class) do
     not hidden? and
       (aria_hidden != "true" or (class != nil and :binary.match(class, "fallback-image") != :nomatch)) and
-      (style == nil or
+      (style == nil or not may_hide?(style) or
          (style_value(style, "display") != "none" and style_value(style, "visibility") != "hidden"))
   end
+
+  defp may_hide?(<<"display", _::binary>>), do: true
+  defp may_hide?(<<"visibility", _::binary>>), do: true
+  defp may_hide?(<<_, rest::binary>>), do: may_hide?(rest)
+  defp may_hide?(<<>>), do: false
 
   # JSDOMParser `Style.getStyle`: the value of the first `;`-separated declaration whose name
   # (before the first `:`, trimmed) is `name`, trimmed and cut at a second `:`.
