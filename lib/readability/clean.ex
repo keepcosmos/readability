@@ -2,21 +2,38 @@ defmodule Readability.Clean do
   @moduledoc false
   # `_prepArticle` and everything it calls (design §7, stage 5).
   #
-  # The passes run in the JS order (design §4.3, "Order constraints inside `_prepArticle`").
-  # Two groups of `_clean` calls are fused into one pre-order removal each: object, embed,
-  # footer, link, aside; and iframe, input, textarea, select, button together with
-  # `_cleanHeaders`. Each of those removals decides on the element's own tag and attributes
-  # only, so applying them in one pass leaves exactly the elements no pass would remove.
+  # The JS sequence of ~20 passes runs here as three fused passes around the `_cleanConditionally`
+  # passes, which must stay separate (design §4.3, "Order constraints inside `_prepArticle`"):
+  #
+  #   A. `_cleanStyles`, `_markDataTables`, `_fixLazyImages`: one pre-order rewrite. Each element
+  #      is cleaned before `_fixLazyImages` looks at its attributes (as in JS, where all of
+  #      `_cleanStyles` runs first). `_markDataTables` reads only attributes `_cleanStyles` keeps
+  #      and descendant structure nothing in this pass changes. Also records which tags are
+  #      present, so that `_cleanConditionally` passes for absent tags are skipped (no pass
+  #      creates form, fieldset, table, ul or div elements).
+  #   form, fieldset: `_cleanConditionally`.
+  #   B. `_clean` (object, embed, footer, link, aside), `_cleanMatchedNodes` (share elements),
+  #      `_clean` (iframe, input, textarea, select, button), `_cleanHeaders`: one pre-order
+  #      removal. Every decision reads the element's own tag and attributes, except the share
+  #      test's `textContent.length`, which is measured without the first group's subtrees (the
+  #      state JS sees). An element survives iff no pass would remove it or an ancestor.
+  #   table, ul, div: `_cleanConditionally`.
+  #   C. h1 to h2, empty-paragraph removal, `<br>` before `<p>`, single-cell tables: one pass,
+  #      see `last_list/1`.
   #
   # Multi-tag snapshots (`_getAllNodesWithTag` without `querySelectorAll` returns them grouped
   # by tag) only occur where every decision is local or a count (`_fixLazyImages`,
   # `_cleanHeaders`, the embeds and content counts), so their order cannot show.
   #
   # `_markDataTables` stores its result as the internal `{:data_table, boolean}` attribute on
-  # each `<table>` (design §2.1); the last pass (single-cell tables) strips it again.
+  # each `<table>` (design §2.1); pass C strips it again.
+
+  import Bitwise
 
   alias Readability.{DOM, Flags, Matchers, Text}
   alias Readability.Clean.Conditional
+
+  @share_threshold 500
 
   @doc """
   `_prepArticle(articleContent)` with the given `_flags` (`FLAG_WEIGHT_CLASSES` for class
@@ -32,27 +49,86 @@ defmodule Readability.Clean do
       if Flags.active?(flags, :clean_conditionally),
         do: {weight?, video, Map.get(opts, :link_density_modifier, 0.0)}
 
+    {article, present} = first_pass(article)
+
     article
-    |> clean_styles()
-    |> mark_data_tables()
-    |> fix_lazy_images()
-    |> clean_conditionally("form", cc)
-    |> clean_conditionally("fieldset", cc)
-    |> remove_preorder(&junk?(&1, video))
-    |> clean_share_elements()
-    |> remove_preorder(&late_junk?(&1, video, weight?))
-    |> clean_conditionally("table", cc)
-    |> clean_conditionally("ul", cc)
-    |> clean_conditionally("div", cc)
-    |> DOM.map_elements(["h1"], &{:cont, DOM.put_tag(&1, "h2")})
-    |> DOM.remove_reverse(["p"], fn p, _anc -> empty_paragraph?(p) end)
-    |> remove_br_before_p()
-    |> replace_single_cell_tables()
+    |> clean_conditionally("form", present, cc)
+    |> clean_conditionally("fieldset", present, cc)
+    |> clean_junk(video, weight?)
+    |> clean_conditionally("table", present, cc)
+    |> clean_conditionally("ul", present, cc)
+    |> clean_conditionally("div", present, cc)
+    |> last_pass()
+  end
+
+  for {tag, bit} <- [{"form", 1}, {"fieldset", 2}, {"table", 4}, {"ul", 8}, {"div", 16}] do
+    defp tag_bit(unquote(tag)), do: unquote(bit)
+  end
+
+  defp tag_bit(_), do: 0
+
+  defp clean_conditionally(article, _tag, _present, nil), do: article
+
+  defp clean_conditionally(article, tag, present, ctx) do
+    if (present &&& tag_bit(tag)) == 0, do: article, else: Conditional.clean(article, tag, ctx)
   end
 
   # ---------------------------------------------------------------------------------------------
-  # _cleanStyles
+  # Pass A: _cleanStyles, _markDataTables, _fixLazyImages
   # ---------------------------------------------------------------------------------------------
+
+  # Returns {article, bits of the conditionally cleaned tags present}. `_cleanStyles` starts at
+  # the article itself; the other two look at its descendants.
+  defp first_pass({tag, _, children, _} = article) do
+    svg? = tag == "svg"
+    article = if svg?, do: article, else: same_or(clean_attrs(article), article)
+
+    case first_list(children, svg?, 0) do
+      {:same, present} -> {article, present}
+      {kids, present} -> {DOM.put_children(article, kids), present}
+    end
+  end
+
+  defp first_list([], _svg?, present), do: {:same, present}
+
+  defp first_list([text | rest], svg?, present) when is_binary(text) do
+    case first_list(rest, svg?, present) do
+      {:same, _} = same -> same
+      {rest, present} -> {[text | rest], present}
+    end
+  end
+
+  defp first_list([{tag, _, _, _} = el | rest] = list, svg?, present) do
+    {node, present} = first_node(el, svg? or tag == "svg", present ||| tag_bit(tag))
+    {rest2, present} = first_list(rest, svg?, present)
+    {splice(node, rest2, list), present}
+  end
+
+  # `svg?`: inside (or at) an <svg>, where `_cleanStyles` stops
+  defp first_node({tag, _, children, _} = el, svg?, present) do
+    cleaned = if svg?, do: :same, else: clean_attrs(el)
+
+    marked =
+      if tag == "table",
+        do: DOM.put_attr(same_or(cleaned, el), :data_table, data_table?(el)),
+        else: cleaned
+
+    {fixed, img} = if lazy_tag?(tag), do: fix_lazy_image(same_or(marked, el)), else: {:same, nil}
+    node = if fixed == :same, do: marked, else: fixed
+
+    case first_list(children, svg?, present) do
+      {:same, present} when img == nil -> {node, present}
+      {:same, present} -> {DOM.put_children(same_or(node, el), children ++ [img]), present}
+      {kids, present} -> {DOM.put_children(same_or(node, el), if(img, do: kids ++ [img], else: kids)), present}
+    end
+  end
+
+  defp same_or(:same, el), do: el
+  defp same_or(new, _el), do: new
+
+  defp lazy_tag?(tag), do: tag == "img" or tag == "picture" or tag == "figure"
+
+  # _cleanStyles
 
   for a <- ~w(align background bgcolor border cellpadding cellspacing frame hspace rules style valign vspace) do
     defp presentational?(unquote(a)), do: true
@@ -63,29 +139,12 @@ defmodule Readability.Clean do
   # DEPRECATED_SIZE_ATTRIBUTE_ELEMS
   defp size_attrs?(tag), do: tag in ~w(table th td hr pre)
 
-  @doc """
-  `_cleanStyles(e)`: removes `PRESENTATIONAL_ATTRIBUTES` (and `width`/`height` on
-  `DEPRECATED_SIZE_ATTRIBUTE_ELEMS`) from `e` and its descendants, leaving `<svg>` subtrees alone.
-  """
-  @spec clean_styles(DOM.el()) :: DOM.el()
-  def clean_styles({"svg", _, _, _} = el), do: el
-
-  def clean_styles(el) do
-    el =
-      case clean_style(el) do
-        :cont -> el
-        {:cont, el} -> el
-      end
-
-    DOM.map_elements(el, :all, &clean_style/1)
-  end
-
-  defp clean_style({"svg", _, _, _}), do: :skip
-
-  defp clean_style({tag, attrs, _, _} = el) do
+  # `PRESENTATIONAL_ATTRIBUTES` (and `width`/`height` on `DEPRECATED_SIZE_ATTRIBUTE_ELEMS`)
+  # removed. `:same` when there are none.
+  defp clean_attrs({tag, attrs, _, _} = el) do
     case strip_attrs(attrs, size_attrs?(tag)) do
-      :same -> :cont
-      attrs -> {:cont, DOM.put_attrs(el, attrs)}
+      :same -> :same
+      attrs -> DOM.put_attrs(el, attrs)
     end
   end
 
@@ -105,12 +164,7 @@ defmodule Readability.Clean do
     end
   end
 
-  # ---------------------------------------------------------------------------------------------
   # _markDataTables, _getRowAndColumnCount
-  # ---------------------------------------------------------------------------------------------
-
-  defp mark_data_tables(article),
-    do: DOM.map_elements(article, ["table"], &{:cont, DOM.put_attr(&1, :data_table, data_table?(&1))})
 
   @doc "The `_readabilityDataTable` value `_markDataTables` gives `table`."
   @spec data_table?(DOM.el()) :: boolean()
@@ -182,30 +236,25 @@ defmodule Readability.Clean do
   defp digits(<<c, rest::binary>>, n) when c in ?0..?9, do: digits(rest, (n || 0) * 10 + c - ?0)
   defp digits(_, n), do: n
 
-  # ---------------------------------------------------------------------------------------------
   # _fixLazyImages
-  # ---------------------------------------------------------------------------------------------
-
-  @lazy_tags ~w(img picture figure)
-
-  defp fix_lazy_images(article), do: DOM.map_elements(article, @lazy_tags, &fix_lazy_image/1)
 
   @doc """
-  `_fixLazyImages` for one `img`, `picture` or `figure` element, as a `DOM.map_elements/3`
-  callback. An `<img>` it appends to a `<figure>` is not visited (JS iterates a snapshot).
+  `_fixLazyImages` for one `img`, `picture` or `figure` element: `{:same | new_el, img}`, where
+  `img` is an `<img>` to append to a `<figure>` (or `nil`). The caller appends it after
+  processing the figure's children, so it is never visited itself (JS iterates a snapshot).
   """
-  @spec fix_lazy_image(DOM.el()) :: :cont | {:cont | :skip, DOM.el()}
+  @spec fix_lazy_image(DOM.el()) :: {:same | DOM.el(), DOM.el() | nil}
   def fix_lazy_image(el) do
     src = DOM.attr(el, "src")
 
     case src not in [nil, ""] and Matchers.b64_data_url(src) do
       # SVG can have a meaningful image in under 133 bytes
       {"image/svg+xml", _} ->
-        :cont
+        {:same, nil}
 
       {_mime, rest} ->
         # a placeholder: under 100 bytes (133 in base64), and an image elsewhere in the attributes
-        if src_could_be_removed?(el) and Text.length(rest) < 133,
+        if src_could_be_removed?(el) and b64_length_below_133?(rest),
           do: copy_lazy_attrs(DOM.delete_attr(el, "src"), true),
           else: copy_lazy_attrs(el, false)
 
@@ -214,28 +263,25 @@ defmodule Readability.Clean do
     end
   end
 
+  # `Text.length(rest) < 133` without scanning long data: a UTF-8 byte sequence of n bytes is at
+  # least n / 3 UTF-16 units.
+  defp b64_length_below_133?(rest) when byte_size(rest) < 133, do: true
+  defp b64_length_below_133?(rest) when byte_size(rest) >= 399, do: false
+  defp b64_length_below_133?(rest), do: Text.length(rest) < 133
+
   defp src_could_be_removed?({_, attrs, _, _}),
     do: Enum.any?(attrs, fn {name, value} -> name != "src" and Matchers.image_ext?(value) end)
 
-  defp copy_lazy_attrs({tag, attrs, children, _} = el, changed?) do
+  defp copy_lazy_attrs({tag, attrs, _, _} = el, changed?) do
     src = DOM.attr(el, "src")
     srcset = DOM.attr(el, "srcset")
 
-    if (src not in [nil, ""] or srcset not in [nil, "", "null"]) and not Matchers.lazy_class?(DOM.attr(el, "class")) do
-      if changed?, do: {:cont, el}, else: :cont
-    else
-      case Enum.reduce(attrs, {el, changed?, nil}, &copy_lazy_attr(tag, &1, &2)) do
-        {_, false, nil} ->
-          :cont
+    {el, changed?, img} =
+      if (src not in [nil, ""] or srcset not in [nil, "", "null"]) and not Matchers.lazy_class?(DOM.attr(el, "class")),
+        do: {el, changed?, nil},
+        else: Enum.reduce(attrs, {el, changed?, nil}, &copy_lazy_attr(tag, &1, &2))
 
-        {el, true, nil} ->
-          {:cont, el}
-
-        {el, _, img} ->
-          kids = DOM.map_elements(children, @lazy_tags, &fix_lazy_image/1)
-          {:skip, DOM.put_children(el, kids ++ [img])}
-      end
-    end
+    {if(changed?, do: el, else: :same), img}
   end
 
   # Accumulator: {element, changed?, img appended to a figure | nil}
@@ -266,13 +312,15 @@ defmodule Readability.Clean do
   end
 
   # ---------------------------------------------------------------------------------------------
-  # _clean, _cleanHeaders, _cleanMatchedNodes
+  # Pass B: _clean, _cleanMatchedNodes, _cleanHeaders
   # ---------------------------------------------------------------------------------------------
 
-  defp remove_preorder(article, junk?) do
+  defp clean_junk(article, video, weight?) do
     {article, nil} =
-      DOM.remove_preorder(article, nil, fn el, _anc, nil ->
-        if junk?.(el), do: {:remove, nil}, else: {:cont, nil}
+      DOM.remove_preorder(article, nil, fn el, anc, nil ->
+        if junk?(el, video) or share_element?(el, anc, video) or late_junk?(el, video, weight?),
+          do: {:remove, nil},
+          else: {:cont, nil}
       end)
 
     article
@@ -310,91 +358,107 @@ defmodule Readability.Clean do
 
   defp class_weight(el), do: Matchers.class_weight(DOM.attr(el, "class"), DOM.attr(el, "id"))
 
-  # _cleanMatchedNodes(topCandidate, shareElements filter) for each child of the article: their
-  # descendants with "share" in class/id and fewer than 500 characters of textContent.
-  defp clean_share_elements(article) do
-    {article, nil} =
-      DOM.remove_preorder(article, nil, fn
-        _top_candidate, [_article], nil ->
-          {:cont, nil}
+  # _cleanMatchedNodes(topCandidate, filter) for each child of the article: descendants (not the
+  # article's children themselves) with "share" in class/id and fewer than 500 characters of
+  # `textContent`, measured as after the first `_clean` group.
+  defp share_element?(_top_candidate, [_article], _video), do: false
 
-        el, _anc, nil ->
-          if Matchers.share_element?(DOM.attr(el, "class"), DOM.attr(el, "id")) and
-               Text.length(DOM.text_content(el)) < 500,
-             do: {:remove, nil},
-             else: {:cont, nil}
-      end)
+  defp share_element?(el, _anc, video) do
+    class = DOM.attr(el, "class")
+    id = DOM.attr(el, "id")
 
-    article
+    (has_share?(class) or has_share?(id)) and Matchers.share_element?(class, id) and
+      share_text_length(el, video) < @share_threshold
   end
 
-  defp clean_conditionally(article, _tag, nil), do: article
-  defp clean_conditionally(article, tag, ctx), do: Conditional.clean(article, tag, ctx)
+  # Prefilter: "share" in any ASCII case.
+  defp has_share?(nil), do: false
+
+  defp has_share?(<<s, h, a, r, e, _::binary>>)
+       when s in ~c"sS" and h in ~c"hH" and a in ~c"aA" and r in ~c"rR" and e in ~c"eE", do: true
+
+  defp has_share?(<<_, rest::binary>>), do: has_share?(rest)
+  defp has_share?(<<>>), do: false
+
+  # `textContent.length` without the subtrees the first `_clean` group removes.
+  defp share_text_length({_, _, children, _}, video), do: share_text_length(children, video, 0)
+
+  defp share_text_length([], _video, n), do: n
+
+  defp share_text_length([text | rest], video, n) when is_binary(text),
+    do: share_text_length(rest, video, n + Text.length(text))
+
+  defp share_text_length([{_, _, children, _} = el | rest], video, n) do
+    n = if junk?(el, video), do: n, else: share_text_length(children, video, n)
+    share_text_length(rest, video, n)
+  end
 
   # ---------------------------------------------------------------------------------------------
-  # The last passes: empty paragraphs, <br> before <p>, single-cell tables
+  # Pass C: h1 to h2, empty paragraphs, <br> before <p>, single-cell tables
   # ---------------------------------------------------------------------------------------------
+
+  defp last_pass({_, _, children, _} = article) do
+    case last_list(children) do
+      {:same, _} -> article
+      {kids, _} -> DOM.put_children(article, kids)
+    end
+  end
+
+  # One pass for four JS passes that run in this order:
+  #
+  #   1. h1 -> h2: changes nothing the others look at.
+  #   2. Empty paragraphs (`_removeNodes` over all <p>): decided on the paragraph as it comes in.
+  #      Removing an inner empty paragraph never changes an outer one's text or content count,
+  #      and the later passes run after this one in JS.
+  #   3. `<br>` before `<p>` (document order, only brs removed): a br goes when the next sibling,
+  #      skipping whitespace-only text, is a <p> that survived step 2. A later br is still there
+  #      when an earlier one is judged. Tables replaced in step 4 are still tables here.
+  #   4. Single-cell tables (top-down): the table's structure and the cell's children are seen
+  #      after steps 2 and 3, as in JS. Replacing inner tables first is equivalent: a replaced
+  #      table and its cell (p or div) are both non-phrasing, and inner replacements happen
+  #      inside the cell, never in the table/tbody/tr structure tested.
+  #
+  # Lists are processed right to left; the second element of the result tells whether the
+  # list's first significant node is a surviving <p> (what a <br> right before it would see).
+  defp last_list([]), do: {:same, false}
+
+  defp last_list([text | rest]) when is_binary(text) do
+    {rest2, p_next?} = last_list(rest)
+    {if(rest2 == :same, do: :same, else: [text | rest2]), p_next? and Text.blank?(text)}
+  end
+
+  defp last_list([{tag, _, _, _} = el | rest] = list) do
+    {rest2, p_next?} = last_list(rest)
+
+    cond do
+      tag == "p" and empty_paragraph?(el) -> {splice(:removed, rest2, list), p_next?}
+      tag == "br" and p_next? -> {splice(:removed, rest2, list), false}
+      true -> {splice(last_node(el), rest2, list), tag == "p"}
+    end
+  end
+
+  defp last_node({tag, _, children, _} = el) do
+    {node, el} =
+      case last_list(children) do
+        {:same, _} -> {:same, el}
+        {kids, _} -> {:changed, DOM.put_children(el, kids)}
+      end
+
+    case tag do
+      "h1" ->
+        DOM.put_tag(el, "h2")
+
+      "table" ->
+        table = DOM.delete_attr(el, :data_table)
+        single_cell(table) || table
+
+      _ ->
+        if node == :same, do: :same, else: el
+    end
+  end
 
   # no img/embed/object/iframe inside and `!_getInnerText(paragraph, false)`
   defp empty_paragraph?(p), do: DOM.blank?(p) and DOM.count_descendants(p, ~w(img embed object iframe)) == 0
-
-  # Each <br> whose next sibling, skipping whitespace-only text, is a <p> is removed. Brs are
-  # visited in document order and only brs are removed, so a br's following siblings are still
-  # as in the original child list when it is judged.
-  defp remove_br_before_p({_, _, children, _} = article) do
-    case br_list(children) do
-      :same -> article
-      children -> DOM.put_children(article, children)
-    end
-  end
-
-  defp br_list([]), do: :same
-
-  defp br_list([text | rest]) when is_binary(text) do
-    case br_list(rest) do
-      :same -> :same
-      rest -> [text | rest]
-    end
-  end
-
-  defp br_list([{"br", _, _, _} = br | rest] = list) do
-    if p_next?(rest) do
-      case br_list(rest) do
-        :same -> rest
-        rest -> rest
-      end
-    else
-      splice(br_node(br), br_list(rest), list)
-    end
-  end
-
-  defp br_list([el | rest] = list), do: splice(br_node(el), br_list(rest), list)
-
-  defp br_node({_, _, children, _} = el) do
-    case br_list(children) do
-      :same -> :same
-      kids -> DOM.put_children(el, kids)
-    end
-  end
-
-  # _nextNode(br.nextSibling).tagName == "P"
-  defp p_next?([text | rest]) when is_binary(text), do: Text.blank?(text) and p_next?(rest)
-  defp p_next?([{"p", _, _, _} | _]), do: true
-  defp p_next?(_), do: false
-
-  defp splice(:same, :same, _list), do: :same
-  defp splice(:same, rest, [h | _]), do: [h | rest]
-  defp splice(node, :same, [_ | t]), do: [node | t]
-  defp splice(node, rest, _list), do: [node | rest]
-
-  # Top-down: a table is replaced by its retagged cell, whose inner tables are visited next.
-  # Every table passes here, so this is also where the `:data_table` marker is stripped.
-  defp replace_single_cell_tables(article) do
-    DOM.map_elements(article, ["table"], fn table ->
-      table = DOM.delete_attr(table, :data_table)
-      {:cont, single_cell(table) || table}
-    end)
-  end
 
   defp single_cell(table) do
     tbody = DOM.single_tag_inside(table, "tbody") || table
@@ -404,4 +468,12 @@ defmodule Readability.Clean do
       DOM.put_tag(cell, if(Enum.all?(kids, &DOM.phrasing?/1), do: "p", else: "div"))
     end
   end
+
+  # Rebuilds [node | rest] from the results for the head and the tail of `list`.
+  defp splice(:same, :same, _list), do: :same
+  defp splice(:same, rest, [h | _]), do: [h | rest]
+  defp splice(:removed, :same, [_ | t]), do: t
+  defp splice(:removed, rest, _list), do: rest
+  defp splice(node, :same, [_ | t]), do: [node | t]
+  defp splice(node, rest, _list), do: [node | rest]
 end

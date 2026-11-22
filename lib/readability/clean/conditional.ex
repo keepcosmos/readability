@@ -172,8 +172,8 @@ defmodule Readability.Clean.Conditional do
       weight < 0 -> true
       DOM.comma_count(node, :ascii) >= 10 -> false
       video? -> false
-      # no alternative of adWords/loadingWords is longer than 13
-      len <= 13 and Matchers.ad_or_loading_words?(DOM.inner_text(node)) -> true
+      # adWords/loadingWords alternatives are 2 to 13 UTF-16 units long
+      len >= 2 and len <= 13 and Matchers.ad_or_loading_words?(DOM.inner_text(node)) -> true
       true -> shady?(node, len, list?, weight, counts, anc, ldm)
     end
   end
