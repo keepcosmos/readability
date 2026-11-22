@@ -84,5 +84,19 @@ defmodule Readability.RobustnessTest do
       assert result == {:error, :too_many_elements}
       assert limited < full / 4, "#{div(limited, 1000)} ms with the limit, #{div(full, 1000)} ms without"
     end
+
+    test "only HTML templates are inert" do
+      tree =
+        ~s(<template><p>T1</p></template><svg><template><g>S</g></template><foreignObject><template>T2</template></foreignObject></svg><math><template>M</template><mi><template>T3</template></mi><annotation-xml encoding="Text/HTML"><template>T4</template></annotation-xml></math>)
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.to_tree()
+        |> Readability.DOM.from_lazy()
+
+      assert tree |> Enum.map(&Readability.DOM.text_content/1) |> Enum.join() == "SM"
+
+      html = ~s(<body><article>#{@para}<svg><template><text>Sentinel</text></template></svg>#{@para}</article></body>)
+      assert {:ok, a} = check(html)
+      assert a.text_content =~ "Sentinel"
+    end
   end
 end
