@@ -11,11 +11,13 @@ defmodule Readability.Test.DOMCompare do
       collapsed. Text is also trimmed, because `expected.html` was run through
       js-beautify, which moved whitespace at tag boundaries.
     * `:attributes` mode is stricter: elements compare on every attribute name and
-      value. Readability.js's own test means to do this but only compares counts.
+      value (all of them, also those `:content` mode skips because their name isn't a
+      valid XML name). Readability.js's own test means to do this but only compares counts.
   """
 
-  # JavaScript's `\s`, which also matches NBSP, BOM and the Unicode space separators.
-  @js_space "[\\s\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]"
+  # JavaScript's `\s`, spelled out: PCRE's `\s` in Unicode mode also matches U+0085 (NEL), which
+  # isn't JS whitespace.
+  @js_space "[\\t\\n\\x{0B}\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]"
 
   @type mode :: :content | :attributes
 
@@ -55,7 +57,6 @@ defmodule Readability.Test.DOMCompare do
     do: walk(rest, depth, mode, [{:comment, depth, text} | acc])
 
   defp walk([{tag, attrs, children} | rest], depth, mode, acc) do
-    attrs = Enum.filter(attrs, &valid_attribute?/1)
     acc = [element_token(tag, attrs, depth, mode) | acc]
     walk(rest, depth, mode, walk(children, depth + 1, mode, acc))
   end
@@ -63,6 +64,7 @@ defmodule Readability.Test.DOMCompare do
   defp element_token(tag, attrs, depth, :attributes), do: {:element, depth, tag, attrs}
 
   defp element_token(tag, attrs, depth, :content) do
+    attrs = Enum.filter(attrs, &valid_attribute?/1)
     id = List.keyfind(attrs, "id", 0, {"id", nil}) |> elem(1)
     class = List.keyfind(attrs, "class", 0, {"class", nil}) |> elem(1)
     {:element, depth, tag, %{id: id, class: class, attribute_count: length(attrs)}}
