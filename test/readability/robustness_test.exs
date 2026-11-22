@@ -330,7 +330,7 @@ defmodule Readability.RobustnessTest do
         |> LazyHTML.to_tree()
         |> Readability.DOM.from_lazy()
 
-      assert tree |> Enum.map(&Readability.DOM.text_content/1) |> Enum.join() == "SM"
+      assert Enum.map_join(tree, &Readability.DOM.text_content/1) == "SM"
 
       html = ~s(<body><article>#{@para}<svg><template><text>Sentinel</text></template></svg>#{@para}</article></body>)
       assert {:ok, a} = verify(html)

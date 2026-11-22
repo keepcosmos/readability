@@ -162,8 +162,7 @@ defmodule Readability.Readerable do
 
       case spend(budget, bytes) do
         {:ok, budget} when text_length >= min_length ->
-          score = score + :math.sqrt(text_length - min_length)
-          if score > min_score, do: true, else: score_list(rest, length, score, budget, min_length, min_score)
+          add(rest, length, score + :math.sqrt(text_length - min_length), budget, min_length, min_score)
 
         {:ok, budget} ->
           score_list(rest, length, score, budget, min_length, min_score)
@@ -175,6 +174,11 @@ defmodule Readability.Readerable do
       score_list(rest, length, score, budget, min_length, min_score)
     end
   end
+
+  defp add(_rest, _length, score, _budget, _min_length, min_score) when score > min_score, do: true
+
+  defp add(rest, length, score, budget, min_length, min_score),
+    do: score_list(rest, length, score, budget, min_length, min_score)
 
   # The budget is `{bytes left, function measuring the document's text}` (`nil` once measured) or
   # `:unlimited`.
