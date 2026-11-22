@@ -167,7 +167,15 @@ defmodule Readability.Text do
   @spec length(binary()) :: non_neg_integer()
   def length(bin) when is_binary(bin), do: len(bin, 0)
 
+  # Seven ASCII bytes at a time (56 bits stay a small integer), then whole 2- and 3-byte
+  # sequences; on other input the byte-wise clauses below count lead bytes as documented.
+  defp len(<<w::56, r::binary>>, n) when (w &&& 0x80808080808080) == 0, do: len(r, n + 7)
   defp len(<<c, r::binary>>, n) when c < 0x80, do: len(r, n + 1)
+
+  defp len(<<c, c1, c2, r::binary>>, n) when c >= 0xE0 and c < 0xF0 and (c1 &&& 0xC0) == 0x80 and (c2 &&& 0xC0) == 0x80,
+    do: len(r, n + 1)
+
+  defp len(<<c, c1, r::binary>>, n) when c >= 0xC0 and c < 0xE0 and (c1 &&& 0xC0) == 0x80, do: len(r, n + 1)
   defp len(<<c, r::binary>>, n) when c < 0xC0, do: len(r, n)
   defp len(<<c, r::binary>>, n) when c < 0xF0, do: len(r, n + 1)
   defp len(<<_, r::binary>>, n), do: len(r, n + 2)
