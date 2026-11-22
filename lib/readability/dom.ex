@@ -86,15 +86,13 @@ defmodule Readability.DOM do
   @doc "Builds an element and computes its stats (children without stats get them first)."
   @spec el(tag(), attrs(), [node_()]) :: el()
   def el(tag, attrs, children) when is_binary(tag) and is_list(attrs) and is_list(children) do
-    case fold_stats(children, @empty) do
-      :upgrade ->
-        children = Enum.map(children, &with_stats/1)
-        {tag, attrs, children, finish_stats(tag, attrs, fold_stats(children, @empty))}
-
-      st ->
-        {tag, attrs, children, finish_stats(tag, attrs, st)}
-    end
+    children = if stats_on_children?(children), do: children, else: Enum.map(children, &with_stats/1)
+    {tag, attrs, children, finish_stats(tag, attrs, fold_stats(children, @empty))}
   end
+
+  defp stats_on_children?([]), do: true
+  defp stats_on_children?([{_, _, _, nil} | _]), do: false
+  defp stats_on_children?([_ | rest]), do: stats_on_children?(rest)
 
   @doc "Builds an element without stats. Only for code that runs before the grab walk."
   @spec raw(tag(), attrs(), [node_()]) :: el()
@@ -110,27 +108,23 @@ defmodule Readability.DOM do
   def with_stats({tag, attrs, children, nil}), do: el(tag, attrs, children)
   def with_stats(text) when is_binary(text), do: text
 
-  # Returns :upgrade when a child element has no stats.
   defp fold_stats([], st), do: st
+  defp fold_stats([text | rest], st) when is_binary(text), do: fold_stats(rest, cat(st, text_stats(text)))
+  defp fold_stats([{_, _, _, child} | rest], st), do: fold_stats(rest, cat(st, child))
 
-  defp fold_stats([text | rest], st) when is_binary(text) do
+  defp text_stats(text) do
     {nw, runs, lead, trail, cm, xc} = Text.summary(text)
-    fold_stats(rest, add(st, nw, runs, lead, trail, cm, xc, 0, 0))
+    {nw, runs, lead, trail, cm, xc, 0, 0}
   end
 
-  defp fold_stats([{_, _, _, nil} | _], _st), do: :upgrade
-
-  defp fold_stats([{_, _, _, {nw, runs, lead, trail, cm, xc, ll, hl}} | rest], st),
-    do: fold_stats(rest, add(st, nw, runs, lead, trail, cm, xc, ll, hl))
-
   # Text.concat/2 on the summary part, sums on the link part.
-  defp add({0, 0, _, _, cm0, xc0, ll0, hl0}, nw, runs, lead, trail, cm, xc, ll, hl),
+  defp cat({0, 0, _, _, cm0, xc0, ll0, hl0}, {nw, runs, lead, trail, cm, xc, ll, hl}),
     do: {nw, runs, lead, trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
 
-  defp add({nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0}, 0, 0, _, _, cm, xc, ll, hl),
+  defp cat({nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0}, {0, 0, _, _, cm, xc, ll, hl}),
     do: {nw0, runs0, lead0, trail0, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
 
-  defp add({nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0}, nw, runs, lead, trail, cm, xc, ll, hl),
+  defp cat({nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0}, {nw, runs, lead, trail, cm, xc, ll, hl}),
     do: {nw0 + nw, runs0 + runs - min(trail0, lead), lead0, trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
 
   defp finish_stats("a", attrs, {nw, runs, lead, trail, cm, xc, ll, hl} = st) do
@@ -280,29 +274,24 @@ defmodule Readability.DOM do
   are walked in document order to reproduce the float additions exactly.
   """
   @spec link_density(el()) :: float()
-  def link_density({tag, attrs, children, st} = el) do
+  def link_density({_, _, children, st} = el) do
     case inner_text_length(el) do
-      0 ->
-        0.0
-
-      len ->
-        case st do
-          {_, _, _, _, _, _, ll, hl} ->
-            {own_ll, own_hl} =
-              cond do
-                tag != "a" -> {0, 0}
-                hash_href?(attrs) -> {0, 1}
-                true -> {len, 0}
-              end
-
-            if hl - own_hl == 0,
-              do: (ll - own_ll) / len,
-              else: link_sum(children, 0) / len
-
-          nil ->
-            link_sum(children, 0) / len
-        end
+      0 -> 0.0
+      len when st == nil -> link_sum(children, 0) / len
+      len -> link_length(el, len) / len
     end
+  end
+
+  # From stats, minus the element's own contribution when it is an <a> itself.
+  defp link_length({tag, attrs, children, {_, _, _, _, _, _, ll, hl}}, len) do
+    {own_ll, own_hl} =
+      cond do
+        tag != "a" -> {0, 0}
+        hash_href?(attrs) -> {0, 1}
+        true -> {len, 0}
+      end
+
+    if hl - own_hl == 0, do: ll - own_ll, else: link_sum(children, 0)
   end
 
   # Document-order float sum over <a> elements, as in the JS loop.
@@ -636,13 +625,15 @@ defmodule Readability.DOM do
         {children, acc} -> {put_children(el, children), acc}
       end
 
-    if tag_in?(tag, tags) do
-      case fun.(if(node == :same, do: el, else: node), anc, acc) do
-        {true, acc} -> {:removed, acc}
-        {false, acc} -> {node, acc}
-      end
-    else
-      {node, acc}
+    if tag_in?(tag, tags),
+      do: rev_decide(if(node == :same, do: el, else: node), node, anc, acc, fun),
+      else: {node, acc}
+  end
+
+  defp rev_decide(el, result, anc, acc, fun) do
+    case fun.(el, anc, acc) do
+      {true, acc} -> {:removed, acc}
+      {false, acc} -> {result, acc}
     end
   end
 
@@ -692,15 +683,15 @@ defmodule Readability.DOM do
   end
 
   defp map_node({tag, _, _, _} = el, tags, fun) do
-    if tag_in?(tag, tags) do
-      case fun.(el) do
-        :cont -> map_children(el, tags, fun)
-        :skip -> :same
-        {:skip, new} -> new
-        {:cont, new} -> with :same <- map_children(new, tags, fun), do: new
-      end
-    else
-      map_children(el, tags, fun)
+    if tag_in?(tag, tags), do: map_apply(el, tags, fun), else: map_children(el, tags, fun)
+  end
+
+  defp map_apply(el, tags, fun) do
+    case fun.(el) do
+      :cont -> map_children(el, tags, fun)
+      :skip -> :same
+      {:skip, new} -> new
+      {:cont, new} -> with :same <- map_children(new, tags, fun), do: new
     end
   end
 
@@ -732,10 +723,7 @@ defmodule Readability.DOM do
   end
 
   # Returns the freshly computed stats of the node (bottom-up, so the check is O(size)).
-  defp verify_node(text, _path, _need_stats) when is_binary(text) do
-    {nw, runs, lead, trail, cm, xc} = Text.summary(text)
-    {nw, runs, lead, trail, cm, xc, 0, 0}
-  end
+  defp verify_node(text, _path, _need_stats) when is_binary(text), do: text_stats(text)
 
   defp verify_node({tag, attrs, children, st}, path, need_stats)
        when is_binary(tag) and is_list(attrs) and is_list(children) do
@@ -750,10 +738,7 @@ defmodule Readability.DOM do
     fresh =
       children
       |> Enum.with_index()
-      |> Enum.reduce(@empty, fn {child, i}, acc ->
-        {nw, runs, lead, trail, cm, xc, ll, hl} = verify_node(child, path ++ [i], st != nil)
-        add(acc, nw, runs, lead, trail, cm, xc, ll, hl)
-      end)
+      |> Enum.reduce(@empty, fn {child, i}, acc -> cat(acc, verify_node(child, path ++ [i], st != nil)) end)
 
     fresh = finish_stats(tag, attrs, fresh)
 
