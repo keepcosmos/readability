@@ -209,6 +209,8 @@ defmodule Readability.Clean do
     end)
   end
 
+  @max_int 1_000_000_000_000_000_000
+
   # `parseInt(value, 10) || 1`; NaN and 0 become 1, negative numbers stay.
   defp span(nil), do: 1
 
@@ -222,7 +224,9 @@ defmodule Readability.Clean do
 
   @doc """
   JS `parseInt(s, 10)`: leading whitespace skipped, an optional sign, then the longest run of
-  ASCII digits. `nil` for NaN.
+  ASCII digits. `nil` for NaN. The magnitude saturates at `#{@max_int}` (JS gives a float that
+  loses precision long before that), so a huge span costs linear time; only sums where huge
+  positive and negative spans cancel out can differ from JS.
   """
   @spec parse_int(binary()) :: integer() | nil
   def parse_int(s) do
@@ -233,7 +237,7 @@ defmodule Readability.Clean do
     end
   end
 
-  defp digits(<<c, rest::binary>>, n) when c in ?0..?9, do: digits(rest, (n || 0) * 10 + c - ?0)
+  defp digits(<<c, rest::binary>>, n) when c in ?0..?9, do: digits(rest, min((n || 0) * 10 + c - ?0, @max_int))
   defp digits(_, n), do: n
 
   # _fixLazyImages

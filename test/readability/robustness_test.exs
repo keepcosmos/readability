@@ -6,6 +6,8 @@ defmodule Readability.RobustnessTest do
 
   alias Readability.Article
 
+  @para "<p>" <> String.duplicate("Lorem ipsum dolor sit amet, consectetur adipiscing elit. ", 12) <> "</p>"
+
   # Runs both functions and checks the shapes of their results.
   defp check(html, opts \\ []) do
     result = Readability.article(html, opts)
@@ -56,6 +58,14 @@ defmodule Readability.RobustnessTest do
       property = String.duplicate("\u00A0", 10_000) <> "X : og:title"
       html = ~s(<meta property="#{property}" content="Meta title"><p>x</p>)
       assert {:ok, %{title: "Meta title"}} = within(500, fn -> check(html) end)
+    end
+
+    test "a span with a huge number of digits takes linear time" do
+      digits = String.duplicate("9", 320_000)
+      table = ~s(<table><tr rowspan="#{digits}"><td colspan="#{digits}">#{@para}</td><td>b</td></tr></table>)
+      assert {:ok, a} = within(500, fn -> check("<body><article>#{@para}#{table}#{@para}</article></body>") end)
+      assert a.content =~ "<table>"
+      assert Readability.Clean.parse_int("-" <> digits) == -1_000_000_000_000_000_000
     end
   end
 end
