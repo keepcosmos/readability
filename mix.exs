@@ -46,15 +46,11 @@ defmodule Readability.Mixfile do
     [
       {:lazy_html, "~> 0.1.14"},
       {:nimble_options, "~> 1.1"},
-      {:floki, "~> 0.30"},
-      {:httpoison, "~> 1.8 or ~> 2.0 or ~> 3.0"},
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:meck, "~> 1.2", only: :test},
       {:stream_data, "~> 1.1", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
-      {:html5ever, "~> 0.18", only: :test},
       {:mix_test_watch, "~> 1.2", only: [:dev, :test], runtime: test_watch_runtime}
     ]
   end
