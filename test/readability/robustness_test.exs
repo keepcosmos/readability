@@ -31,6 +31,13 @@ defmodule Readability.RobustnessTest do
 
   defp utf16_length(text), do: text |> :unicode.characters_to_binary(:utf8, :utf16) |> byte_size() |> div(2)
 
+  # Runs `fun` and asserts it takes less than `ms` milliseconds.
+  defp within(ms, fun) do
+    {us, result} = :timer.tc(fun)
+    assert div(us, 1000) < ms, "took #{div(us, 1000)} ms, expected < #{ms} ms"
+    result
+  end
+
   describe "regressions" do
     test "invalid UTF-8 is replaced with U+FFFD" do
       assert {:ok, a} = check("<title>" <> <<255>> <> "</title><p>x</p>")
@@ -43,6 +50,12 @@ defmodule Readability.RobustnessTest do
       lazy = LazyHTML.from_document(body)
       assert {:ok, ^a} = Readability.article(lazy)
       assert is_boolean(Readability.readerable?(lazy))
+    end
+
+    test "a long whitespace run in a meta property doesn't backtrack quadratically" do
+      property = String.duplicate("\u00A0", 10_000) <> "X : og:title"
+      html = ~s(<meta property="#{property}" content="Meta title"><p>x</p>)
+      assert {:ok, %{title: "Meta title"}} = within(500, fn -> check(html) end)
     end
   end
 end
