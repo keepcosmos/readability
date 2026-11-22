@@ -66,6 +66,11 @@ defmodule Readability.DOM.SerializerTest do
       html = Serializer.inner_html(DOM.raw("body", [], children))
       assert html == "<pre>\n\nx</pre><textarea>\n\ny</textarea><pre>z</pre>"
       assert Serializer.outer_html([DOM.raw("listing", [], ["\nq"])]) == "<listing>\n\nq</listing>"
+
+      # inner_html of the element itself: no start tag, so no padding (like innerHTML)
+      pre = DOM.raw("pre", [], ["\nx"])
+      assert Serializer.inner_html(pre) == "\nx"
+      assert Serializer.inner_html([pre]) == "<pre>\n\nx</pre>"
     end
 
     test "returns stats-carrying and raw trees alike; text node alone" do
