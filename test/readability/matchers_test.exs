@@ -154,7 +154,8 @@ defmodule Readability.MatchersTest do
 
   test "regex/1 compiles once and caches in :persistent_term" do
     assert %Regex{} = M.regex(:videos)
-    assert :persistent_term.get(M) |> Map.fetch!(:videos) == M.regex(:videos)
+    assert [{{M, hash}, regexes}] = for({{M, _}, _} = entry <- :persistent_term.get(), do: entry)
+    assert is_integer(hash) and Map.fetch!(regexes, :videos) == M.regex(:videos)
     assert_raise FunctionClauseError, fn -> apply(M, :regex, [:nope]) end
   end
 

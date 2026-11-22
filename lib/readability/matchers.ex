@@ -423,13 +423,16 @@ defmodule Readability.Matchers do
 
   @regex_names Keyword.keys(@regexes)
 
+  # The cache key changes with the pattern sources, so a code reload never serves stale regexes.
+  @cache_key {__MODULE__, :erlang.phash2(@regexes)}
+
   @doc """
   A cold regex, compiled once per VM into `:persistent_term`. Names: #{Enum.map_join(@regex_names, ", ", &"`#{&1}`")}.
   JS translation: `$` is `\\z`, `\\s` is the JS class, `/i` without `u` is compiled in byte mode.
   """
   @spec regex(atom) :: Regex.t()
   def regex(name) when name in @regex_names do
-    case :persistent_term.get(__MODULE__, nil) do
+    case :persistent_term.get(@cache_key, nil) do
       nil -> init()
       regexes -> regexes
     end
@@ -439,7 +442,7 @@ defmodule Readability.Matchers do
   defp init do
     # Racing processes compile and store equal values; the last write wins.
     regexes = Map.new(@regexes, fn {name, {source, opts}} -> {name, Regex.compile!(source, opts)} end)
-    :persistent_term.put(__MODULE__, regexes)
+    :persistent_term.put(@cache_key, regexes)
     regexes
   end
 
