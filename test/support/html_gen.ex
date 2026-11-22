@@ -162,7 +162,7 @@ defmodule Readability.Test.HTMLGen do
       map(json_ld(), &["<script type=\"application/ld+json\">", &1, "</script>"]),
       constant("<style>p { display: none }</style>"),
       constant("<script>document.write('<p>x</p>')</script>"),
-      constant("<link rel=\"stylesheet\" href=\"a.css\">"),
+      constant(~s(<link rel="stylesheet" href="a.css">)),
       constant("<noscript><img src=\"ns.png\"></noscript>"),
       # pulls the rest of the head into the body
       constant("<div>early body</div>")
@@ -330,9 +330,9 @@ defmodule Readability.Test.HTMLGen do
       constant("<hr>"),
       img(),
       map(member_of(@iframes), &["<iframe src=\"", &1, "\"></iframe>"]),
-      constant("<input type=\"text\" value=\"v\">"),
+      constant(~s(<input type="text" value="v">)),
       constant("<embed src=\"https://www.youtube.com/v/x\">"),
-      constant("<object data=\"x.swf\"><param name=\"a\"></object>")
+      constant(~s(<object data="x.swf"><param name="a"></object>))
     ])
   end
 

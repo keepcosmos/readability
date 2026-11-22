@@ -100,7 +100,7 @@ defmodule Readability.Grab.Walk do
     cond do
       text_path == :blank and DOM.without_content?(el) -> {:removed, acc}
       tag == "div" -> div(attrs, wrap_phrasing(children), anc, path, acc, cfg, known(text_path))
-      true -> descend(tag, attrs, children, anc, path, acc, cfg, score_tag?(tag), known(text_path))
+      true -> descend(tag, attrs, children, anc, path, acc, cfg, known(text_path))
     end
   end
 
@@ -116,7 +116,7 @@ defmodule Readability.Grab.Walk do
     case DOM.single_tag_inside(div, "p") do
       {_, p_attrs, p_children, _} = p ->
         if DOM.link_density(div) < 0.25,
-          do: descend("p", p_attrs, p_children, anc, path, acc, cfg, true, known(below(p, text_path))),
+          do: descend("p", p_attrs, p_children, anc, path, acc, cfg, known(below(p, text_path))),
           else: div_or_p(div, p, anc, path, acc, cfg, text_path)
 
       nil ->
@@ -126,13 +126,14 @@ defmodule Readability.Grab.Walk do
 
   defp div_or_p({_, attrs, children, _} = div, _p, anc, path, acc, cfg, text_path) do
     if DOM.child_block?(div),
-      do: descend("div", attrs, children, anc, path, acc, cfg, false, text_path),
-      else: descend("p", attrs, children, anc, path, acc, cfg, true, text_path)
+      do: descend("div", attrs, children, anc, path, acc, cfg, text_path),
+      else: descend("p", attrs, children, anc, path, acc, cfg, text_path)
   end
 
-  # Visits the children and rebuilds the element. `score?`: push it to elementsToScore (at its
-  # pre-order position, `seq`).
-  defp descend(tag, attrs, children, anc, path, acc, cfg, score?, text_path) do
+  # Visits the children and rebuilds the element. One of DEFAULT_TAGS_TO_SCORE is pushed to
+  # elementsToScore (at its pre-order position, `seq`).
+  defp descend(tag, attrs, children, anc, path, acc, cfg, text_path) do
+    score? = score_tag?(tag)
     seq = acc.seq
     acc = if score?, do: %{acc | seq: seq + 1}, else: acc
     {rev, acc} = walk_list(children, [{tag, attrs} | anc], path, 0, [], acc, cfg, text_path)

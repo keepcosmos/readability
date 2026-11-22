@@ -66,7 +66,7 @@ defmodule Readability.Clean.Conditional do
         end
       end
 
-    splice(node, search(rest, anc, in_dt?, tag, ctx), list)
+    DOM.splice(node, search(rest, anc, in_dt?, tag, ctx), list)
   end
 
   # Inside a judged node: process and count. Returns `{:same | new_list, acc}`, where `acc` adds
@@ -99,50 +99,43 @@ defmodule Readability.Clean.Conditional do
       end
 
     {rest2, acc} = count(rest, anc, in_dt?, tag, ctx, acc)
-    {splice(node, rest2, list), acc}
+    {DOM.splice(node, rest2, list), acc}
   end
 
   defp rebuild(el, :same), do: el
   defp rebuild(el, kids), do: DOM.put_children(el, kids)
 
-  defp splice(:same, :same, _list), do: :same
-  defp splice(:same, rest, [h | _]), do: [h | rest]
-  defp splice(:removed, :same, [_ | t]), do: t
-  defp splice(:removed, rest, _list), do: rest
-  defp splice(node, :same, [_ | t]), do: [node | t]
-  defp splice(node, rest, _list), do: [node | rest]
-
   defp add({p, i, l, n, e, v, h, x, s, d}, {p2, i2, l2, n2, e2, v2, h2, x2, s2, d2}),
     do: {p + p2, i + i2, l + l2, n + n2, e + e2, v or v2, h + h2, x or x2, s + s2, d or d2}
 
   # The element's own contribution to its ancestors' counts.
-  defp own({p, i, l, n, e, v, h, x, s, d} = acc, {tag, attrs, _, _} = el, ctx) do
-    case tag do
-      "p" -> textish({p + 1, i, l, n, e, v, h, x, s, d}, el)
-      "img" -> textish({p, i + 1, l, n, e, v, h, x, s, d}, el)
-      "li" -> textish({p, i, l + 1, n, e, v, h, x, s, d}, el)
-      "input" -> {p, i, l, n + 1, e, v, h, x, s, d}
-      "object" -> {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
-      "embed" -> {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
-      "iframe" -> {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
-      "h1" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-      "h2" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-      "h3" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-      "h4" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-      "h5" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-      "h6" -> {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
-      "ul" -> textish({p, i, l, n, e, v, h, x, s + DOM.inner_text_length(el), d}, el)
-      "ol" -> textish({p, i, l, n, e, v, h, x, s + DOM.inner_text_length(el), d}, el)
-      "table" -> textish({p, i, l, n, e, v, h, x, s, d or data_table?(attrs)}, el)
-      "span" -> textish(acc, el)
-      "td" -> textish(acc, el)
-      "blockquote" -> textish(acc, el)
-      "dl" -> textish(acc, el)
-      "div" -> textish(acc, el)
-      "pre" -> textish(acc, el)
-      _ -> acc
-    end
-  end
+  defp own({p, i, l, n, e, v, h, x, s, d}, {"p", _, _, _} = el, _ctx),
+    do: textish({p + 1, i, l, n, e, v, h, x, s, d}, el)
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {"img", _, _, _} = el, _ctx),
+    do: textish({p, i + 1, l, n, e, v, h, x, s, d}, el)
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {"li", _, _, _} = el, _ctx),
+    do: textish({p, i, l + 1, n, e, v, h, x, s, d}, el)
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {"input", _, _, _}, _ctx), do: {p, i, l, n + 1, e, v, h, x, s, d}
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {tag, attrs, _, _}, ctx) when tag in ["object", "embed", "iframe"],
+    do: {p, i, l, n, e + 1, v or video_embed?(attrs, ctx), h, x, s, d}
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {tag, _, _, _} = el, _ctx) when tag in ["h1", "h2", "h3", "h4", "h5", "h6"],
+    do: {p, i, l, n, e, v, h + DOM.inner_text_length(el), x, s, d}
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {tag, _, _, _} = el, _ctx) when tag in ["ul", "ol"],
+    do: textish({p, i, l, n, e, v, h, x, s + DOM.inner_text_length(el), d}, el)
+
+  defp own({p, i, l, n, e, v, h, x, s, d}, {"table", attrs, _, _} = el, _ctx),
+    do: textish({p, i, l, n, e, v, h, x, s, d or data_table?(attrs)}, el)
+
+  defp own(acc, {tag, _, _, _} = el, _ctx) when tag in ["span", "td", "blockquote", "dl", "div", "pre"],
+    do: textish(acc, el)
+
+  defp own(acc, _el, _ctx), do: acc
 
   defp textish({_, _, _, _, _, _, _, true, _, _} = acc, _el), do: acc
   defp textish(acc, el), do: if(DOM.blank?(el), do: acc, else: put_elem(acc, 7, true))
@@ -159,17 +152,20 @@ defmodule Readability.Clean.Conditional do
   defp remove?({tag, attrs, _, _} = node, counts, anc, in_dt?, ctx) do
     {_p, _img, _li, _input, _embeds, video?, _heading_len, _textish?, list_len, data_table_inside?} = counts
     len = DOM.inner_text_length(node)
-    # 0 / 0 is NaN (false) in JS; len == 0 implies list_len == 0
-    list? = tag == "ul" or tag == "ol" or if(len == 0, do: list_len > 0, else: list_len / len > 0.9)
 
     cond do
       tag == "table" and data_table?(attrs) -> false
       in_dt? -> false
       DOM.has_ancestor_tag?(anc, "code") -> false
       data_table_inside? -> false
-      true -> judge(node, len, list?, video?, counts, anc, ctx)
+      true -> judge(node, len, list?(tag, len, list_len), video?, counts, anc, ctx)
     end
   end
+
+  # `isList`. 0 / 0 is NaN (false) in JS; len == 0 implies list_len == 0.
+  defp list?(tag, _len, _list_len) when tag in ["ul", "ol"], do: true
+  defp list?(_tag, 0, list_len), do: list_len > 0
+  defp list?(_tag, len, list_len), do: list_len / len > 0.9
 
   defp judge(node, len, list?, video?, counts, anc, {weight?, _, ldm}) do
     weight = if weight?, do: Matchers.class_weight(DOM.attr(node, "class"), DOM.attr(node, "id")), else: 0
@@ -185,6 +181,8 @@ defmodule Readability.Clean.Conditional do
     end
   end
 
+  # `haveToRemove` and the list-of-images exception, kept as one expression like the JS.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defp shady?(node, len, list?, weight, counts, anc, ldm) do
     {p, img, li_count, input, embeds, _video?, heading_len, textish?, _list_len, _dt?} = counts
     li = li_count - 100

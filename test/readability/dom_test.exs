@@ -19,7 +19,7 @@ defmodule Readability.DOMTest do
 
   describe "el/3 and stats" do
     test "stats aggregate text, commas and links" do
-      div = DOM.with_stats(parse1("<div> a, b <a href=\"x\">link</a><a href=\"#h\">h</a>\uFF0C</div>"))
+      div = DOM.with_stats(parse1(~s(<div> a, b <a href="x">link</a><a href="#h">h</a>\uFF0C</div>)))
       assert {nw, _runs, 1, 0, 1, 1, 4, 1} = elem(div, 3)
       assert nw == byte_size("ab,linkh") + 1
       assert DOM.verify!(div) == div

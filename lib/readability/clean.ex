@@ -30,8 +30,8 @@ defmodule Readability.Clean do
 
   import Bitwise
 
-  alias Readability.{DOM, Flags, Matchers, Text}
   alias Readability.Clean.Conditional
+  alias Readability.{DOM, Flags, Matchers, Text}
 
   @share_threshold 500
 
@@ -101,7 +101,7 @@ defmodule Readability.Clean do
   defp first_list([{tag, _, _, _} = el | rest] = list, svg?, present) do
     {node, present} = first_node(el, svg? or tag == "svg", present ||| tag_bit(tag))
     {rest2, present} = first_list(rest, svg?, present)
-    {splice(node, rest2, list), present}
+    {DOM.splice(node, rest2, list), present}
   end
 
   # `svg?`: inside (or at) an <svg>, where `_cleanStyles` stops
@@ -291,29 +291,29 @@ defmodule Readability.Clean do
   # Accumulator: {element, changed?, img appended to a figure | nil}
   defp copy_lazy_attr(_tag, {name, _}, acc) when name in ["src", "srcset", "alt"], do: acc
 
-  defp copy_lazy_attr(tag, {_, value}, {el, changed?, img} = acc) do
-    copy_to =
-      cond do
-        Matchers.lazy_srcset?(value) -> "srcset"
-        Matchers.lazy_src?(value) -> "src"
-        true -> nil
-      end
+  defp copy_lazy_attr(tag, {_, value}, acc), do: copy_lazy_value(tag, lazy_target(value), value, acc)
 
+  defp lazy_target(value) do
     cond do
-      copy_to == nil ->
-        acc
-
-      tag == "img" or tag == "picture" ->
-        {DOM.put_attr(el, copy_to, value), true, img}
-
-      # a figure without an image gets one (the nytimes-3 test case)
-      tag == "figure" and img == nil and not DOM.any_descendant?(el, &(elem(&1, 0) in ["img", "picture"])) ->
-        {el, changed?, DOM.el("img", [{copy_to, value}], [])}
-
-      true ->
-        acc
+      Matchers.lazy_srcset?(value) -> "srcset"
+      Matchers.lazy_src?(value) -> "src"
+      true -> nil
     end
   end
+
+  defp copy_lazy_value(_tag, nil, _value, acc), do: acc
+
+  defp copy_lazy_value(tag, copy_to, value, {el, _changed?, img}) when tag in ["img", "picture"],
+    do: {DOM.put_attr(el, copy_to, value), true, img}
+
+  # a figure without an image gets one (the nytimes-3 test case)
+  defp copy_lazy_value("figure", copy_to, value, {el, changed?, nil} = acc) do
+    if DOM.any_descendant?(el, &(elem(&1, 0) in ["img", "picture"])),
+      do: acc,
+      else: {el, changed?, DOM.el("img", [{copy_to, value}], [])}
+  end
+
+  defp copy_lazy_value(_tag, _copy_to, _value, acc), do: acc
 
   # ---------------------------------------------------------------------------------------------
   # Pass B: _clean, _cleanMatchedNodes, _cleanHeaders
@@ -331,30 +331,13 @@ defmodule Readability.Clean do
   end
 
   # _clean(e, "object" | "embed" | "footer" | "link" | "aside")
-  defp junk?({tag, attrs, _, _}, video) do
-    case tag do
-      "object" -> not video_attr?(attrs, video)
-      "embed" -> not video_attr?(attrs, video)
-      "footer" -> true
-      "link" -> true
-      "aside" -> true
-      _ -> false
-    end
-  end
+  defp junk?({tag, attrs, _, _}, video) when tag in ["object", "embed"], do: not video_attr?(attrs, video)
+  defp junk?({tag, _, _, _}, _video), do: tag in ["footer", "link", "aside"]
 
   # _clean(e, "iframe" | "input" | "textarea" | "select" | "button"), _cleanHeaders(e)
-  defp late_junk?({tag, attrs, _, _} = el, video, weight?) do
-    case tag do
-      "iframe" -> not video_attr?(attrs, video)
-      "input" -> true
-      "textarea" -> true
-      "select" -> true
-      "button" -> true
-      "h1" -> weight? and class_weight(el) < 0
-      "h2" -> weight? and class_weight(el) < 0
-      _ -> false
-    end
-  end
+  defp late_junk?({"iframe", attrs, _, _}, video, _weight?), do: not video_attr?(attrs, video)
+  defp late_junk?({tag, _, _, _} = el, _video, weight?) when tag in ["h1", "h2"], do: weight? and class_weight(el) < 0
+  defp late_junk?({tag, _, _, _}, _video, _weight?), do: tag in ["input", "textarea", "select", "button"]
 
   # Allow youtube and vimeo videos through as people usually want to see those. (The
   # `innerHTML` check behind `tagName === "object"` is dead code in JS, design §4.4.)
@@ -435,9 +418,9 @@ defmodule Readability.Clean do
     {rest2, p_next?} = last_list(rest)
 
     cond do
-      tag == "p" and empty_paragraph?(el) -> {splice(:removed, rest2, list), p_next?}
-      tag == "br" and p_next? -> {splice(:removed, rest2, list), false}
-      true -> {splice(last_node(el), rest2, list), tag == "p"}
+      tag == "p" and empty_paragraph?(el) -> {DOM.splice(:removed, rest2, list), p_next?}
+      tag == "br" and p_next? -> {DOM.splice(:removed, rest2, list), false}
+      true -> {DOM.splice(last_node(el), rest2, list), tag == "p"}
     end
   end
 
@@ -472,12 +455,4 @@ defmodule Readability.Clean do
       DOM.put_tag(cell, if(Enum.all?(kids, &DOM.phrasing?/1), do: "p", else: "div"))
     end
   end
-
-  # Rebuilds [node | rest] from the results for the head and the tail of `list`.
-  defp splice(:same, :same, _list), do: :same
-  defp splice(:same, rest, [h | _]), do: [h | rest]
-  defp splice(:removed, :same, [_ | t]), do: t
-  defp splice(:removed, rest, _list), do: rest
-  defp splice(node, :same, [_ | t]), do: [node | t]
-  defp splice(node, rest, _list), do: [node | rest]
 end

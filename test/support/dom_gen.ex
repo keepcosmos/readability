@@ -27,17 +27,15 @@ defmodule Readability.Test.DOMGen do
   @doc "A raw (stats-less) element."
   def element do
     tree(leaf(), fn child ->
-      bind({member_of(@tags), member_of(@hrefs), list_of(one_of([child, text()]), max_length: 4)}, fn {tag, href,
-                                                                                                       children} ->
-        attrs = if href, do: [{"href", href}], else: []
-        constant(DOM.raw(tag, attrs, children))
-      end)
+      bind({member_of(@tags), member_of(@hrefs), list_of(one_of([child, text()]), max_length: 4)}, &constant(raw(&1)))
     end)
   end
 
   defp leaf, do: bind({member_of(@tags), member_of(@hrefs)}, &constant(raw_leaf(&1)))
-  defp raw_leaf({tag, nil}), do: DOM.raw(tag, [], [])
-  defp raw_leaf({tag, href}), do: DOM.raw(tag, [{"href", href}], [])
+  defp raw_leaf({tag, href}), do: raw({tag, href, []})
+
+  defp raw({tag, nil, children}), do: DOM.raw(tag, [], children)
+  defp raw({tag, href, children}), do: DOM.raw(tag, [{"href", href}], children)
 
   def text, do: member_of(@texts)
   def tags, do: @tags
@@ -54,15 +52,13 @@ defmodule Readability.Test.DOMGen do
     if text_length == 0 do
       0.0
     else
-      link_length =
-        el
-        |> DOM.find_all(["a"])
-        |> Enum.reduce(0, fn a, acc ->
-          coefficient = if Text.hash_url?(DOM.attr(a, "href")), do: 0.3, else: 1
-          acc + Text.normalized_length(DOM.text_content(a)) * coefficient
-        end)
-
+      link_length = el |> DOM.find_all(["a"]) |> Enum.map(&weighted_link_length/1) |> Enum.sum()
       link_length / text_length
     end
+  end
+
+  defp weighted_link_length(a) do
+    coefficient = if Text.hash_url?(DOM.attr(a, "href")), do: 0.3, else: 1
+    Text.normalized_length(DOM.text_content(a)) * coefficient
   end
 end

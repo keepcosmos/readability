@@ -90,13 +90,15 @@ defmodule Readability.Metadata do
   defp find_in_graph(parsed) do
     graph = get(parsed, "@graph")
 
-    if not truthy?(get(parsed, "@type")) and is_list(graph) do
-      case Enum.find(graph, fn it -> it |> get("@type") |> js_or("") |> match_type!() end) do
-        nil -> :error
-        found -> {:ok, found}
-      end
-    else
-      {:ok, parsed}
+    if not truthy?(get(parsed, "@type")) and is_list(graph),
+      do: find_typed(graph),
+      else: {:ok, parsed}
+  end
+
+  defp find_typed(graph) do
+    case Enum.find(graph, fn it -> it |> get("@type") |> js_or("") |> match_type!() end) do
+      nil -> :error
+      found -> {:ok, found}
     end
   end
 
@@ -288,16 +290,9 @@ defmodule Readability.Metadata do
   # `values[name] = content.trim()` for every `<meta>` whose property or name matches; later ones win.
   defp meta_values(metas) do
     Enum.reduce(metas, %{}, fn meta, values ->
-      case DOM.attr(meta, "content") do
-        content when content in [nil, ""] ->
-          values
-
-        content ->
-          case property_key(DOM.attr(meta, "property")) || name_key(DOM.attr(meta, "name")) do
-            nil -> values
-            key -> Map.put(values, key, Text.trim(content))
-          end
-      end
+      content = DOM.attr(meta, "content")
+      key = content not in [nil, ""] and (property_key(DOM.attr(meta, "property")) || name_key(DOM.attr(meta, "name")))
+      if key, do: Map.put(values, key, Text.trim(content)), else: values
     end)
   end
 
@@ -363,40 +358,7 @@ defmodule Readability.Metadata do
   # `_getArticleTitle()` on a collected page.
   def article_title(%{title: orig} = page) do
     separator = Matchers.regex(:title_separator)
-
-    {cur, hierarchical?} =
-      cond do
-        Regex.match?(separator, orig) ->
-          hierarchical? = Regex.match?(Matchers.regex(:title_hierarchical_separator), orig)
-          [[{last, _}] | _] = separator |> Regex.scan(orig, return: :index) |> :lists.reverse()
-          cur = binary_part(orig, 0, last)
-
-          # if the resulting title is too short, remove the first part instead
-          cur =
-            if Text.word_count(cur) < 3,
-              do: Regex.replace(Matchers.regex(:title_first_part), orig, "", global: false),
-              else: cur
-
-          {cur, hierarchical?}
-
-        :binary.match(orig, ": ") != :nomatch ->
-          # a heading with exactly this text means the colon belongs to the title
-          if Enum.any?(page.headings, &(&1 |> DOM.text_content() |> Text.trim() == orig)) do
-            {orig, false}
-          else
-            {colon_title(orig), false}
-          end
-
-        (len = Text.length(orig)) > 150 or len < 15 ->
-          case page.h1s do
-            [h1] -> {DOM.inner_text(h1), false}
-            _ -> {orig, false}
-          end
-
-        true ->
-          {orig, false}
-      end
-
+    {cur, hierarchical?} = title_candidate(orig, separator, page)
     cur = cur |> Text.trim() |> Text.normalize()
     word_count = Text.word_count(cur)
 
@@ -405,6 +367,39 @@ defmodule Readability.Metadata do
          (not hierarchical? or word_count != Text.word_count(Regex.replace(separator, orig, "")) - 1),
        do: orig,
        else: cur
+  end
+
+  # {title, whether it had hierarchical separators}
+  defp title_candidate(orig, separator, page) do
+    cond do
+      Regex.match?(separator, orig) ->
+        {separator_title(orig, separator), Regex.match?(Matchers.regex(:title_hierarchical_separator), orig)}
+
+      :binary.match(orig, ": ") != :nomatch ->
+        # a heading with exactly this text means the colon belongs to the title
+        if Enum.any?(page.headings, &(&1 |> DOM.text_content() |> Text.trim() == orig)),
+          do: {orig, false},
+          else: {colon_title(orig), false}
+
+      (len = Text.length(orig)) > 150 or len < 15 ->
+        case page.h1s do
+          [h1] -> {DOM.inner_text(h1), false}
+          _ -> {orig, false}
+        end
+
+      true ->
+        {orig, false}
+    end
+  end
+
+  # The title up to the last separator; if that is too short, without the first part instead.
+  defp separator_title(orig, separator) do
+    [[{last, _}] | _] = separator |> Regex.scan(orig, return: :index) |> :lists.reverse()
+    cur = binary_part(orig, 0, last)
+
+    if Text.word_count(cur) < 3,
+      do: Regex.replace(Matchers.regex(:title_first_part), orig, "", global: false),
+      else: cur
   end
 
   defp colon_title(orig) do

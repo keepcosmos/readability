@@ -143,15 +143,7 @@ defmodule Readability.PostProcess do
   defp rewrite_attrs([], _abs, _media?), do: :same
 
   defp rewrite_attrs([{name, value} = attr | rest], abs, media?) do
-    new =
-      case name do
-        _ when value == "" -> value
-        "href" when not media? -> abs.(value)
-        "src" when media? -> abs.(value)
-        "poster" when media? -> abs.(value)
-        "srcset" when media? -> URL.absolutize_srcset(value, abs)
-        _ -> value
-      end
+    new = rewrite_value(name, value, abs, media?)
 
     case rewrite_attrs(rest, abs, media?) do
       :same when new == value -> :same
@@ -160,6 +152,12 @@ defmodule Readability.PostProcess do
       rest2 -> [{name, new} | rest2]
     end
   end
+
+  defp rewrite_value(_name, "", _abs, _media?), do: ""
+  defp rewrite_value("href", value, abs, false), do: abs.(value)
+  defp rewrite_value(name, value, abs, true) when name in ["src", "poster"], do: abs.(value)
+  defp rewrite_value("srcset", value, abs, true), do: URL.absolutize_srcset(value, abs)
+  defp rewrite_value(_name, value, _abs, _media?), do: value
 
   # ---------------------------------------------------------------------------------------------
   # _simplifyNestedElements

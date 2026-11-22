@@ -202,33 +202,22 @@ defmodule Readability.URL do
   defp skip_slashes(s), do: s
 
   # relative state + relative slash state
-  defp relative(input, base) do
-    special = special?(base.scheme)
-    url = %__MODULE__{scheme: base.scheme}
+  defp relative(input, base), do: relative(input, base, special?(base.scheme))
 
-    case input do
-      <<c1, c2, r::binary>> when special and c1 in ~c"/\\" and c2 in ~c"/\\" ->
-        authority(skip_slashes(r), url)
+  defp relative(<<c1, c2, r::binary>>, base, true) when c1 in ~c"/\\" and c2 in ~c"/\\",
+    do: authority(skip_slashes(r), %__MODULE__{scheme: base.scheme})
 
-      <<"//", r::binary>> when not special ->
-        authority(r, url)
+  defp relative(<<"//", r::binary>>, base, false), do: authority(r, %__MODULE__{scheme: base.scheme})
 
-      <<c, r::binary>> when c == ?/ or (special and c == ?\\) ->
-        {:ok, path_state(r, %{base | path: [], query: nil, fragment: nil})}
+  defp relative(<<c, r::binary>>, base, special) when c == ?/ or (special and c == ?\\),
+    do: {:ok, path_state(r, %{base | path: [], query: nil, fragment: nil})}
 
-      <<"?", r::binary>> ->
-        {:ok, query_state(r, %{base | fragment: nil})}
+  defp relative(<<"?", r::binary>>, base, _special), do: {:ok, query_state(r, %{base | fragment: nil})}
+  defp relative(<<"#", r::binary>>, base, _special), do: {:ok, %{base | fragment: encode(r, :fragment)}}
+  defp relative(<<>>, base, _special), do: {:ok, %{base | fragment: nil}}
 
-      <<"#", r::binary>> ->
-        {:ok, %{base | fragment: encode(r, :fragment)}}
-
-      <<>> ->
-        {:ok, %{base | fragment: nil}}
-
-      _ ->
-        {:ok, path_state(input, %{base | path: shorten(base.path, base.scheme), query: nil, fragment: nil})}
-    end
-  end
+  defp relative(input, base, _special),
+    do: {:ok, path_state(input, %{base | path: shorten(base.path, base.scheme), query: nil, fragment: nil})}
 
   # authority state + host state + port state; `input` is past the slashes
   defp authority(input, url) do

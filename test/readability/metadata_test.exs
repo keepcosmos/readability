@@ -185,7 +185,7 @@ defmodule Readability.MetadataTest do
 
     test "JSON-LD comes first" do
       metadata =
-        "<html><head><title>T</title><meta property=\"og:title\" content=\"OG\"></head></html>"
+        ~s(<html><head><title>T</title><meta property="og:title" content="OG"></head></html>)
         |> doc()
         |> Metadata.extract(%{title: "LD &amp; co", byline: "B", date_published: "2020"})
 

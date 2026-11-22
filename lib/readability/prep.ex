@@ -127,21 +127,19 @@ defmodule Readability.Prep do
   end
 
   defp copy_image_attrs(img, old_attrs) do
-    Enum.reduce(old_attrs, img, fn
-      {_, ""}, img ->
-        img
-
-      {name, value}, img ->
-        if name == "src" or name == "srcset" or Matchers.image_ext?(value) do
-          case DOM.attr(img, name) do
-            ^value -> img
-            nil -> DOM.put_attr(img, name, value)
-            _ -> DOM.put_attr(img, "data-old-" <> name, value)
-          end
-        else
-          img
-        end
+    Enum.reduce(old_attrs, img, fn {name, value}, img ->
+      if value != "" and (name == "src" or name == "srcset" or Matchers.image_ext?(value)),
+        do: copy_image_attr(img, name, value),
+        else: img
     end)
+  end
+
+  defp copy_image_attr(img, name, value) do
+    case DOM.attr(img, name) do
+      ^value -> img
+      nil -> DOM.put_attr(img, name, value)
+      _ -> DOM.put_attr(img, "data-old-" <> name, value)
+    end
   end
 
   # ---------------------------------------------------------------------------------------------

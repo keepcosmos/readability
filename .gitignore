@@ -25,8 +25,5 @@ readability-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-# Misc.
-.credo.exs
-
 # macOS
 .DS_Store

@@ -150,6 +150,8 @@ defmodule Readability.MatchersTest do
     assert %Regex{} = M.regex(:videos)
     assert [{{M, hash}, regexes}] = for({{M, _}, _} = entry <- :persistent_term.get(), do: entry)
     assert is_integer(hash) and Map.fetch!(regexes, :videos) == M.regex(:videos)
+    # through apply/3: a direct call with an unknown name is a compile-time type warning
+    # credo:disable-for-next-line Credo.Check.Refactor.Apply
     assert_raise FunctionClauseError, fn -> apply(M, :regex, [:nope]) end
   end
 

@@ -86,9 +86,11 @@ defmodule Readability.Test.Traces do
       |> update_present("top_candidates", fn cs -> Enum.map(cs, &candidate/1) end)
       |> update_present("top_candidate", &candidate/1)
       |> update_present("parent_of_top_candidate", &rpath/1)
-      |> update_present("appended_siblings", fn ss -> Enum.map(ss, &Map.update!(&1, "path", fn p -> rpath(p) end)) end)
+      |> update_present("appended_siblings", fn ss -> Enum.map(ss, &sibling/1) end)
     end
   end
+
+  defp sibling(sibling), do: Map.update!(sibling, "path", &rpath/1)
 
   defp convert_trees(map, keys, fun), do: Enum.reduce(keys, map, &update_present(&2, &1, fun))
 

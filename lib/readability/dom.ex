@@ -573,13 +573,17 @@ defmodule Readability.DOM do
     end
   end
 
-  # Rebuilds [node | rest] from the results for the head and the tail of `list`.
-  defp splice(:same, :same, _list), do: :same
-  defp splice(:same, rest, [h | _]), do: [h | rest]
-  defp splice(:removed, :same, [_ | t]), do: t
-  defp splice(:removed, rest, _list), do: rest
-  defp splice(node, :same, [_ | t]), do: [node | t]
-  defp splice(node, rest, _list), do: [node | rest]
+  @doc """
+  Rebuilds `[head | tail]` of `list` from the results for its head (`:same`, `:removed` or a new
+  node) and its tail (`:same` or a new list). `:same` when neither changed.
+  """
+  @spec splice(:same | :removed | node_(), :same | tree(), tree()) :: :same | tree()
+  def splice(:same, :same, _list), do: :same
+  def splice(:same, rest, [h | _]), do: [h | rest]
+  def splice(:removed, :same, [_ | t]), do: t
+  def splice(:removed, rest, _list), do: rest
+  def splice(node, :same, [_ | t]), do: [node | t]
+  def splice(node, rest, _list), do: [node | rest]
 
   # ---------------------------------------------------------------------------------------------
   # Debugging
