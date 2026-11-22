@@ -104,6 +104,13 @@ defmodule Readability.Test.DOMCompare do
   @doc "Collapses whitespace runs like Readability.js's tests (`str.replace(/\\s+/g, \" \")`)."
   def collapse(text), do: String.replace(text, js_space_regex(), " ")
 
+  @doc "JavaScript's `str.trim()`."
+  def js_trim(text) do
+    text |> String.replace(Regex.compile!("^" <> @js_space <> "+", "u"), "") |> String.replace(js_space_end_regex(), "")
+  end
+
+  defp js_space_end_regex, do: Regex.compile!(@js_space <> "+\\z", "u")
+
   @doc "Like JavaScript's `!str.trim()`."
   def blank?(text), do: String.replace(text, js_space_regex(), "") == ""
 

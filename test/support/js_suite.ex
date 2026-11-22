@@ -51,7 +51,8 @@ defmodule Readability.Test.JSSuite do
 
     %{
       page: page,
-      source: File.read!(Path.join(dir, "source.html")),
+      # Upstream's test runner trims the source (JS trim, which also strips a BOM).
+      source: dir |> Path.join("source.html") |> File.read!() |> DOMCompare.js_trim(),
       expected: File.read!(Path.join(dir, "expected.html")),
       metadata: dir |> Path.join("expected-metadata.json") |> File.read!() |> decode_json()
     }
