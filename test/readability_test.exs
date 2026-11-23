@@ -72,6 +72,7 @@ defmodule ReadabilityTest do
       assert Readability.article(@html, max_elems_to_parse: 9) == {:error, :too_many_elements}
     end
 
+    # Also checks that `Readability` still recognizes LazyHTML's error message for the limit.
     test ":max_depth limits the nesting of a binary, not of a parsed document" do
       # html, body, 998 divs, p
       html = "<html><body>" <> String.duplicate("<div>", 998) <> "<p>#{@paragraph}</p>"
@@ -83,6 +84,10 @@ defmodule ReadabilityTest do
       assert {:ok, _} = Readability.article(@html, max_depth: 5)
       assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, max_depth: 0) end
       assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, max_depth: nil) end
+      # LazyHTML's limit is a uint64
+      assert {:ok, _} = Readability.article(@html, max_depth: 0xFFFF_FFFF_FFFF_FFFF)
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.article(@html, max_depth: 2 ** 64) end
+      assert_raise NimbleOptions.ValidationError, fn -> Readability.readerable?(@html, max_depth: 2 ** 64) end
     end
 
     test "deeply nested documents are rejected quickly" do

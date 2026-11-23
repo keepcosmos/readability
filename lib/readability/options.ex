@@ -6,13 +6,15 @@ defmodule Readability.Options do
   # become siblings), so no page renders deeper than that in Chrome. 1000 leaves plenty of room
   # and keeps the parser's work per token (proportional to the depth) small; LazyHTML gives up
   # on deeper input without parsing the rest.
+  # LazyHTML takes the limit as an unsigned 64-bit integer.
   @max_depth [
-    type: {:or, [:pos_integer, {:in, [:infinity]}]},
+    type: {:or, [{:in, 1..0xFFFF_FFFF_FFFF_FFFF}, {:in, [:infinity]}]},
     default: 1000,
     doc: """
     Give up on documents whose elements nest deeper than this (`<html>` is at depth 1): parsing
-    them takes time quadratic in the depth. `:infinity` means no limit. Doesn't apply to a
-    `%LazyHTML{}`, which was parsed with the limits its caller chose.
+    them takes time quadratic in the depth. A positive integer below 2^64, or `:infinity` for
+    no limit. Doesn't apply to a `%LazyHTML{}`, which was parsed with the limits its caller
+    chose.
     """
   ]
 
@@ -24,7 +26,8 @@ defmodule Readability.Options do
               default: nil,
               doc: """
               The page's URL. Relative links and image sources in the article are resolved
-              against it (and against the page's `<base href>`). Without it, they're kept as they are.
+              against it and the page's `<base href>`. Without it, they're kept as they are,
+              unless the page has an absolute `<base href>`.
               """
             ],
             char_threshold: [

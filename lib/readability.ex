@@ -130,6 +130,8 @@ defmodule Readability do
     {:ok, LazyHTML.from_document(html, if(max_depth == :infinity, do: [], else: [max_depth: max_depth]))}
   rescue
     # LazyHTML raises a RuntimeError for every limit; the depth limit is the only one set here.
+    # Matching its message (LazyHTML 0.1.14) is checked by the ":max_depth limits the nesting"
+    # test in test/readability_test.exs.
     error in RuntimeError ->
       if String.contains?(error.message, "nest deeper than :max_depth"),
         do: {:error, :too_deep},
