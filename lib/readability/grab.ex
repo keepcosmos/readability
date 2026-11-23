@@ -196,25 +196,28 @@ defmodule Readability.Grab do
 
   # `doc.baseURI` reads the `href` of the first <base> in the document, skipping `moved` subtrees.
   defp base_href(tree, moved) do
-    tree
-    |> bases([], 0, [])
-    |> :lists.reverse()
-    |> Enum.find_value({:base, nil}, fn {path, href} -> if not moved?(path, moved), do: {:base, href} end)
-    |> elem(1)
+    case first_base(tree, 0, Enum.reduce(moved, %{}, &put_path(&2, :lists.reverse(&1)))) do
+      {:base, href} -> href
+      nil -> nil
+    end
   end
 
-  # {reversed path, href} of every <base>, last first
-  defp bases([], _parent, _i, acc), do: acc
-  defp bases([text | rest], parent, i, acc) when is_binary(text), do: bases(rest, parent, i + 1, acc)
+  # The moved paths as nested maps from child index to the level below, `:moved` at a moved subtree
+  defp put_path(:moved, _path), do: :moved
+  defp put_path(_moved, []), do: :moved
+  defp put_path(moved, [i | path]), do: Map.put(moved, i, put_path(Map.get(moved, i, %{}), path))
 
-  defp bases([{"base", _, _, _} = base | rest], parent, i, acc),
-    do: bases(rest, parent, i + 1, [{[i | parent], DOM.attr(base, "href")} | acc])
+  # {:base, href} of the first <base> in document order outside the moved subtrees, in one pass
+  defp first_base([], _i, _moved), do: nil
+  defp first_base([text | rest], i, moved) when is_binary(text), do: first_base(rest, i + 1, moved)
 
-  defp bases([{_, _, children, _} | rest], parent, i, acc),
-    do: bases(rest, parent, i + 1, bases(children, [i | parent], 0, acc))
-
-  defp moved?([], _moved), do: false
-  defp moved?([_ | parent] = path, moved), do: path in moved or moved?(parent, moved)
+  defp first_base([{tag, _, children, _} = node | rest], i, moved) do
+    case Map.get(moved, i, %{}) do
+      :moved -> first_base(rest, i + 1, moved)
+      _ when tag == "base" -> {:base, DOM.attr(node, "href")}
+      below -> first_base(children, 0, below) || first_base(rest, i + 1, moved)
+    end
+  end
 
   # `_articleDir`: the first `dir` attribute on [parentOfTopCandidate, topCandidate, ...ancestors
   # of parentOfTopCandidate]. After a reset of <body>, the old children of <body> are detached, so
