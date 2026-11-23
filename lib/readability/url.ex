@@ -519,9 +519,11 @@ defmodule Readability.URL do
   defp pd(<<>>, acc), do: acc
 
   # OTP's strict parser follows the standard's IPv6 parser, except that it accepts zone IDs
-  # ("fe80::1%eth0").
+  # ("fe80::1%eth0") and signs in an IPv4 part ("::1.+2.3.4"). No valid address is longer than
+  # 45 bytes ("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255").
   defp ipv6(s) do
-    with false <- String.contains?(s, "%"),
+    with true <- byte_size(s) <= 45,
+         false <- String.contains?(s, ["%", "+", "-"]),
          {:ok, address} <- :inet.parse_ipv6strict_address(:erlang.binary_to_list(s)) do
       serialize_ipv6(Tuple.to_list(address))
     else

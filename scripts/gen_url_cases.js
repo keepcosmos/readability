@@ -36,6 +36,8 @@ const EDGE_INPUTS = [
   "\\a\\b", "\\\\host\\path", "/\\host", "http:\\\\host\\a\\b", "http:/\\host", "http:host/a", "http:/a",
   "http:", "https:", "http:?q", "http:#f", "http://", "http:///", "http:// ", "http://a b/", "http://[::1]/",
   "http://[1:0::]/", "http://[0:0:0:0:0:0:0:1]/", "http://[::ffff:1.2.3.4]/", "http://[",
+  "http://[::ffff:1.+2.3.4]/", "http://[::ffff:1.2.3.+4]/", "http://[::ffff:1.2.3.-0]/", "http://[+1::]/",
+  "http://[ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]/", "http://[0000:0000:0000:0000:0000:0000:0000:00000]/",
   "http://1.2.3.4/", "http://example.com.:80/",
   "http://EXAMPLE.COM/A?B#C", "HTTP://Example.Com/", "http://example.com:/", "http://example.com:0080/",
   "http://example.com:65535/", "http://example.com:65536/", "http://example.com:8a/", "https://ex.com:443/",

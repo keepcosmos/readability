@@ -99,7 +99,15 @@ defmodule Readability.URLTest do
           {"http://[::1.2.3.04]/", :error},
           {"http://[fe80::1%25eth0]/", :error},
           {"http://[fe80::1%eth0]/", :error},
-          {"http://[0001:0:0:0:0:0:0:A]/", {:ok, "http://[1::a]/"}}
+          {"http://[0001:0:0:0:0:0:0:A]/", {:ok, "http://[1::a]/"}},
+          # :inet accepts signs in the IPv4 part
+          {"http://[::ffff:1.+2.3.4]/", :error},
+          {"http://[::ffff:1.2.3.+4]/", :error},
+          {"http://[::ffff:1.2.3.-0]/", :error},
+          {"http://[ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]/",
+           {:ok, "http://[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]/"}},
+          {"http://[0000:0000:0000:0000:0000:0000:0000:00000]/", :error},
+          {"http://[#{String.duplicate("0:", 100_000)}:]/", :error}
         ] do
       assert URL.resolve(input, nil) == expected, input
     end
