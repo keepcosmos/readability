@@ -19,10 +19,12 @@ extracted content and metadata), which runs as part of this library's tests.
 ```elixir
 def deps do
   [
-    {:readability, "~> 1.0"}
+    {:readability, "~> 1.0.0-rc.1"}
   ]
 end
 ```
+
+This is a release candidate; once 1.0.0 is out, use `{:readability, "~> 1.0"}`.
 
 Readability requires Elixir 1.17 or newer and OTP 27 or newer.
 

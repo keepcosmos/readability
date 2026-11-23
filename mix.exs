@@ -2,7 +2,7 @@ defmodule Readability.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/keepcosmos/readability"
-  @version "1.0.0-dev"
+  @version "1.0.0-rc.1"
 
   def project do
     [
