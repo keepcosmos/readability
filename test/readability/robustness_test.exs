@@ -225,7 +225,7 @@ defmodule Readability.RobustnessTest do
       assert {:ok, _} = within(1000, fn -> verify(html) end)
     end
 
-    test "time is linear in the number of elements and candidates" do
+    test "the work is linear in the number of elements and candidates" do
       assert_linear(fn n -> "<body><div>" <> String.duplicate("<span>a</span>", n) <> "</div>" end, 5_000)
       assert_linear(fn n -> "<body>" <> String.duplicate(@para, n) end, 100)
       assert_linear(fn n -> "<body>" <> String.duplicate("<div><p>a, b</p><br></div>", n) end, 2_000)
@@ -260,25 +260,33 @@ defmodule Readability.RobustnessTest do
     end
 
     @tag :slow
-    test "time is linear at larger sizes" do
+    test "the work is linear at larger sizes" do
       assert_linear(fn n -> "<body><div>" <> String.duplicate("<span>a</span>", n) <> "</div>" end, 50_000)
       assert_linear(fn n -> "<body>" <> String.duplicate(@para, n) end, 2_000)
       assert_linear(fn n -> "<body>" <> String.duplicate("<section><div>a, b<br>c</div></section>", n) end, 20_000)
     end
   end
 
-  # Time for `html_fun.(4 * n)` is less than 8 times that for `html_fun.(n)` (quadratic would be 16).
+  # The work for `html_fun.(4 * n)` is less than 8 times that for `html_fun.(n)` (quadratic would
+  # be 16), counted in reductions of an inline (`spawn: false`) call. Not in wall time: copying a
+  # live heap that grows to hundreds of MB makes the GC's share grow faster than the input (200k
+  # spans: ×6–8 per ×4 with the default heap, ×4 with no GC at all).
   defp assert_linear(html_fun, n) do
-    small = html_fun.(n)
-    large = html_fun.(4 * n)
-    # warm up
-    Readability.article(small)
-    t_small = min_time(fn -> Readability.article(small) end)
-    t_large = min_time(fn -> Readability.article(large) end)
-    assert t_large < 8 * t_small + 20_000, "n: #{div(t_small, 1000)} ms, 4n: #{div(t_large, 1000)} ms"
+    small = reductions(html_fun.(n))
+    large = reductions(html_fun.(4 * n))
+    assert large < 8 * small, "n: #{small} reductions, 4n: #{large}"
   end
 
-  defp min_time(fun), do: Enum.min(for _ <- 1..3, do: elem(:timer.tc(fun), 0))
+  defp reductions(html) do
+    fn ->
+      {:reductions, r0} = Process.info(self(), :reductions)
+      Readability.article(html, spawn: false)
+      {:reductions, r1} = Process.info(self(), :reductions)
+      r1 - r0
+    end
+    |> Task.async()
+    |> Task.await(:infinity)
+  end
 
   describe "regressions" do
     test "invalid UTF-8 is replaced with U+FFFD" do

@@ -32,4 +32,35 @@ defmodule Readability.SpawnTest do
 
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}, 5000
   end
+
+  describe "the worker's heap" do
+    @unlimited %{size: 0, kill: true, error_logger: true, include_shared_binaries: false}
+
+    test "is preallocated at one word per byte of HTML up to 2 MB" do
+      html = String.duplicate("x", 2 * 1024 * 1024)
+      assert Readability.Worker.spawn_opts(html, @unlimited)[:min_heap_size] == byte_size(html)
+      assert Readability.Worker.spawn_opts("<p>hi</p>", @unlimited)[:min_heap_size] == 9
+    end
+
+    test "isn't preallocated for larger HTML, or for a parsed document" do
+      # An 8 MB comment used to preallocate 8M words (64 MB) before parsing.
+      html = "<html><body><!--" <> String.duplicate("x", 8 * 1024 * 1024) <> "--></body></html>"
+      refute Keyword.has_key?(Readability.Worker.spawn_opts(html, @unlimited), :min_heap_size)
+
+      refute Keyword.has_key?(
+               Readability.Worker.spawn_opts(LazyHTML.from_document("<p>hi</p>"), @unlimited),
+               :min_heap_size
+             )
+    end
+
+    test "leaves room under the caller's :max_heap_size" do
+      max = %{@unlimited | size: 100_000}
+      assert Readability.Worker.spawn_opts(String.duplicate("x", 1_000_000), max)[:min_heap_size] == 50_000
+    end
+
+    test "large HTML still works" do
+      html = "<html><body><!--" <> String.duplicate("x", 3 * 1024 * 1024) <> "--></body></html>"
+      assert Readability.article(html) == {:error, :not_readable}
+    end
+  end
 end

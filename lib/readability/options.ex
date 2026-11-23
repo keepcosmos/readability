@@ -74,10 +74,14 @@ defmodule Readability.Options do
               type: :boolean,
               default: true,
               doc: """
-              Do the work in a short-lived linked process whose heap is sized for the input, so
-              that the garbage collector has little to do and the memory is released at once
-              (about a quarter faster). Exceptions are re-raised in the caller, and the caller's
-              `:max_heap_size` applies to the process. `false` runs everything in the caller.
+              Do the work in a short-lived linked process, so that the garbage collector has
+              little to do and the memory is released at once (about a fifth faster on typical pages).
+              For HTML up to 2 MB, the process starts with a heap of one word per byte of HTML
+              (at most 16 MB on a 64-bit VM), about what the work needs; larger HTML starts
+              with the default heap and grows as needed. Results, exceptions and exits are
+              passed on to the caller, and the caller's `:max_heap_size` applies to the process.
+              The process doesn't inherit the caller's `$callers` or Logger metadata.
+              `false` runs everything in the caller.
               """
             ]
           )
