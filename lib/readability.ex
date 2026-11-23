@@ -143,29 +143,8 @@ defmodule Readability do
   defp valid_utf8(html), do: if(String.valid?(html, :fast_ascii), do: html, else: String.replace_invalid(html))
 
   # A `%LazyHTML{}` passed in may have been parsed from invalid UTF-8: scrub its tree the same way.
-  defp valid_tree(tree, %LazyHTML{}), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
+  defp valid_tree(tree, %LazyHTML{}), do: DOM.valid_utf8(tree)
   defp valid_tree(tree, _html), do: tree
-
-  defp valid_list?([]), do: true
-  defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text, :fast_ascii) and valid_list?(rest)
-  defp valid_list?([{:comment, _} | rest]), do: valid_list?(rest)
-
-  defp valid_list?([{tag, attrs, children} | rest]) do
-    String.valid?(tag, :fast_ascii) and
-      Enum.all?(attrs, fn {name, value} -> String.valid?(name, :fast_ascii) and String.valid?(value, :fast_ascii) end) and
-      valid_list?(children) and valid_list?(rest)
-  end
-
-  defp scrub_list(nodes) do
-    Enum.map(nodes, fn
-      text when is_binary(text) -> String.replace_invalid(text)
-      {:comment, _} = comment -> comment
-      {tag, attrs, children} -> {String.replace_invalid(tag), scrub_attrs(attrs), scrub_list(children)}
-    end)
-  end
-
-  defp scrub_attrs(attrs),
-    do: for({name, value} <- attrs, do: {String.replace_invalid(name), String.replace_invalid(value)})
 
   # `getElementsByTagName("*").length` on the document as parsed
   defp count_elements([], n), do: n

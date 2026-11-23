@@ -77,6 +77,39 @@ defmodule Readability.DOM do
   @spec from_lazy(list()) :: tree()
   def from_lazy(tree) when is_list(tree), do: lazy_list(tree, :html)
 
+  @doc """
+  `LazyHTML.to_tree/1` output with each malformed UTF-8 sequence in text, tag and attribute
+  names and values replaced with U+FFFD, as a decoder does (LazyHTML keeps invalid UTF-8 as is).
+  Returns `tree` itself when it's valid.
+  """
+  @spec valid_utf8(list()) :: list()
+  def valid_utf8(tree), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
+
+  defp valid_list?([]), do: true
+  defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text, :fast_ascii) and valid_list?(rest)
+  defp valid_list?([{:comment, _} | rest]), do: valid_list?(rest)
+
+  defp valid_list?([{tag, attrs, children} | rest]),
+    do: String.valid?(tag, :fast_ascii) and valid_attrs?(attrs) and valid_list?(children) and valid_list?(rest)
+
+  @doc "Whether the names and values of `attrs` are valid UTF-8."
+  @spec valid_attrs?(attrs()) :: boolean()
+  def valid_attrs?(attrs),
+    do: Enum.all?(attrs, fn {name, value} -> String.valid?(name, :fast_ascii) and String.valid?(value, :fast_ascii) end)
+
+  defp scrub_list(nodes) do
+    Enum.map(nodes, fn
+      text when is_binary(text) -> String.replace_invalid(text)
+      {:comment, _} = comment -> comment
+      {tag, attrs, children} -> {String.replace_invalid(tag), scrub_attrs(attrs), scrub_list(children)}
+    end)
+  end
+
+  @doc "`attrs` with malformed UTF-8 in names and values replaced with U+FFFD."
+  @spec scrub_attrs(attrs()) :: attrs()
+  def scrub_attrs(attrs),
+    do: for({name, value} <- attrs, do: {String.replace_invalid(name), String.replace_invalid(value)})
+
   # `ns`: the namespace the parser gives these nodes' elements (approximately: an `<svg>` start
   # tag in MathML is taken as SVG). A `<template>` in SVG or MathML is an ordinary element.
   defp lazy_list([], _ns), do: []

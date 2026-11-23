@@ -71,6 +71,49 @@ defmodule Readability.RobustnessTest do
       end
     end
 
+    property "a %LazyHTML{} parsed from invalid UTF-8 gives the same result as the binary" do
+      invalid =
+        member_of([
+          <<0x80>>,
+          <<0xC3>>,
+          <<0xFF, 0xFE>>,
+          <<0xED, 0xA0, 0x80>>,
+          <<0xE2, 0x80>>,
+          <<0xF0, 0xE2, 0x80, 0x80>>
+        ])
+
+      text =
+        map(
+          list_of(one_of([invalid, member_of(["a", " ", "\u00A0", ", "])]), min_length: 50, max_length: 400),
+          &Enum.join/1
+        )
+
+      attrs =
+        map(
+          list_of(one_of([invalid, member_of(["ban", "ner", " ", "display", ":", "none", ";"])]), max_length: 8),
+          &Enum.join/1
+        )
+
+      check all(
+              # an empty page leaves the inserted paragraphs to decide
+              html <- one_of([constant("<html><body></body></html>"), HTMLGen.document()]),
+              paragraphs <- list_of(tuple({text, attrs}), max_length: 6),
+              pos <- integer(0..byte_size(html)),
+              opts <- member_of([[], [min_content_length: 20, min_score: 5]]),
+              max_runs: 100
+            ) do
+        inserted =
+          for {text, attrs} <- paragraphs,
+              into: "",
+              do: ~s(<div><p class="#{attrs}" style="#{attrs}">#{text}</p><br>#{text}</div>)
+
+        html = binary_part(html, 0, pos) <> inserted <> binary_part(html, pos, byte_size(html) - pos)
+        lazy = LazyHTML.from_document(html)
+        assert Readability.readerable?(lazy, opts) == Readability.readerable?(html, opts)
+        assert Readability.article(lazy) == Readability.article(html)
+      end
+    end
+
     property "readerable?/2's exact pass agrees with its usual paths" do
       check all(
               html <- HTMLGen.document(),

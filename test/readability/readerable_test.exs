@@ -28,6 +28,22 @@ defmodule Readability.ReaderableTest do
     assert mismatches == []
   end
 
+  test "invalid UTF-8 in a %LazyHTML{} counts as in a binary: one U+FFFD per malformed sequence" do
+    invalid = String.duplicate(<<0x80>>, 2000)
+
+    for html <- [
+          page("<p>#{invalid}</p>"),
+          # the tree paths: <template> contents, and the exact pass
+          page("<template></template><p>#{invalid}</p>"),
+          page(~s(<p class="ban#{<<0x80>>}ner">#{invalid}</p>))
+        ] do
+      lazy = LazyHTML.from_document(html)
+      assert Readability.readerable?(html)
+      assert Readability.readerable?(lazy), inspect(html)
+      assert Readerable.readerable?(lazy, exact: true)
+    end
+  end
+
   test "score accumulates sqrt(length - 140) until it exceeds 20" do
     # sqrt(540 - 140) = 20 is not enough, one more character is
     refute readerable?(page("<p>#{text(540)}</p>"))

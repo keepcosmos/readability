@@ -38,7 +38,7 @@ defmodule Readability.Readerable do
 
     case input do
       %LazyHTML{} when exact? ->
-        input |> LazyHTML.to_tree() |> DOM.from_lazy() |> exact_readerable?(min_length, min_score)
+        input |> tree() |> exact_readerable?(min_length, min_score)
 
       tree when exact? ->
         exact_readerable?(tree, min_length, min_score)
@@ -47,7 +47,7 @@ defmodule Readability.Readerable do
         # `LazyHTML.text/1` includes `<template>` contents, `textContent` does not
         if Enum.empty?(LazyHTML.query(input, "template")),
           do: lazy_readerable?(input, min_length, min_score),
-          else: input |> LazyHTML.to_tree() |> DOM.from_lazy() |> tree_readerable?(min_length, min_score)
+          else: input |> tree() |> tree_readerable?(min_length, min_score)
 
       tree when is_list(tree) ->
         tree_readerable?(tree, min_length, min_score)
@@ -68,13 +68,22 @@ defmodule Readability.Readerable do
     budget = {@text_budget, fn -> byte_size(LazyHTML.text(doc)) end}
 
     case score_phases(phases, &text_length(LazyHTML.text(&1), min_length), budget, min_length, min_score) do
-      :over_budget -> doc |> LazyHTML.to_tree() |> DOM.from_lazy() |> exact_readerable?(min_length, min_score)
+      :over_budget -> doc |> tree() |> exact_readerable?(min_length, min_score)
       readerable? -> readerable?
     end
   end
 
   # Attributes come in one NIF call for all nodes
-  defp lazy_candidates(nodes), do: Enum.zip(nodes, LazyHTML.attributes(nodes))
+  defp lazy_candidates(nodes) do
+    Enum.zip_with(nodes, LazyHTML.attributes(nodes), fn node, attrs ->
+      {node, if(DOM.valid_attrs?(attrs), do: attrs, else: DOM.scrub_attrs(attrs))}
+    end)
+  end
+
+  # A `%LazyHTML{}` may hold invalid UTF-8 (parsed from a binary we didn't scrub): replaced the
+  # way `Readability` replaces it in a binary, here and in the text of the candidates
+  # (`text_length/2`).
+  defp tree(lazy), do: lazy |> LazyHTML.to_tree() |> DOM.valid_utf8() |> DOM.from_lazy()
 
   # ---------------------------------------------------------------------------------------------
   # DOM tree
@@ -310,7 +319,11 @@ defmodule Readability.Readerable do
   end
 
   # `{byte size, text.trim().length}`, the length 0 when it is certainly below `min_length` (a
-  # UTF-16 unit takes at least one byte of UTF-8)
+  # UTF-16 unit takes at least one byte of UTF-8, a U+FFFD replacing a malformed sequence too)
   defp text_length(text, min_length) when byte_size(text) < min_length, do: {byte_size(text), 0}
-  defp text_length(text, _min_length), do: {byte_size(text), text |> Text.trim() |> Text.length()}
+
+  defp text_length(text, _min_length) do
+    valid = if String.valid?(text, :fast_ascii), do: text, else: String.replace_invalid(text)
+    {byte_size(text), valid |> Text.trim() |> Text.length()}
+  end
 end
