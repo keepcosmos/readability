@@ -44,12 +44,7 @@ defmodule Readability.Worker do
       # Killed (by its `:max_heap_size`, or an exit signal). Without trapping exits the link
       # has taken the caller down already.
       {:DOWN, ^ref, :process, ^pid, reason} ->
-        receive do
-          {:EXIT, ^pid, _} -> :ok
-        after
-          0 -> :ok
-        end
-
+        unlink(pid)
         exit(reason)
     end
   end
@@ -67,7 +62,9 @@ defmodule Readability.Worker do
           []
       end
 
-    if max_heap.size > 0, do: heap ++ [max_heap_size: max_heap], else: heap
+    # Even a size of 0: without the option the process gets the VM's default limit, which may be
+    # smaller than the heap asked for (and then `spawn_opt` raises).
+    heap ++ [max_heap_size: max_heap]
   end
 
   defp unlink(pid) do

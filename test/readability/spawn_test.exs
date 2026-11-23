@@ -33,6 +33,21 @@ defmodule Readability.SpawnTest do
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}, 5000
   end
 
+  test "a caller trapping exits gets the worker's exit reason, and no messages" do
+    html = "<html><body>" <> String.duplicate("<div><p>#{String.duplicate("Text, more text. ", 20)}</p></div>", 2000)
+
+    {pid, ref} =
+      spawn_monitor(fn ->
+        Process.flag(:trap_exit, true)
+        Process.flag(:max_heap_size, %{size: 200_000, kill: true, error_logger: false})
+        result = catch_exit(Readability.article(html))
+        Process.flag(:max_heap_size, 0)
+        exit({result, Process.info(self(), :messages)})
+      end)
+
+    assert_receive {:DOWN, ^ref, :process, ^pid, {:killed, {:messages, []}}}, 5000
+  end
+
   describe "the worker's heap" do
     @unlimited %{size: 0, kill: true, error_logger: true, include_shared_binaries: false}
 
@@ -51,6 +66,10 @@ defmodule Readability.SpawnTest do
                Readability.Worker.spawn_opts(LazyHTML.from_document("<p>hi</p>"), @unlimited),
                :min_heap_size
              )
+    end
+
+    test "gets the caller's :max_heap_size, even no limit" do
+      assert Readability.Worker.spawn_opts("<p>hi</p>", @unlimited)[:max_heap_size] == @unlimited
     end
 
     test "leaves room under the caller's :max_heap_size" do
