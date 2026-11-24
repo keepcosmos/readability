@@ -24,67 +24,100 @@ defmodule Readability.DOM.Serializer do
 
   @doc "Serializes the children of an element (or a list of nodes) like `innerHTML`."
   @spec inner_html(Readability.DOM.el() | Readability.DOM.tree()) :: binary()
-  def inner_html(list) when is_list(list), do: IO.iodata_to_binary(nodes(list, :html, []))
+  def inner_html(list) when is_list(list), do: nodes(list, :html, patterns(), <<>>)
 
   def inner_html({tag, attrs, children, _}) do
+    pats = patterns()
     ns = element_ns(tag, :html)
 
-    iodata =
-      if ns == :html and newline_sensitive?(tag),
-        do: nodes(children, :html, []),
-        else: content(tag, attrs, children, ns, [])
-
-    IO.iodata_to_binary(iodata)
+    if ns == :html and newline_sensitive?(tag),
+      do: nodes(children, :html, pats, <<>>),
+      else: content(tag, attrs, children, ns, pats, <<>>)
   end
 
   @doc "Serializes a node (or a list of nodes) like `outerHTML`."
   @spec outer_html(Readability.DOM.node_() | Readability.DOM.tree()) :: binary()
-  def outer_html(list) when is_list(list), do: IO.iodata_to_binary(nodes(list, :html, []))
-  def outer_html(node), do: IO.iodata_to_binary(nodes([node], :html, []))
+  def outer_html(list) when is_list(list), do: nodes(list, :html, patterns(), <<>>)
+  def outer_html(node), do: nodes([node], :html, patterns(), <<>>)
 
-  # `ns` is the namespace of the parent (:html | :svg | :math | :math_text); the iodata is
-  # accumulated in `acc` (left-nested lists, no reversal needed).
-  defp nodes([], _ns, acc), do: acc
-  defp nodes([text | rest], ns, acc) when is_binary(text), do: nodes(rest, ns, [acc | escape_text(text)])
+  # `ns` is the namespace of the parent (:html | :svg | :math | :math_text). `acc` is a linearly
+  # threaded binary so the BEAM uses its in-place append buffer (no cons-cell iodata garbage and
+  # no second pass in `IO.iodata_to_binary/1`).
+  defp nodes([], _ns, _pats, acc), do: acc
 
-  defp nodes([{tag, attrs, children, _} | rest], parent_ns, acc) do
-    ns = element_ns(tag, parent_ns)
-    acc = attributes(attrs, [acc, ?<, tag])
+  defp nodes([text | rest], ns, {tp, _} = pats, acc) when is_binary(text),
+    do: nodes(rest, ns, pats, append_escaped(text, tp, acc))
+
+  # Fast path for the common HTML namespace (non-svg, non-math).
+  defp nodes([{tag, attrs, children, _} | rest], :html, pats, acc) when tag != "svg" and tag != "math" do
+    acc =
+      case attrs do
+        [] -> <<acc::binary, ?<, tag::binary, ?>>>
+        _ -> <<attributes(attrs, pats, <<acc::binary, ?<, tag::binary>>)::binary, ?>>>
+      end
 
     acc =
-      if ns == :html and void?(tag),
-        do: [acc | ">"],
-        else: [content(tag, attrs, children, ns, [acc | ">"]), "</", tag | ">"]
+      if void?(tag) do
+        acc
+      else
+        acc = content_html(tag, children, pats, acc)
+        <<acc::binary, "</", tag::binary, ?>>>
+      end
 
-    nodes(rest, parent_ns, acc)
+    nodes(rest, :html, pats, acc)
   end
 
-  # The children of an element whose own namespace is `ns`.
-  defp content(tag, attrs, children, :html, acc) do
+  defp nodes([{tag, attrs, children, _} | rest], parent_ns, pats, acc) do
+    ns = element_ns(tag, parent_ns)
+    acc = <<attributes(attrs, pats, <<acc::binary, ?<, tag::binary>>)::binary, ?>>>
+
+    acc =
+      if ns == :html and void?(tag) do
+        acc
+      else
+        acc = content(tag, attrs, children, ns, pats, acc)
+        <<acc::binary, "</", tag::binary, ?>>>
+      end
+
+    nodes(rest, parent_ns, pats, acc)
+  end
+
+  defp content_html(tag, children, pats, acc) do
     cond do
-      raw_text?(tag) -> raw(children, acc)
-      newline_sensitive?(tag) and starts_with_lf?(children) -> nodes(children, :html, [acc | "\n"])
-      true -> nodes(children, children_ns(tag, attrs, :html), acc)
+      raw_text?(tag) -> raw(children, pats, acc)
+      newline_sensitive?(tag) and starts_with_lf?(children) -> nodes(children, :html, pats, <<acc::binary, ?\n>>)
+      true -> nodes(children, :html, pats, acc)
     end
   end
 
-  defp content(tag, attrs, children, ns, acc), do: nodes(children, children_ns(tag, attrs, ns), acc)
+  # The children of an element whose own namespace is `ns`.
+  defp content(tag, attrs, children, :html, pats, acc) do
+    cond do
+      raw_text?(tag) -> raw(children, pats, acc)
+      newline_sensitive?(tag) and starts_with_lf?(children) -> nodes(children, :html, pats, <<acc::binary, ?\n>>)
+      true -> nodes(children, children_ns(tag, attrs, :html), pats, acc)
+    end
+  end
+
+  defp content(tag, attrs, children, ns, pats, acc), do: nodes(children, children_ns(tag, attrs, ns), pats, acc)
 
   defp starts_with_lf?([<<?\n, _::binary>> | _]), do: true
   defp starts_with_lf?(_), do: false
 
   # Raw text elements only have text children after parsing; elements put there by the algorithm
   # are serialized normally.
-  defp raw([], acc), do: acc
-  defp raw([text | rest], acc) when is_binary(text), do: raw(rest, [acc | text])
-  defp raw([el | rest], acc), do: raw(rest, nodes([el], :html, acc))
+  defp raw([], _pats, acc), do: acc
+  defp raw([text | rest], pats, acc) when is_binary(text), do: raw(rest, pats, <<acc::binary, text::binary>>)
+  defp raw([el | rest], pats, acc), do: raw(rest, pats, nodes([el], :html, pats, acc))
 
-  defp attributes([], acc), do: acc
+  defp attributes([], _pats, acc), do: acc
 
-  defp attributes([{name, value} | rest], acc) when is_binary(name),
-    do: attributes(rest, [acc, ?\s, name, "=\"", escape_attr(value) | "\""])
+  defp attributes([{name, value} | rest], {_, ap} = pats, acc) when is_binary(name) do
+    acc = append_escaped(value, ap, <<acc::binary, ?\s, name::binary, "=\"">>)
+    attributes(rest, pats, <<acc::binary, ?">>)
+  end
 
-  defp attributes([{name, _} | _], _acc),
+  defp attributes([{name, _} | _], _pats, _acc),
     do: raise(ArgumentError, "internal attribute #{inspect(name)} reached the serializer")
 
   for tag <- ~w(area base basefont bgsound br col embed frame hr img input keygen link meta param source track wbr) do
@@ -129,48 +162,44 @@ defmodule Readability.DOM.Serializer do
 
   @nbsp <<0xC2, 0xA0>>
 
-  defp escape_text(text) do
-    case :binary.matches(text, pattern(:text)) do
-      [] -> text
-      matches -> splice(text, matches, 0)
+  defp append_escaped(<<>>, _pat, acc), do: acc
+
+  defp append_escaped(bin, pat, acc) do
+    case :binary.matches(bin, pat) do
+      [] -> <<acc::binary, bin::binary>>
+      matches -> append_splice(bin, matches, 0, acc)
     end
   end
 
-  defp escape_attr(value) do
-    case :binary.matches(value, pattern(:attr)) do
-      [] -> value
-      matches -> splice(value, matches, 0)
-    end
+  defp append_splice(bin, [], pos, acc) do
+    tail = binary_part(bin, pos, byte_size(bin) - pos)
+    <<acc::binary, tail::binary>>
   end
 
-  defp splice(bin, [], pos), do: binary_part(bin, pos, byte_size(bin) - pos)
+  defp append_splice(bin, [{at, len} | rest], pos, acc) do
+    chunk = binary_part(bin, pos, at - pos)
+    ent = entity(:binary.at(bin, at))
+    append_splice(bin, rest, at + len, <<acc::binary, chunk::binary, ent::binary>>)
+  end
 
-  defp splice(bin, [{at, len} | rest], pos),
-    do: [binary_part(bin, pos, at - pos), entity(binary_part(bin, at, len)) | splice(bin, rest, at + len)]
+  defp entity(?&), do: "&amp;"
+  defp entity(?<), do: "&lt;"
+  defp entity(?>), do: "&gt;"
+  defp entity(?"), do: "&quot;"
+  defp entity(0xC2), do: "&nbsp;"
 
-  defp entity("&"), do: "&amp;"
-  defp entity("<"), do: "&lt;"
-  defp entity(">"), do: "&gt;"
-  defp entity("\""), do: "&quot;"
-  defp entity(@nbsp), do: "&nbsp;"
-
-  # Compiled patterns hold a reference, so they live in :persistent_term, built on first use.
-  defp pattern(kind) do
-    key = {__MODULE__, kind}
+  # Compiled patterns hold a reference, so they live in :persistent_term, fetched once per call.
+  defp patterns do
+    key = {__MODULE__, :patterns}
 
     case :persistent_term.get(key, nil) do
       nil ->
-        pattern =
-          case kind do
-            :text -> :binary.compile_pattern(["&", "<", ">", @nbsp])
-            :attr -> :binary.compile_pattern(["&", "\"", @nbsp])
-          end
+        pats = {:binary.compile_pattern(["&", "<", ">", @nbsp]), :binary.compile_pattern(["&", "\"", @nbsp])}
+        :persistent_term.put(key, pats)
+        pats
 
-        :persistent_term.put(key, pattern)
-        pattern
-
-      pattern ->
-        pattern
+      pats ->
+        pats
     end
   end
 end
