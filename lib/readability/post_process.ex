@@ -47,36 +47,101 @@ defmodule Readability.PostProcess do
   """
   @spec run(DOM.el(), binary() | nil, binary() | nil, map()) :: DOM.el()
   def run({_, _, _, _} = article, doc_uri, base_uri, opts) do
-    ctx = %{
-      absolutize: if(base_uri, do: URL.absolutizer(base_uri, doc_uri)),
-      preserve: if(opts[:keep_classes], do: nil, else: preserve(["page" | opts[:classes_to_preserve] || []]))
-    }
+    abs = if base_uri, do: URL.absolutizer(base_uri, doc_uri)
+    preserve = if opts[:keep_classes], do: nil, else: preserve(["page" | opts[:classes_to_preserve] || []])
 
-    # The root is not a link, not simplified (it has no parent) and is never visited by
-    # `remove_preorder/4`, so only steps 1 and 4 apply to it.
-    {root, _} = fix_js_links(article)
-    {root, _} = clean_class(root, ctx.preserve)
-    {root, _} = DOM.remove_preorder(root, ctx, &visit/3, [], :drop)
-    root
+    # The root is not a link and is never simplified (it has no parent), so only class cleanup
+    # and its descendants' traversal apply (`javascript:` link children are unlinked in `post_list`).
+    {root, _} = clean_class(article, preserve)
+    {tag, attrs, children, _} = root
+
+    case post_list(children, abs, preserve) do
+      :same -> root
+      kids -> DOM.raw(tag, attrs, kids)
+    end
   end
 
-  defp visit(el, _ancestors, ctx) do
-    {el, changed1} = fix_js_links(el)
-    {el, changed2} = fix_uris(el, ctx.absolutize)
+  # Dedicated pre-order traversal (`:drop` stats semantics, no unused ancestors list, and
+  # `javascript:` `<a>` unlinking done directly on `<a>` rather than pre-scanning every parent's
+  # children, except on `div`/`section` containers where `simplify` reads direct children first).
+  defp post_list([], _abs, _preserve), do: :same
 
-    case simplify(el) do
+  defp post_list([text | rest], abs, preserve) when is_binary(text) do
+    case post_list(rest, abs, preserve) do
+      :same -> :same
+      rest2 -> [text | rest2]
+    end
+  end
+
+  defp post_list([el | rest] = list, abs, preserve) do
+    node = post_node(el, abs, preserve)
+    rest2 = post_list(rest, abs, preserve)
+    DOM.splice(node, rest2, list)
+  end
+
+  defp post_node({"a", attrs, children, _} = el, abs, preserve) do
+    if js_href?(attrs) do
+      case unlink(children) do
+        text when is_binary(text) -> text
+        span -> post_children(span, true, abs, preserve)
+      end
+    else
+      {el, ch1} = fix_link_uri(el, abs)
+      {el, ch2} = clean_class(el, preserve)
+      post_children(el, ch1 or ch2, abs, preserve)
+    end
+  end
+
+  defp post_node({tag, _, _, _} = el, abs, preserve) when tag == "div" or tag == "section" do
+    case DOM.attr(el, "id") do
+      <<"readability", _::binary>> ->
+        {el, ch} = clean_class(el, preserve)
+        post_children(el, ch, abs, preserve)
+
+      _ ->
+        post_container(el, abs, preserve)
+    end
+  end
+
+  defp post_node({tag, _, _, _} = el, abs, preserve) when tag in @media do
+    {el, ch1} = fix_media_uris(el, abs)
+    {el, ch2} = clean_class(el, preserve)
+    post_children(el, ch1 or ch2, abs, preserve)
+  end
+
+  defp post_node(el, abs, preserve) do
+    {el, ch} = clean_class(el, preserve)
+    post_children(el, ch, abs, preserve)
+  end
+
+  defp post_container(el, abs, preserve) do
+    {el, ch1} = fix_js_links(el)
+
+    case simplify_container(el) do
       :remove ->
-        {:remove, ctx}
+        :removed
 
       {:revisit, child} ->
-        {:revisit, child, ctx}
+        case post_node(child, abs, preserve) do
+          :same -> child
+          other -> other
+        end
 
       :keep ->
-        case clean_class(el, ctx.preserve) do
-          {el, true} -> {:cont, el, ctx}
-          {el, false} when changed1 or changed2 -> {:cont, el, ctx}
-          {_el, false} -> {:cont, ctx}
-        end
+        {el, ch2} = clean_class(el, preserve)
+        post_children(el, ch1 or ch2, abs, preserve)
+    end
+  end
+
+  defp post_children({_, _, [], _} = el, changed?, _abs, _preserve), do: if(changed?, do: el, else: :same)
+
+  defp post_children({_, _, [text], _} = el, changed?, _abs, _preserve) when is_binary(text),
+    do: if(changed?, do: el, else: :same)
+
+  defp post_children({tag, attrs, children, _} = el, changed?, abs, preserve) do
+    case post_list(children, abs, preserve) do
+      :same -> if(changed?, do: el, else: :same)
+      kids -> DOM.raw(tag, attrs, kids)
     end
   end
 
@@ -119,23 +184,23 @@ defmodule Readability.PostProcess do
   defp unlink([text]) when is_binary(text), do: text
   defp unlink(children), do: DOM.raw("span", [], children)
 
-  defp fix_uris(el, nil), do: {el, false}
+  defp fix_link_uri(el, nil), do: {el, false}
 
-  defp fix_uris({"a", attrs, _, _} = el, abs) do
+  defp fix_link_uri({"a", attrs, children, _} = el, abs) do
     case rewrite_attrs(attrs, abs, false) do
       :same -> {el, false}
-      attrs -> {DOM.put_attrs(el, attrs), true}
+      attrs -> {DOM.raw("a", attrs, children), true}
     end
   end
 
-  defp fix_uris({tag, attrs, _, _} = el, abs) when tag in @media do
+  defp fix_media_uris(el, nil), do: {el, false}
+
+  defp fix_media_uris({tag, attrs, children, _} = el, abs) do
     case rewrite_attrs(attrs, abs, true) do
       :same -> {el, false}
-      attrs -> {DOM.put_attrs(el, attrs), true}
+      attrs -> {DOM.raw(tag, attrs, children), true}
     end
   end
-
-  defp fix_uris(el, _abs), do: {el, false}
 
   # `href` for links (media?=false); `src`, `poster`, `srcset` for media. Empty values are left
   # alone (`if (src)`). Attribute names are unique, so mapping the list equals
@@ -163,15 +228,6 @@ defmodule Readability.PostProcess do
   # _simplifyNestedElements
   # ---------------------------------------------------------------------------------------------
 
-  defp simplify({tag, _, _, _} = el) when tag == "div" or tag == "section" do
-    case DOM.attr(el, "id") do
-      <<"readability", _::binary>> -> :keep
-      _ -> simplify_container(el)
-    end
-  end
-
-  defp simplify(_el), do: :keep
-
   defp simplify_container({_, attrs, _, _} = el) do
     cond do
       DOM.without_content?(el) ->
@@ -198,9 +254,10 @@ defmodule Readability.PostProcess do
   end
 
   defp clean_class(el, nil), do: {el, false}
+  defp clean_class({_, [], _, _} = el, _preserve), do: {el, false}
 
-  defp clean_class(el, {classes, pattern}) do
-    case DOM.attr(el, "class") do
+  defp clean_class({tag, attrs, children, _} = el, {classes, pattern}) do
+    case DOM.attr_value(attrs, "class") do
       nil ->
         {el, false}
 
@@ -211,9 +268,9 @@ defmodule Readability.PostProcess do
             else: class |> Text.split_ws() |> Enum.filter(&(&1 in classes)) |> Enum.join(" ")
 
         case kept do
-          "" -> {DOM.delete_attr(el, "class"), true}
+          "" -> {DOM.raw(tag, :lists.keydelete("class", 1, attrs), children), true}
           ^class -> {el, false}
-          kept -> {DOM.put_attr(el, "class", kept), true}
+          kept -> {DOM.raw(tag, :lists.keyreplace("class", 1, attrs, {"class", kept}), children), true}
         end
     end
   end

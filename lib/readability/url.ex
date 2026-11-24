@@ -68,12 +68,14 @@ defmodule Readability.URL do
 
     case parse_base(base_uri) do
       {:ok, base} ->
+        origin = http_origin(base)
+
         fn
           <<"#", _::binary>> = uri when keep_hash? ->
             uri
 
           uri ->
-            absolute(uri, base)
+            absolute(uri, base, origin)
         end
 
       # `new URL(uri, invalidBase)` always throws
@@ -82,12 +84,78 @@ defmodule Readability.URL do
     end
   end
 
-  defp absolute(uri, base) do
+  defp http_origin(%__MODULE__{scheme: scheme} = base) when scheme == "http" or scheme == "https",
+    do: IO.iodata_to_binary([scheme, ":", authority_iodata(base)])
+
+  defp http_origin(_base), do: nil
+
+  defp absolute(<<"https://", rest::binary>> = uri, base, _origin) do
+    if canonical_host_path?(rest, false), do: uri, else: parse_and_serialize(uri, base)
+  end
+
+  defp absolute(<<"http://", rest::binary>> = uri, base, _origin) do
+    if canonical_host_path?(rest, false), do: uri, else: parse_and_serialize(uri, base)
+  end
+
+  defp absolute(<<"/", c, _::binary>> = uri, base, origin)
+       when origin != nil and c != ?/ and c != ?\\ do
+    <<_, rest::binary>> = uri
+    if canonical_seg_start?(rest), do: origin <> uri, else: parse_and_serialize(uri, base)
+  end
+
+  defp absolute("/", _base, origin) when origin != nil, do: origin <> "/"
+
+  defp absolute(uri, base, _origin), do: parse_and_serialize(uri, base)
+
+  defp parse_and_serialize(uri, base) do
     case parse(uri, base) do
       {:ok, url} -> serialize(url)
       :error -> uri
     end
   end
+
+  # Single-pass check that an `http://` or `https://` URL (past the scheme and `//`) is already
+  # canonical: plain lowercase host with explicit `/`, no dot segments, no bytes needing encoding
+  # or stripping. When true, `serialize(parse(uri, base))` is byte-for-byte equal to `uri`.
+  defp canonical_host_path?(<<c, r::binary>>, _non_empty)
+       when c in ?a..?z or c in ?0..?9 or c == ?- or c == ?.,
+       do: canonical_host_path?(r, true)
+
+  defp canonical_host_path?(<<"/", r::binary>>, true), do: canonical_seg_start?(r)
+  defp canonical_host_path?(_, _), do: false
+
+  # Segment start after `/`: reject any `.` or `%2e`/`%2E` prefix (possible dot-segment).
+  defp canonical_seg_start?(<<".", _::binary>>), do: false
+  defp canonical_seg_start?(<<"%2", e, _::binary>>) when e == ?e or e == ?E, do: false
+  defp canonical_seg_start?(r), do: canonical_seg?(r)
+
+  defguardp seg_byte?(c)
+            when c > 0x20 and c < 0x7F and c != ?" and c != ?< and c != ?> and c != ?\\ and c != ?^ and
+                   c != ?` and c != ?{ and c != ?}
+
+  defp canonical_seg?(<<"/", r::binary>>), do: canonical_seg_start?(r)
+  defp canonical_seg?(<<"?", r::binary>>), do: canonical_query?(r)
+  defp canonical_seg?(<<"#", r::binary>>), do: canonical_frag?(r)
+  defp canonical_seg?(<<>>), do: true
+  defp canonical_seg?(<<c, r::binary>>) when seg_byte?(c), do: canonical_seg?(r)
+  defp canonical_seg?(_), do: false
+
+  defp canonical_query?(<<"#", r::binary>>), do: canonical_frag?(r)
+  defp canonical_query?(<<>>), do: true
+
+  defp canonical_query?(<<c, r::binary>>)
+       when c > 0x20 and c < 0x7F and c != ?" and c != ?< and c != ?> and c != ?',
+       do: canonical_query?(r)
+
+  defp canonical_query?(_), do: false
+
+  defp canonical_frag?(<<>>), do: true
+
+  defp canonical_frag?(<<c, r::binary>>)
+       when c > 0x20 and c < 0x7F and c != ?" and c != ?< and c != ?> and c != ?`,
+       do: canonical_frag?(r)
+
+  defp canonical_frag?(_), do: false
 
   @doc """
   The `srcset` rewrite of `_fixRelativeUris`: `srcset.replace(srcsetUrl, (_, p1, p2, p3) =>
@@ -236,7 +304,7 @@ defmodule Readability.URL do
           {%{url | user: user, pass: pass}, hostport}
       end
 
-    {host, port} = split_port(hostport, false, 0)
+    {host, port} = split_port(hostport, hostport, false, 0)
     if host == "" and (special or port != nil), do: fail()
 
     url = %{url | host: parse_host(host, special), port: parse_port(port, url.scheme)}
@@ -263,24 +331,13 @@ defmodule Readability.URL do
     end
   end
 
-  defp split_port(s, in_brackets, i) do
-    case s do
-      <<_::binary-size(^i), ":", _::binary>> when not in_brackets ->
-        {binary_part(s, 0, i), binary_part(s, i + 1, byte_size(s) - i - 1)}
+  defp split_port(<<":", _::binary>>, s, false, i),
+    do: {binary_part(s, 0, i), binary_part(s, i + 1, byte_size(s) - i - 1)}
 
-      <<_::binary-size(^i), "[", _::binary>> ->
-        split_port(s, true, i + 1)
-
-      <<_::binary-size(^i), "]", _::binary>> ->
-        split_port(s, false, i + 1)
-
-      <<_::binary-size(^i), _, _::binary>> ->
-        split_port(s, in_brackets, i + 1)
-
-      _ ->
-        {s, nil}
-    end
-  end
+  defp split_port(<<"[", r::binary>>, s, _in_brackets, i), do: split_port(r, s, true, i + 1)
+  defp split_port(<<"]", r::binary>>, s, _in_brackets, i), do: split_port(r, s, false, i + 1)
+  defp split_port(<<_, r::binary>>, s, in_brackets, i), do: split_port(r, s, in_brackets, i + 1)
+  defp split_port(<<>>, s, _in_brackets, _i), do: {s, nil}
 
   defp parse_port(nil, _scheme), do: nil
   defp parse_port("", _scheme), do: nil
