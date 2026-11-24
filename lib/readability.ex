@@ -161,7 +161,8 @@ defmodule Readability do
       byline: copy(js_or(metadata.byline, grabbed.byline)),
       dir: copy(grabbed.dir),
       lang: copy(grabbed.lang),
-      content: Serializer.inner_html(article),
+      # built by appending, so it has room to grow that a copy doesn't keep
+      content: article |> Serializer.inner_html() |> :binary.copy(),
       text_content: copy(text_content),
       length: Text.length(text_content),
       excerpt: copy(excerpt(metadata.excerpt, article)),
