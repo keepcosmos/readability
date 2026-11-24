@@ -54,6 +54,14 @@ defmodule ReadabilityTest do
 
     test "a leading byte order mark is ignored" do
       assert Readability.article(<<0xEF, 0xBB, 0xBF>> <> @html) == Readability.article(@html)
+
+      # LazyHTML keeps the mark as text and moves the <head> content into <body>
+      bom = "﻿<div class=\"article-body\"><p>#{@paragraph}</p></div>"
+      assert Readability.article(LazyHTML.from_document(bom)) == Readability.article(bom)
+      {:ok, article} = Readability.article(LazyHTML.from_document("﻿" <> @html))
+      refute article.text_content =~ "﻿"
+      refute article.content =~ "﻿"
+      assert article.title == "Some title"
     end
 
     test "a document without an article is not readable" do

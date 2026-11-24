@@ -66,11 +66,8 @@ defmodule Readability.RobustnessTest do
 
     property "a %LazyHTML{} gives the same result as the binary it was parsed from" do
       check all(html <- HTMLGen.document(), max_runs: 50) do
-        # `article/2` drops a leading byte order mark from a binary; LazyHTML keeps it as text, and
-        # a `%LazyHTML{}` is used as is. So parse what a decoder would have left.
-        lazy = LazyHTML.from_document(String.replace_prefix(html, "﻿", ""))
-        assert Readability.article(lazy) == Readability.article(html)
-        assert Readability.readerable?(lazy) == Readability.readerable?(html)
+        assert Readability.article(LazyHTML.from_document(html)) == Readability.article(html)
+        assert Readability.readerable?(LazyHTML.from_document(html)) == Readability.readerable?(html)
       end
     end
 

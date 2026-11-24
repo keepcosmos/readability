@@ -39,7 +39,9 @@ defmodule Readability do
   `LazyHTML.from_document/2`. A binary is parsed with the `:max_depth` option as LazyHTML's depth
   limit. A `%LazyHTML{}` is used as is: parse it yourself to choose LazyHTML's limits
   (`:max_depth`, `:max_memory`, `:timeout`, ...) for untrusted input, or to parse once for both
-  `readerable?/2` and `article/2`.
+  `readerable?/2` and `article/2`. Strip a byte order mark before you parse: LazyHTML doesn't,
+  and parses the `<head>` of such a document into its `<body>`. A U+FEFF at the start of the
+  document's first text is dropped, but elements misplaced that way stay where they are.
 
   Options are listed in the [module documentation](#module-options). Invalid options raise
   `NimbleOptions.ValidationError`.
@@ -145,8 +147,10 @@ defmodule Readability do
   defp valid_utf8(html), do: if(String.valid?(html, :fast_ascii), do: html, else: String.replace_invalid(html))
 
   # A `%LazyHTML{}` passed in may have been parsed from invalid UTF-8: scrub its tree the same way.
-  defp valid_tree(tree, %LazyHTML{}), do: DOM.valid_utf8(tree)
-  defp valid_tree(tree, _html), do: tree
+  # A byte order mark ends up as the first text of a tree (LazyHTML keeps it), which can't be told
+  # from a U+FEFF that was there, so that's dropped for both kinds of input.
+  defp valid_tree(tree, %LazyHTML{}), do: tree |> DOM.valid_utf8() |> DOM.drop_bom()
+  defp valid_tree(tree, _html), do: DOM.drop_bom(tree)
 
   # `getElementsByTagName("*").length` on the document as parsed
   defp count_elements([], n), do: n

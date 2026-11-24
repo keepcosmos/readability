@@ -87,6 +87,30 @@ defmodule Readability.DOM do
   @spec valid_utf8(list()) :: list()
   def valid_utf8(tree), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
 
+  @doc """
+  `LazyHTML.to_tree/1` output without a byte order mark at the start of its first text. A decoder
+  drops the BOM, LazyHTML keeps it as text (in `<body>`, the first character being text).
+  """
+  @spec drop_bom(list()) :: list()
+  def drop_bom(tree), do: tree |> bom_list() |> elem(1)
+
+  # `{:done, list}` once the first text is found, `{:cont, list}` while there's none yet.
+  defp bom_list([]), do: {:cont, []}
+  defp bom_list([<<0xEF, 0xBB, 0xBF>> | rest]), do: {:done, rest}
+  defp bom_list([<<0xEF, 0xBB, 0xBF, text::binary>> | rest]), do: {:done, [text | rest]}
+  defp bom_list([text | _] = list) when is_binary(text), do: {:done, list}
+
+  defp bom_list([{tag, attrs, children} = el | rest]) do
+    case bom_list(children) do
+      {:done, children} -> {:done, [{tag, attrs, children} | rest]}
+      {:cont, _} -> el |> cons(bom_list(rest))
+    end
+  end
+
+  defp bom_list([node | rest]), do: node |> cons(bom_list(rest))
+
+  defp cons(node, {status, list}), do: {status, [node | list]}
+
   defp valid_list?([]), do: true
   defp valid_list?([text | rest]) when is_binary(text), do: String.valid?(text, :fast_ascii) and valid_list?(rest)
   defp valid_list?([{:comment, _} | rest]), do: valid_list?(rest)

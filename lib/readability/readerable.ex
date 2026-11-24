@@ -83,7 +83,7 @@ defmodule Readability.Readerable do
   # A `%LazyHTML{}` may hold invalid UTF-8 (parsed from a binary we didn't scrub): replaced the
   # way `Readability` replaces it in a binary, here and in the text of the candidates
   # (`text_length/2`).
-  defp tree(lazy), do: lazy |> LazyHTML.to_tree() |> DOM.valid_utf8() |> DOM.from_lazy()
+  defp tree(lazy), do: lazy |> LazyHTML.to_tree() |> DOM.valid_utf8() |> DOM.drop_bom() |> DOM.from_lazy()
 
   # ---------------------------------------------------------------------------------------------
   # DOM tree
