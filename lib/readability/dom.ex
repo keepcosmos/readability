@@ -31,6 +31,8 @@ defmodule Readability.DOM do
   # Combinators pass the ancestors of the visited element as a list of `{tag, attrs}` frames,
   # nearest first, as they are at that moment (see each combinator). `has_ancestor_tag?/4` reads it.
 
+  import Bitwise
+
   alias Readability.Text
 
   @type tag :: binary()
@@ -141,14 +143,29 @@ defmodule Readability.DOM do
 
   @doc "Builds an element and computes its stats (children without stats get them first)."
   @spec el(tag(), attrs(), [node_()]) :: el()
-  def el(tag, attrs, children) when is_binary(tag) and is_list(attrs) and is_list(children) do
-    children = if stats_on_children?(children), do: children, else: Enum.map(children, &with_stats/1)
-    {tag, attrs, children, finish_stats(tag, attrs, fold_stats(children, @empty))}
+  def el(tag, attrs, []) when is_binary(tag) and is_list(attrs),
+    do: {tag, attrs, [], finish_stats(tag, attrs, @empty)}
+
+  def el(tag, attrs, [text] = children) when is_binary(tag) and is_list(attrs) and is_binary(text) do
+    {nw, runs, lead, trail, cm, xc} = Text.summary(text)
+    {tag, attrs, children, finish_stats(tag, attrs, {nw, runs, lead, trail, cm, xc, 0, 0})}
   end
 
-  defp stats_on_children?([]), do: true
-  defp stats_on_children?([{_, _, _, nil} | _]), do: false
-  defp stats_on_children?([_ | rest]), do: stats_on_children?(rest)
+  def el(tag, attrs, [{_, _, _, st}] = children) when is_binary(tag) and is_list(attrs) and st != nil do
+    {tag, attrs, children, finish_stats(tag, attrs, st)}
+  end
+
+  def el(tag, attrs, children) when is_binary(tag) and is_list(attrs) and is_list(children) do
+    case fold_stats(children, 0, 0, 0, 0, 0, 0, 0) do
+      :missing_stats ->
+        children = Enum.map(children, &with_stats/1)
+        st = fold_stats(children, 0, 0, 0, 0, 0, 0, 0)
+        {tag, attrs, children, finish_stats(tag, attrs, st)}
+
+      st ->
+        {tag, attrs, children, finish_stats(tag, attrs, st)}
+    end
+  end
 
   @doc "Builds an element without stats. Only for code that runs before the grab walk."
   @spec raw(tag(), attrs(), [node_()]) :: el()
@@ -164,16 +181,46 @@ defmodule Readability.DOM do
   def with_stats({tag, attrs, children, nil}), do: el(tag, attrs, children)
   def with_stats(text) when is_binary(text), do: text
 
-  defp fold_stats([], st), do: st
-  defp fold_stats([text | rest], st) when is_binary(text), do: fold_stats(rest, cat(st, text_stats(text)))
-  defp fold_stats([{_, _, _, child} | rest], st), do: fold_stats(rest, cat(st, child))
+  # Folds children into one stats tuple without intermediate 8-tuples (`edges` packs `lead <<< 1 ||| trail`).
+  defp fold_stats([], nw, runs, edges, cm, xc, ll, hl), do: {nw, runs, edges >>> 1, edges &&& 1, cm, xc, ll, hl}
+  defp fold_stats([{_, _, _, nil} | _], _, _, _, _, _, _, _), do: :missing_stats
+
+  defp fold_stats([text | rest], nw0, runs0, edges0, cm0, xc0, ll0, hl0) when is_binary(text) do
+    {nw, runs, lead, trail, cm, xc} = Text.summary(text)
+
+    cond do
+      nw0 == 0 and runs0 == 0 ->
+        fold_stats(rest, nw, runs, lead <<< 1 ||| trail, cm0 + cm, xc0 + xc, ll0, hl0)
+
+      nw == 0 and runs == 0 ->
+        fold_stats(rest, nw0, runs0, edges0, cm0 + cm, xc0 + xc, ll0, hl0)
+
+      true ->
+        merged = runs0 + runs - (edges0 &&& 1 &&& lead)
+        fold_stats(rest, nw0 + nw, merged, (edges0 &&& 2) ||| trail, cm0 + cm, xc0 + xc, ll0, hl0)
+    end
+  end
+
+  defp fold_stats([{_, _, _, {nw, runs, lead, trail, cm, xc, ll, hl}} | rest], nw0, runs0, edges0, cm0, xc0, ll0, hl0) do
+    cond do
+      nw0 == 0 and runs0 == 0 ->
+        fold_stats(rest, nw, runs, lead <<< 1 ||| trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
+
+      nw == 0 and runs == 0 ->
+        fold_stats(rest, nw0, runs0, edges0, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
+
+      true ->
+        merged = runs0 + runs - (edges0 &&& 1 &&& lead)
+        fold_stats(rest, nw0 + nw, merged, (edges0 &&& 2) ||| trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
+    end
+  end
 
   defp text_stats(text) do
     {nw, runs, lead, trail, cm, xc} = Text.summary(text)
     {nw, runs, lead, trail, cm, xc, 0, 0}
   end
 
-  # Text.concat/2 on the summary part, sums on the link part.
+  # Text.concat/2 on the summary part, sums on the link part (used by verify!/1).
   defp cat({0, 0, _, _, cm0, xc0, ll0, hl0}, {nw, runs, lead, trail, cm, xc, ll, hl}),
     do: {nw, runs, lead, trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
 
