@@ -3,14 +3,16 @@ defmodule Readability.Worker do
   # `spawn: true`: runs the extraction in a short-lived linked process and hands back its result
   # (or raises what it raised, or exits with its exit reason).
   #
-  # A binary input of up to `@max_preallocated` bytes gets a heap of one word per byte: the tree
-  # and its rebuilt copies need about that much, and growing to it step by step makes the GC copy
-  # the tree over and over (design §8). Over the 130 test pages (all under 2 MB) that's 13% less
-  # time (296 → 257 ms). Larger inputs get the default heap: on 10 MB pages preallocating saves
-  # nothing (254 vs 254 ms and 139 vs 149 ms on two of them), and a heap preallocated at less
-  # than the input size makes them up to 3× slower than the default heap (8 MB: 589 ms, 4 MB:
-  # 740 ms). So at most 16 MB is preallocated per call, and none for a large input that is mostly
-  # comments or whitespace. The garbage goes away with the process, unscanned.
+  # A binary input of up to `@max_preallocated` bytes gets a heap of two words per byte, floored
+  # at `@min_preallocated` words (64 KB on 64-bit, avoiding 4-11 GCs on small pages) and capped at
+  # `@max_preallocated` words (16 MB on 64-bit): the tree and its rebuilt copies need ~1.5-2 words
+  # per byte, and growing step by step makes the GC copy the tree over and over (design §8).
+  # Larger inputs get the default heap: on 10 MB pages preallocating saves nothing (254 vs 254 ms
+  # and 139 vs 149 ms on two of them), and a heap preallocated at less than the input size makes
+  # them up to 3× slower than the default heap (8 MB: 589 ms, 4 MB: 740 ms). So at most 16 MB is
+  # preallocated per call, and none for a large input that is mostly comments or whitespace. The
+  # garbage goes away with the process, unscanned.
+  @min_preallocated 8 * 1024
   @max_preallocated 2 * 1024 * 1024
 
   def run(fun, html) do
@@ -56,7 +58,8 @@ defmodule Readability.Worker do
         html when is_binary(html) and byte_size(html) <= @max_preallocated ->
           # Room to grow under the caller's limit (a size of 0 is no limit).
           limit = if max_heap.size > 0, do: div(max_heap.size, 2), else: :infinity
-          [min_heap_size: min(byte_size(html), limit)]
+          size = html |> byte_size() |> Kernel.*(2) |> max(@min_preallocated) |> min(@max_preallocated)
+          [min_heap_size: min(size, limit)]
 
         _ ->
           []

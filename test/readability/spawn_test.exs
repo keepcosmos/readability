@@ -51,10 +51,11 @@ defmodule Readability.SpawnTest do
   describe "the worker's heap" do
     @unlimited %{size: 0, kill: true, error_logger: true, include_shared_binaries: false}
 
-    test "is preallocated at one word per byte of HTML up to 2 MB" do
+    test "is preallocated at two words per byte of HTML, floored at 8192 words and capped at 2M words" do
       html = String.duplicate("x", 2 * 1024 * 1024)
-      assert Readability.Worker.spawn_opts(html, @unlimited)[:min_heap_size] == byte_size(html)
-      assert Readability.Worker.spawn_opts("<p>hi</p>", @unlimited)[:min_heap_size] == 9
+      assert Readability.Worker.spawn_opts(html, @unlimited)[:min_heap_size] == 2 * 1024 * 1024
+      assert Readability.Worker.spawn_opts(String.duplicate("x", 50_000), @unlimited)[:min_heap_size] == 100_000
+      assert Readability.Worker.spawn_opts("<p>hi</p>", @unlimited)[:min_heap_size] == 8192
     end
 
     test "isn't preallocated for larger HTML, or for a parsed document" do
