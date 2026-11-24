@@ -34,12 +34,11 @@ defmodule Readability.Grab.Score do
     weight? = Flags.active?(flags, :weight_classes)
     {raw, rev_order} = Enum.reduce(entries, {initialized, []}, &score_entry(&1, &2, weight?))
     order = :lists.reverse(rev_order)
+    densities = link_densities(tree, order)
 
     {scores, top} =
-      order
-      |> Enum.zip(link_densities(tree, order))
-      |> Enum.reduce({raw, []}, fn {path, density}, {scores, top} ->
-        score = Map.fetch!(raw, path) * (1 - density)
+      Enum.reduce(order, {raw, []}, fn path, {scores, top} ->
+        score = Map.fetch!(raw, path) * (1 - Map.fetch!(densities, path))
         {Map.put(scores, path, score), insert_top(top, {path, score}, nb_top)}
       end)
 
@@ -115,36 +114,15 @@ defmodule Readability.Grab.Score do
   # JS). It visits the paths to those candidates and their subtrees' link-bearing parts only.
   # ---------------------------------------------------------------------------------------------
 
-  # The densities in the order of `paths`.
+  # Returns `%{path => density}` for every candidate in `paths`, in one tree traversal:
+  # candidates without `#` links below take O(1) `DOM.link_density/1`; candidates with `#` links
+  # accumulate exact document-order float sums in `open` during the same pass.
+  defp link_densities(_tree, []), do: %{}
+
   defp link_densities(tree, paths) do
-    nodes = nodes_at(tree, 0, trie(paths), %{})
-    densities = for path <- paths, do: density_from_stats(Map.fetch!(nodes, path))
-
-    if :exact in densities do
-      exact = for {path, :exact} <- Enum.zip(paths, densities), do: path
-      {[], sums} = sums(tree, 0, trie(exact), [], %{})
-      Enum.zip_with(paths, densities, &exact_density(&1, &2, sums))
-    else
-      densities
-    end
+    {[], densities} = collect_densities(tree, 0, trie(paths), [], %{})
+    densities
   end
-
-  defp density_from_stats(el), do: if(hash_links_below?(el), do: :exact, else: DOM.link_density(el))
-
-  defp exact_density(path, :exact, sums), do: Map.fetch!(sums, path)
-  defp exact_density(_path, density, _sums), do: density
-
-  # The nodes at the paths of a trie, in one traversal (looking each one up from the root is
-  # quadratic in the number of siblings and in the depth).
-  defp nodes_at(_nodes, _i, [], acc), do: acc
-
-  defp nodes_at([node | rest], i, [{i, path, sub} | trie], acc) do
-    acc = if path, do: Map.put(acc, path, node), else: acc
-    acc = if sub == [], do: acc, else: nodes_at(elem(node, 2), 0, sub, acc)
-    nodes_at(rest, i + 1, trie, acc)
-  end
-
-  defp nodes_at([_ | rest], i, trie, acc), do: nodes_at(rest, i + 1, trie, acc)
 
   # `#` links among the descendants, and some text (the density of an empty element is 0).
   defp hash_links_below?({tag, attrs, _, {nw, _, _, _, _, _, _, hash_links}}) do
@@ -154,36 +132,41 @@ defmodule Readability.Grab.Score do
 
   # The (reversed) paths as a trie of forward paths: a list of `{child_index, candidate_path | nil,
   # trie}` sorted by index, so a traversal can stop after the last index it needs.
-  defp trie(paths), do: paths |> Enum.map(&{:lists.reverse(&1), &1}) |> Enum.sort() |> trie_sorted()
+  defp trie(paths), do: paths |> Enum.map(&{:lists.reverse(&1), &1}) |> :lists.sort() |> trie_sorted()
 
   defp trie_sorted([]), do: []
 
   defp trie_sorted([{[i | _], _} | _] = sorted) do
-    {group, rest} = Enum.split_while(sorted, &match?({[^i | _], _}, &1))
-    candidate = Enum.find_value(group, fn {forward, path} -> if forward == [i], do: path end)
-    [{i, candidate, trie_sorted(for({[_ | tail], path} <- group, tail != [], do: {tail, path}))} | trie_sorted(rest)]
+    {candidate, sub, rest} = split_index(sorted, i, nil, [])
+    [{i, candidate, trie_sorted(:lists.reverse(sub))} | trie_sorted(rest)]
   end
 
-  # `open`: the open sums `{path, sum}`, innermost first.
-  defp sums(_nodes, _i, [], [], acc), do: {[], acc}
-  defp sums([], _i, _trie, open, acc), do: {open, acc}
-  defp sums([text | rest], i, trie, open, acc) when is_binary(text), do: sums(rest, i + 1, trie, open, acc)
+  defp split_index([{[i], path} | rest], i, _cand, sub), do: split_index(rest, i, path, sub)
+  defp split_index([{[i | tail], path} | rest], i, cand, sub), do: split_index(rest, i, cand, [{tail, path} | sub])
+  defp split_index(rest, _i, cand, sub), do: {cand, sub, rest}
 
-  defp sums([{tag, _, children, st} = el | rest], i, trie, open, acc) do
+  # `open`: the open exact-sum candidates `{path, sum}`, innermost first.
+  defp collect_densities(_nodes, _i, [], [], acc), do: {[], acc}
+  defp collect_densities([], _i, _trie, open, acc), do: {open, acc}
+
+  defp collect_densities([text | rest], i, trie, open, acc) when is_binary(text),
+    do: collect_densities(rest, i + 1, trie, open, acc)
+
+  defp collect_densities([{tag, _, children, st} = el | rest], i, trie, open, acc) do
     open = if tag == "a" and open != [], do: add_link(open, el), else: open
 
     {open, trie, acc} =
       case trie do
         [{^i, nil, sub} | trie] ->
-          {open, acc} = sums(children, 0, sub, open, acc)
+          {open, acc} = collect_densities(children, 0, sub, open, acc)
           {open, trie, acc}
 
         [{^i, path, sub} | trie] ->
-          {[{^path, sum} | open], acc} = sums(children, 0, sub, [{path, 0} | open], acc)
-          {open, trie, Map.put(acc, path, sum / DOM.inner_text_length(el))}
+          {open, acc} = visit_candidate(el, path, sub, open, acc)
+          {open, trie, acc}
 
         _ when open != [] and (elem(st, 6) > 0 or elem(st, 7) > 0) ->
-          {open, acc} = sums(children, 0, [], open, acc)
+          {open, acc} = collect_densities(children, 0, [], open, acc)
           {open, trie, acc}
 
         # no <a> with text or a `#` href below (the others would add 0)
@@ -191,14 +174,35 @@ defmodule Readability.Grab.Score do
           {open, trie, acc}
       end
 
-    sums(rest, i + 1, trie, open, acc)
+    collect_densities(rest, i + 1, trie, open, acc)
+  end
+
+  defp visit_candidate({_, _, children, st} = el, path, sub, open, acc) do
+    if hash_links_below?(el) do
+      {[{^path, sum} | open], acc} = collect_densities(children, 0, sub, [{path, 0} | open], acc)
+      {open, Map.put(acc, path, sum / DOM.inner_text_length(el))}
+    else
+      acc = Map.put(acc, path, DOM.link_density(el))
+
+      if sub != [] or (open != [] and (elem(st, 6) > 0 or elem(st, 7) > 0)),
+        do: collect_densities(children, 0, sub, open, acc),
+        else: {open, acc}
+    end
   end
 
   defp add_link(open, {_, attrs, _, _} = a) do
-    length = DOM.inner_text_length(a)
-    term = if Text.hash_url?(DOM.attr_value(attrs, "href")), do: length * 0.3, else: length
-    for {path, sum} <- open, do: {path, sum + term}
+    case DOM.inner_text_length(a) do
+      0 ->
+        open
+
+      length ->
+        term = if Text.hash_url?(DOM.attr_value(attrs, "href")), do: length * 0.3, else: length
+        add_term(open, term)
+    end
   end
+
+  defp add_term([], _term), do: []
+  defp add_term([{path, sum} | rest], term), do: [{path, sum + term} | add_term(rest, term)]
 
   # Inserts before the first entry it beats strictly (`score > top[t].score`), or at the end; at
   # most `n` entries are kept (`top` never has more).
