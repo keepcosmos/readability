@@ -82,12 +82,12 @@ rendering content from untrusted pages.
   rules; if every attempt is short, the longest one is returned.
 - `:max_depth` (1000) - give up on HTML whose elements nest deeper than this (parsing time is
   quadratic in the depth); `:infinity` for no limit.
-- `:spawn` (true) - do the work in a short-lived linked process, which keeps garbage
-  collection out of the way and releases the memory at once; `false` runs in the caller. HTML
-  up to 2 MB gets a heap preallocated at one word per byte (16 MB at most per call); larger HTML
-  starts with the default heap. Results, exceptions and exits are passed on to the caller, and
-  the caller's `:max_heap_size` applies to the process, but its `$callers` and Logger metadata
-  don't.
+- `:spawn` (false) - do the work in a short-lived linked process, which keeps garbage
+  collection out of the way and releases the memory at once (about a fifth faster on typical
+  pages). HTML up to 2 MB gets a heap preallocated at two words per byte (16 MB at most per
+  call); larger HTML starts with the default heap. Results, exceptions and exits are passed on
+  to the caller, and the caller's `:max_heap_size` applies to the process, but its `$callers`
+  and Logger metadata don't.
 - `:char_threshold` (500), `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
   `:classes_to_preserve` ([]), `:keep_classes` (false), `:disable_json_ld` (false),
   `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See the

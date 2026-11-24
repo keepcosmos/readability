@@ -43,13 +43,13 @@ defmodule Bench.Spec do
     [
       %{
         name: "local",
-        description: "This checkout",
+        description: "This checkout (default options: everything in the calling Benchee process)",
         deps: [{:readability, path: @repo_root}],
         apps: [:readability, :lazy_html]
       },
       %{
-        name: "local-inline",
-        description: "This checkout with `spawn: false`: everything in the calling (Benchee) process",
+        name: "local-spawn",
+        description: "This checkout with `spawn: true`: the work runs in a short-lived process with a pre-sized heap",
         deps: [{:readability, path: @repo_root}],
         apps: [:readability, :lazy_html]
       },
@@ -279,8 +279,8 @@ defmodule Bench.Worker do
     end
   end
 
-  defp job("local-inline"),
-    do: fn html -> Readability.article(html, url: "http://fakehost/test/page.html", spawn: false) end
+  defp job("local-spawn"),
+    do: fn html -> Readability.article(html, url: "http://fakehost/test/page.html", spawn: true) end
 
   defp job("hex"), do: &legacy_job/1
   defp job("parse-only"), do: fn html -> html |> LazyHTML.from_document() |> LazyHTML.to_tree() end
@@ -355,7 +355,7 @@ defmodule Bench.Report do
     - Machine: #{env.cpu || "unknown CPU"}, #{env.logical_cpus} logical CPUs, #{env.os}
     - Elixir #{env.elixir}, Erlang/OTP #{env.otp}#{if env.jit, do: " (JIT)", else: ""}
     - Benchee per row: #{env.benchee.warmup} s warmup, #{env.benchee.time} s run time, #{env.benchee.memory_time} s memory. Each target runs in its own BEAM, #{env.rounds} rounds, best median wins.#{if env.quick, do: "\n- **Quick run: don't compare these numbers.**", else: ""}
-    - Memory is what Benchee measures on the calling process's heap, so it leaves out memory the LazyHTML NIF allocates, and, for `local`, the worker process `article/2` spawns (see `local-inline` for that).
+    - Memory is what Benchee measures on the calling process's heap, so it leaves out memory the LazyHTML NIF allocates, and, for `local-spawn`, the worker process `article/2` spawns (`local` shows it).
 
     ## Targets
 

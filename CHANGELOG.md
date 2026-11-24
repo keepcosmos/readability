@@ -51,9 +51,9 @@ A rewrite: Readability is now a port of Mozilla's
 - HTML nested deeper than the `:max_depth` option (1000 levels by default) is rejected while
   parsing, with `{:error, :too_deep}` from `Readability.article/2` and `false` from
   `Readability.readerable?/2`: parsing time grows quadratically with the depth.
-- `Readability.article/2` works in a short-lived process (option `:spawn`, on by default) whose
-  heap is sized for pages up to 2 MB (16 MB at most), which keeps garbage collection out of the
-  way.
+- `Readability.article/2` can work in a short-lived process (option `:spawn`, off by default)
+  whose heap is sized for pages up to 2 MB (16 MB at most), which keeps garbage collection out of
+  the way.
 - Benchmarks (`benchmarks/benchmark.exs`) against 0.x and the cost of parsing alone.
 
 ### Fixed

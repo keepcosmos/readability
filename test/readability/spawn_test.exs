@@ -5,19 +5,19 @@ defmodule Readability.SpawnTest do
   @html "<html><body><article><p>#{String.duplicate("Some text here. ", 40)}</p></article></body></html>"
 
   test "the result is the same either way" do
-    assert Readability.article(@html) == Readability.article(@html, spawn: false)
-    assert Readability.article("<html></html>") == {:error, :not_readable}
+    assert Readability.article(@html, spawn: true) == Readability.article(@html, spawn: false)
+    assert Readability.article("<html></html>", spawn: true) == {:error, :not_readable}
   end
 
   test "exceptions are re-raised in the caller" do
-    assert_raise FunctionClauseError, fn -> Readability.article(:not_html) end
-    assert_raise Readability.Error, fn -> Readability.article!("<html></html>") end
+    assert_raise FunctionClauseError, fn -> Readability.article(:not_html, spawn: true) end
+    assert_raise Readability.Error, fn -> Readability.article!("<html></html>", spawn: true) end
   end
 
   test "a caller trapping exits gets no messages" do
     Process.flag(:trap_exit, true)
-    assert {:ok, _} = Readability.article(@html)
-    assert_raise FunctionClauseError, fn -> Readability.article(:not_html) end
+    assert {:ok, _} = Readability.article(@html, spawn: true)
+    assert_raise FunctionClauseError, fn -> Readability.article(:not_html, spawn: true) end
     refute_receive _, 50
   end
 
@@ -27,7 +27,7 @@ defmodule Readability.SpawnTest do
     {pid, ref} =
       spawn_monitor(fn ->
         Process.flag(:max_heap_size, %{size: 200_000, kill: true, error_logger: false})
-        Readability.article(html)
+        Readability.article(html, spawn: true)
       end)
 
     assert_receive {:DOWN, ^ref, :process, ^pid, :killed}, 5000
@@ -40,7 +40,7 @@ defmodule Readability.SpawnTest do
       spawn_monitor(fn ->
         Process.flag(:trap_exit, true)
         Process.flag(:max_heap_size, %{size: 200_000, kill: true, error_logger: false})
-        result = catch_exit(Readability.article(html))
+        result = catch_exit(Readability.article(html, spawn: true))
         Process.flag(:max_heap_size, 0)
         exit({result, Process.info(self(), :messages)})
       end)
@@ -80,7 +80,7 @@ defmodule Readability.SpawnTest do
 
     test "large HTML still works" do
       html = "<html><body><!--" <> String.duplicate("x", 3 * 1024 * 1024) <> "--></body></html>"
-      assert Readability.article(html) == {:error, :not_readable}
+      assert Readability.article(html, spawn: true) == {:error, :not_readable}
     end
   end
 end

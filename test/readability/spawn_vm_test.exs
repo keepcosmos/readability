@@ -7,7 +7,7 @@ defmodule Readability.SpawnVMTest do
     old = :erlang.system_flag(:max_heap_size, %{size: 100_000, kill: false, error_logger: false})
 
     try do
-      assert {:ok, _} = Readability.article(html)
+      assert {:ok, _} = Readability.article(html, spawn: true)
     after
       :erlang.system_flag(:max_heap_size, old)
     end
