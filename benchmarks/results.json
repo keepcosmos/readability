@@ -6,9 +6,9 @@
       "time": 5,
       "warmup": 2
     },
-    "commit": "a0ab4bdf290528ab7fb8bc37684a5c1558bb4bdd",
+    "commit": "661f2c3e8ad70388c799d1d57ee9f80d73b864c1",
     "cpu": "Apple M1 Pro",
-    "date": "2026-11-22 22:33 UTC",
+    "date": "2026-11-24 13:52 UTC",
     "elixir": "1.20.4",
     "jit": true,
     "lib_dirty": false,
@@ -43,140 +43,140 @@
       "corpus": {
         "errors": 0,
         "pages": 130,
-        "total_ms": 290
+        "total_ms": 360
       },
-      "description": "This checkout",
+      "description": "This checkout (default options: everything in the calling Benchee process)",
       "name": "local",
       "rows": [
         {
-          "deviation_pct": 25.653246364646044,
+          "deviation_pct": 52.54011479315237,
           "input": "small",
-          "ips": 755.7022399369134,
-          "median_ns": 1285958.0,
-          "memory_bytes": 7056.0,
-          "p99_ns": 1614308.7199999979,
-          "reductions": 1055.0,
-          "sample_size": 3777,
+          "ips": 701.6457415066644,
+          "median_ns": 1322104.5,
+          "memory_bytes": 827008.0,
+          "p99_ns": 3932758.619999995,
+          "reductions": 177342.0,
+          "sample_size": 3506,
           "status": "ok"
         },
         {
-          "deviation_pct": 15.817698014254377,
+          "deviation_pct": 25.212444916594468,
           "input": "medium",
-          "ips": 382.9874376751034,
-          "median_ns": 2529292.0,
-          "memory_bytes": 6728.0,
-          "p99_ns": 3124143.139999995,
-          "reductions": 1054.0,
-          "sample_size": 1913,
+          "ips": 323.00611444114514,
+          "median_ns": 3038666.0,
+          "memory_bytes": 1417504.0,
+          "p99_ns": 4007018.1599999964,
+          "reductions": 267514.0,
+          "sample_size": 1615,
           "status": "ok"
         },
         {
-          "deviation_pct": 11.60567724624245,
+          "deviation_pct": 9.481369931009272,
           "input": "large",
-          "ips": 244.04836745784974,
-          "median_ns": 3982437.5,
-          "memory_bytes": 6728.0,
-          "p99_ns": 5322425.5,
-          "reductions": 1048.0,
-          "sample_size": 1220,
+          "ips": 221.8938955113551,
+          "median_ns": 4425333.0,
+          "memory_bytes": 1332472.0,
+          "p99_ns": 6288174.400000005,
+          "reductions": 443303.0,
+          "sample_size": 1109,
           "status": "ok"
         }
       ],
       "status": "ok",
       "versions": {
-        "lazy_html": "0.1.14",
-        "readability": "1.0.0-dev"
+        "lazy_html": "0.1.15",
+        "readability": "1.0.0-rc.1"
       }
     },
     {
       "corpus": {
         "errors": 0,
         "pages": 130,
-        "total_ms": 353
+        "total_ms": 265
       },
-      "description": "This checkout with `spawn: false`: everything in the calling (Benchee) process",
-      "name": "local-inline",
+      "description": "This checkout with `spawn: true`: the work runs in a short-lived process with a pre-sized heap",
+      "name": "local-spawn",
       "rows": [
         {
-          "deviation_pct": 29.74357840907545,
+          "deviation_pct": 70.09824011553599,
           "input": "small",
-          "ips": 662.9426234871892,
-          "median_ns": 1393750.0,
-          "memory_bytes": 1209392.0,
-          "p99_ns": 2377695.649999999,
-          "reductions": 217541.0,
-          "sample_size": 3314,
+          "ips": 862.2375265577756,
+          "median_ns": 1048562.5,
+          "memory_bytes": 6920.0,
+          "p99_ns": 4263666.659999987,
+          "reductions": 1069.0,
+          "sample_size": 4300,
           "status": "ok"
         },
         {
-          "deviation_pct": 13.111466951472165,
+          "deviation_pct": 18.030151520063566,
           "input": "medium",
-          "ips": 313.3454692400173,
-          "median_ns": 3094666.0,
-          "memory_bytes": 1639872.0,
-          "p99_ns": 3988512.88,
-          "reductions": 292810.0,
-          "sample_size": 1567,
+          "ips": 390.008588995668,
+          "median_ns": 2473750.0,
+          "memory_bytes": 6920.0,
+          "p99_ns": 3880375.0,
+          "reductions": 1069.0,
+          "sample_size": 1949,
           "status": "ok"
         },
         {
-          "deviation_pct": 12.422504447508805,
+          "deviation_pct": 26.56365699900712,
           "input": "large",
-          "ips": 180.47929346325955,
-          "median_ns": 5526875.0,
-          "memory_bytes": 2302312.0,
-          "p99_ns": 7551483.040000009,
-          "reductions": 545843.0,
-          "sample_size": 903,
+          "ips": 230.07123571432956,
+          "median_ns": 4093395.5,
+          "memory_bytes": 6920.0,
+          "p99_ns": 10576765.000000004,
+          "reductions": 1068.0,
+          "sample_size": 1150,
           "status": "ok"
         }
       ],
       "status": "ok",
       "versions": {
-        "lazy_html": "0.1.14",
-        "readability": "1.0.0-dev"
+        "lazy_html": "0.1.15",
+        "readability": "1.0.0-rc.1"
       }
     },
     {
       "corpus": {
         "errors": 0,
         "pages": 130,
-        "total_ms": 4490
+        "total_ms": 4485
       },
       "description": "Latest 0.x release on Hex (Floki + mochiweb parser)",
       "name": "hex",
       "rows": [
         {
-          "deviation_pct": 6.398492565161298,
+          "deviation_pct": 12.714736524226868,
           "input": "small",
-          "ips": 159.87502562851617,
-          "median_ns": 6223791.5,
+          "ips": 152.98157535800863,
+          "median_ns": 6446250.0,
           "memory_bytes": 20796480.0,
-          "p99_ns": 7900905.75,
+          "p99_ns": 10547839.780000003,
           "reductions": 823356.0,
-          "sample_size": 800,
+          "sample_size": 765,
           "status": "ok"
         },
         {
-          "deviation_pct": 4.571393645973466,
+          "deviation_pct": 6.470316985758427,
           "input": "medium",
-          "ips": 24.64979012451061,
-          "median_ns": 40347646.0,
+          "ips": 24.439513355585742,
+          "median_ns": 40589083.0,
           "memory_bytes": 50705984.0,
-          "p99_ns": 46282781.25,
+          "p99_ns": 58016726.08000009,
           "reductions": 2348269.0,
-          "sample_size": 124,
+          "sample_size": 123,
           "status": "ok"
         },
         {
-          "deviation_pct": 3.945131283589983,
+          "deviation_pct": 13.406991208386343,
           "input": "large",
-          "ips": 10.47613523900258,
-          "median_ns": 95701917.0,
+          "ips": 9.717764074552843,
+          "median_ns": 99117083.0,
           "memory_bytes": 200555624.0,
-          "p99_ns": 101036333.0,
+          "p99_ns": 171592167.0,
           "reductions": 5754920.0,
-          "sample_size": 53,
+          "sample_size": 49,
           "status": "ok"
         }
       ],
@@ -190,42 +190,42 @@
       "corpus": {
         "errors": 0,
         "pages": 130,
-        "total_ms": 124
+        "total_ms": 135
       },
       "description": "LazyHTML.from_document + to_tree, the floor for any LazyHTML-based version",
       "name": "parse-only",
       "rows": [
         {
-          "deviation_pct": 125.3974471498704,
+          "deviation_pct": 62.537764184429456,
           "input": "small",
-          "ips": 2679.723664401366,
-          "median_ns": 325833.0,
+          "ips": 3009.1971694442555,
+          "median_ns": 311750.0,
           "memory_bytes": 1608.0,
-          "p99_ns": 919612.5200000001,
+          "p99_ns": 555484.5000000001,
           "reductions": 2231.0,
-          "sample_size": 12505,
+          "sample_size": 15022,
           "status": "ok"
         },
         {
-          "deviation_pct": 30.29100555162151,
+          "deviation_pct": 41.18070738782521,
           "input": "medium",
-          "ips": 677.4700107270666,
-          "median_ns": 1.343e6,
+          "ips": 598.0921002165286,
+          "median_ns": 1476083.0,
           "memory_bytes": 1608.0,
-          "p99_ns": 2167150.0000000014,
-          "reductions": 6164.0,
-          "sample_size": 3155,
+          "p99_ns": 3985123.9599999934,
+          "reductions": 6212.0,
+          "sample_size": 2987,
           "status": "ok"
         },
         {
-          "deviation_pct": 15.523387699888913,
+          "deviation_pct": 23.79478031424033,
           "input": "large",
-          "ips": 455.5934453771014,
-          "median_ns": 2225063.0,
+          "ips": 419.01844302993516,
+          "median_ns": 2292812.5,
           "memory_bytes": 1608.0,
-          "p99_ns": 2741368.860000001,
-          "reductions": 9170.0,
-          "sample_size": 2278,
+          "p99_ns": 4069949.400000002,
+          "reductions": 9164.0,
+          "sample_size": 2094,
           "status": "ok"
         }
       ],
@@ -236,42 +236,42 @@
       "corpus": {
         "errors": 0,
         "pages": 130,
-        "total_ms": 690
+        "total_ms": 709
       },
       "description": "Readability.js (the version this ports) on JSDOMParser under Node, JSDOMParser's parse included; not Benchee: same budget, own timing",
       "name": "readability-js",
       "rows": [
         {
-          "deviation_pct": 9.654412126224074,
+          "deviation_pct": 30.234464216264612,
           "input": "small",
-          "ips": 504.8432733479556,
-          "median_ns": 1923792,
+          "ips": 471.5030307809901,
+          "median_ns": 1992292,
           "memory_bytes": null,
-          "p99_ns": 2592750,
+          "p99_ns": 4809625,
           "reductions": null,
-          "sample_size": 2524,
+          "sample_size": 2358,
           "status": "ok"
         },
         {
-          "deviation_pct": 18.05758840320633,
+          "deviation_pct": 25.593360703754637,
           "input": "medium",
-          "ips": 160.89461615023052,
-          "median_ns": 5804458,
+          "ips": 159.19754676580433,
+          "median_ns": 5804417,
           "memory_bytes": null,
-          "p99_ns": 12397666,
+          "p99_ns": 12413584,
           "reductions": null,
-          "sample_size": 805,
+          "sample_size": 796,
           "status": "ok"
         },
         {
-          "deviation_pct": 13.619824066929802,
+          "deviation_pct": 16.549945890379934,
           "input": "large",
-          "ips": 182.67805545621687,
-          "median_ns": 5209208,
+          "ips": 180.69861239380754,
+          "median_ns": 5239125,
           "memory_bytes": null,
-          "p99_ns": 9144833,
+          "p99_ns": 9193666,
           "reductions": null,
-          "sample_size": 914,
+          "sample_size": 904,
           "status": "ok"
         }
       ],
