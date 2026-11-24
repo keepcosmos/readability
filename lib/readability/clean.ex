@@ -51,10 +51,14 @@ defmodule Readability.Clean do
 
     {article, present} = first_pass(article)
 
+    article =
+      article
+      |> clean_conditionally("form", present, cc)
+      |> clean_conditionally("fieldset", present, cc)
+
+    {article, present} = clean_junk(article, video, weight?)
+
     article
-    |> clean_conditionally("form", present, cc)
-    |> clean_conditionally("fieldset", present, cc)
-    |> clean_junk(video, weight?)
     |> clean_conditionally("table", present, cc)
     |> clean_conditionally("ul", present, cc)
     |> clean_conditionally("div", present, cc)
@@ -294,10 +298,14 @@ defmodule Readability.Clean do
   defp copy_lazy_attr(tag, {_, value}, acc), do: copy_lazy_value(tag, lazy_target(value), value, acc)
 
   defp lazy_target(value) do
-    cond do
-      Matchers.lazy_srcset?(value) -> "srcset"
-      Matchers.lazy_src?(value) -> "src"
-      true -> nil
+    if :binary.match(value, ".") == :nomatch do
+      nil
+    else
+      cond do
+        Matchers.lazy_srcset?(value) -> "srcset"
+        Matchers.lazy_src?(value) -> "src"
+        true -> nil
+      end
     end
   end
 
@@ -319,16 +327,53 @@ defmodule Readability.Clean do
   # Pass B: _clean, _cleanMatchedNodes, _cleanHeaders
   # ---------------------------------------------------------------------------------------------
 
-  defp clean_junk(article, video, weight?) do
-    {article, nil} =
-      DOM.remove_preorder(article, nil, fn el, anc, nil ->
-        if junk?(el, video) or share_element?(el, anc, video) or late_junk?(el, video, weight?),
-          do: {:remove, nil},
-          else: {:cont, nil}
-      end)
-
-    article
+  # Direct pre-order removal: avoids allocating ancestor frame lists (only needs `top_level?`)
+  # and tracks which of table/ul/div survive for the subsequent `_cleanConditionally` passes.
+  defp clean_junk({_, _, children, _} = article, video, weight?) do
+    case junk_list(children, true, video, weight?, 0) do
+      {:same, present} -> {article, present}
+      {kids, present} -> {DOM.put_children(article, kids), present}
+    end
   end
+
+  defp junk_list([], _top?, _video, _weight?, present), do: {:same, present}
+
+  defp junk_list([text | rest], top?, video, weight?, present) when is_binary(text) do
+    case junk_list(rest, top?, video, weight?, present) do
+      {:same, _} = same -> same
+      {rest2, present} -> {[text | rest2], present}
+    end
+  end
+
+  defp junk_list([el | rest] = list, top?, video, weight?, present) do
+    {node, present} = junk_node(el, top?, video, weight?, present)
+    {rest2, present} = junk_list(rest, top?, video, weight?, present)
+    {DOM.splice(node, rest2, list), present}
+  end
+
+  defp junk_node({tag, _, children, _} = el, top?, video, weight?, present) do
+    if junk?(el, video) or share_element?(el, top?, video) or late_junk?(el, video, weight?) do
+      {:removed, present}
+    else
+      present = present ||| late_tag_bit(tag)
+      junk_children(el, children, video, weight?, present)
+    end
+  end
+
+  defp junk_children(_el, [], _video, _weight?, present), do: {:same, present}
+  defp junk_children(_el, [text], _video, _weight?, present) when is_binary(text), do: {:same, present}
+
+  defp junk_children(el, children, video, weight?, present) do
+    case junk_list(children, false, video, weight?, present) do
+      {:same, _} = same -> same
+      {kids, present} -> {DOM.put_children(el, kids), present}
+    end
+  end
+
+  defp late_tag_bit("table"), do: 4
+  defp late_tag_bit("ul"), do: 8
+  defp late_tag_bit("div"), do: 16
+  defp late_tag_bit(_), do: 0
 
   # _clean(e, "object" | "embed" | "footer" | "link" | "aside")
   defp junk?({tag, attrs, _, _}, video) do
@@ -369,15 +414,20 @@ defmodule Readability.Clean do
   # _cleanMatchedNodes(topCandidate, filter) for each child of the article: descendants (not the
   # article's children themselves) with "share" in class/id and fewer than 500 characters of
   # `textContent`, measured as after the first `_clean` group.
-  defp share_element?(_top_candidate, [_article], _video), do: false
+  defp share_element?(_top_candidate, true, _video), do: false
+  defp share_element?({_, [], _, _}, false, _video), do: false
 
-  defp share_element?(el, _anc, video) do
-    class = DOM.attr(el, "class")
-    id = DOM.attr(el, "id")
+  defp share_element?({_, attrs, _, _} = el, false, video) do
+    {class, id} = class_and_id(attrs, nil, nil)
 
     (has_share?(class) or has_share?(id)) and Matchers.share_element?(class, id) and
       share_text_length(el, video) < @share_threshold
   end
+
+  defp class_and_id([], class, id), do: {class, id}
+  defp class_and_id([{"class", v} | rest], nil, id), do: class_and_id(rest, v, id)
+  defp class_and_id([{"id", v} | rest], class, nil), do: class_and_id(rest, class, v)
+  defp class_and_id([_ | rest], class, id), do: class_and_id(rest, class, id)
 
   # Prefilter: "share" in any ASCII case.
   defp has_share?(nil), do: false

@@ -190,6 +190,8 @@ defmodule Readability.Matchers do
   defp lazy_src_scan(<<".jpeg", r::binary>>, _), do: lazy_src_scan(r, true)
   defp lazy_src_scan(<<".png", r::binary>>, _), do: lazy_src_scan(r, true)
   defp lazy_src_scan(<<".webp", r::binary>>, _), do: lazy_src_scan(r, true)
+  defp lazy_src_scan(<<c, r::binary>>, found) when c > 32 and c < 128, do: lazy_src_scan(r, found)
+  defp lazy_src_scan(<<c, r::binary>>, found) when c == 32 or (c >= 9 and c <= 13), do: found and Text.blank?(r)
   defp lazy_src_scan(<<>>, found), do: found
 
   defp lazy_src_scan(s, found) do
@@ -199,7 +201,7 @@ defmodule Readability.Matchers do
         lazy_src_scan(r, found)
 
       _ ->
-        found and skip_ws(s) |> elem(1) == ""
+        found and Text.blank?(s)
     end
   end
 
@@ -346,6 +348,10 @@ defmodule Readability.Matchers do
 
   # {number of whitespace characters skipped, rest}
   defp skip_ws(s), do: skip_ws(s, 0)
+
+  defp skip_ws(<<c, r::binary>>, n) when c == 32 or (c >= 9 and c <= 13), do: skip_ws(r, n + 1)
+  defp skip_ws(<<c, _::binary>> = s, n) when c < 128, do: {n, s}
+  defp skip_ws(<<>>, n), do: {n, <<>>}
 
   defp skip_ws(s, n) do
     case ws_size(s) do
