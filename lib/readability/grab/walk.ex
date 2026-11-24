@@ -69,6 +69,17 @@ defmodule Readability.Grab.Walk do
   defp below(el, [el | below]), do: below
   defp below(_el, _text_path), do: nil
 
+  # Fast path for attribute-less elements: never hidden, never a byline, never unlikely.
+  defp visit({tag, [], _, _} = el, anc, path, acc, cfg, text_path) do
+    acc = if tag == "html", do: %{acc | lang: nil}, else: acc
+
+    if acc.title_header? and header_duplicates_title?(el, cfg.title) do
+      {:removed, %{acc | title_header?: false}}
+    else
+      visit_kept(el, anc, path, acc, cfg, text_path)
+    end
+  end
+
   # One iteration of the `while (node)` loop, in the JS order of checks. `text_path`: the part of
   # the text path below `el` (see `walk_list/8`) or nil.
   defp visit({tag, attrs, _, _} = el, anc, path, acc, cfg, text_path) do
@@ -110,28 +121,35 @@ defmodule Readability.Grab.Walk do
   # Turns a DIV into a P (or replaces it by its single P child) where JS does, after wrapping its
   # phrasing content into paragraphs. Either way the resulting P is pushed to elementsToScore and
   # the walk continues with its children; the replacing P child is not checked itself.
-  defp div(attrs, children, anc, path, acc, cfg, text_path) do
-    div = DOM.raw("div", attrs, children)
+  # Note: `wrap_phrasing/1` wraps all non-whitespace phrasing nodes (including every text node)
+  # into `<p>` elements and drops stray whitespace, so `children` contains only elements here.
+  defp div(attrs, [], anc, path, acc, cfg, text_path),
+    do: descend("p", attrs, [], anc, path, acc, cfg, text_path)
 
-    case DOM.single_tag_inside(div, "p") do
-      {_, p_attrs, p_children, _} = p ->
-        if DOM.link_density(div) < 0.25,
-          do: descend("p", p_attrs, p_children, anc, path, acc, cfg, known(below(p, text_path))),
-          else: div_or_p(div, p, anc, path, acc, cfg, text_path)
-
-      nil ->
-        div_or_p(div, nil, anc, path, acc, cfg, text_path)
-    end
+  defp div(attrs, [{"p", p_attrs, p_children, _} = p] = children, anc, path, acc, cfg, text_path) do
+    if DOM.link_density(p) < 0.25,
+      do: descend("p", p_attrs, p_children, anc, path, acc, cfg, known(below(p, text_path))),
+      else: descend("div", attrs, children, anc, path, acc, cfg, text_path)
   end
 
-  defp div_or_p({_, attrs, children, _} = div, _p, anc, path, acc, cfg, text_path) do
-    if DOM.child_block?(div),
+  defp div(attrs, children, anc, path, acc, cfg, text_path) do
+    if DOM.child_block?(DOM.raw("div", attrs, children)),
       do: descend("div", attrs, children, anc, path, acc, cfg, text_path),
       else: descend("p", attrs, children, anc, path, acc, cfg, text_path)
   end
 
   # Visits the children and rebuilds the element. One of DEFAULT_TAGS_TO_SCORE is pushed to
   # elementsToScore (at its pre-order position, `seq`).
+  defp descend(tag, attrs, [], anc, path, acc, _cfg, _text_path) do
+    node = DOM.el(tag, attrs, [])
+    {node, record_score(tag, path, anc, node, acc)}
+  end
+
+  defp descend(tag, attrs, [text] = children, anc, path, acc, _cfg, _text_path) when is_binary(text) do
+    node = DOM.el(tag, attrs, children)
+    {node, record_score(tag, path, anc, node, acc)}
+  end
+
   defp descend(tag, attrs, children, anc, path, acc, cfg, text_path) do
     score? = score_tag?(tag)
     seq = acc.seq
@@ -142,6 +160,12 @@ defmodule Readability.Grab.Walk do
     {node, acc}
   end
 
+  defp record_score(tag, path, anc, node, acc) do
+    if score_tag?(tag),
+      do: %{acc | seq: acc.seq + 1, to_score: [{acc.seq, path, anc, node} | acc.to_score]},
+      else: acc
+  end
+
   # ---------------------------------------------------------------------------------------------
   # The attributes the walk reads, in one pass, as `{class, id, style, hidden, aria-hidden,
   # aria-modal, role, rel, itemprop}` (`nil` when missing; the first occurrence wins, like
@@ -150,7 +174,6 @@ defmodule Readability.Grab.Walk do
 
   @no_attrs {nil, nil, nil, nil, nil, nil, nil, nil, nil}
 
-  defp scan_attrs([]), do: @no_attrs
   defp scan_attrs(attrs), do: scan_attrs(attrs, @no_attrs)
 
   defp scan_attrs([], info), do: info
@@ -302,17 +325,20 @@ defmodule Readability.Grab.Walk do
 
   defp wrap_phrasing([]), do: []
 
-  defp wrap_phrasing([node | rest]) do
-    if DOM.phrasing?(node) do
-      {run, rest} = take_phrasing(rest, [node])
+  # Leading whitespace text or `<br>` at the start of a phrasing run is always trimmed away.
+  defp wrap_phrasing([text | rest]) when is_binary(text) do
+    if Text.blank?(text), do: wrap_phrasing(rest), else: wrap_phrasing_run(text, rest)
+  end
 
-      case run |> drop_whitespace() |> :lists.reverse() |> drop_whitespace() do
-        [] -> wrap_phrasing(rest)
-        run -> [DOM.raw("p", [], run) | wrap_phrasing(rest)]
-      end
-    else
-      [node | wrap_phrasing(rest)]
-    end
+  defp wrap_phrasing([{"br", _, _, _} | rest]), do: wrap_phrasing(rest)
+
+  defp wrap_phrasing([node | rest]) do
+    if DOM.phrasing?(node), do: wrap_phrasing_run(node, rest), else: [node | wrap_phrasing(rest)]
+  end
+
+  defp wrap_phrasing_run(first, rest) do
+    {run, rest} = take_phrasing(rest, [first])
+    [DOM.raw("p", [], run |> drop_whitespace() |> :lists.reverse()) | wrap_phrasing(rest)]
   end
 
   # Returns the run reversed.
