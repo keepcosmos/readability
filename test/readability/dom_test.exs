@@ -2,6 +2,8 @@ defmodule Readability.DOMTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
+  require Readability.DOM
+
   alias Readability.DOM
   alias Readability.Test.DOMGen
 
@@ -20,14 +22,14 @@ defmodule Readability.DOMTest do
   describe "el/3 and stats" do
     test "stats aggregate text, commas and links" do
       div = DOM.with_stats(parse1(~s(<div> a, b <a href="x">link</a><a href="#h">h</a>\uFF0C</div>)))
-      assert {nw, _runs, 1, 0, 1, 1, 4, 1} = elem(div, 3)
+      assert DOM.stats(nonws: nw, lead: 1, trail: 0, commas: 1, xcommas: 1, link_len: 4, hash_links: 1) = elem(div, 3)
       assert nw == byte_size("ab,linkh") + 1
       assert DOM.verify!(div) == div
     end
 
     test "el/3 upgrades children without stats" do
       el = DOM.el("div", [], [DOM.raw("p", [], ["x ", DOM.raw("b", [], ["y"])]), " z"])
-      assert {"div", [], [{"p", [], ["x ", {"b", [], ["y"], {1, 0, 0, 0, 0, 0, 0, 0}}], _}, " z"], _} = el
+      assert {"div", [], [{"p", [], ["x ", {"b", [], ["y"], DOM.stats(nonws: 1)}], _}, " z"], _} = el
       DOM.verify!(el)
     end
 
@@ -48,11 +50,11 @@ defmodule Readability.DOMTest do
 
     test "put_attrs/2 and put_tag/2 keep stats, recomputing around <a>" do
       a = DOM.el("a", [{"href", "x"}], ["abc"])
-      assert {_, _, _, {3, 0, 0, 0, 0, 0, 3, 0}} = a
-      assert {_, _, _, {3, 0, 0, 0, 0, 0, 0, 1}} = DOM.put_attrs(a, [{"href", "#x"}])
-      assert {_, _, _, {3, 0, 0, 0, 0, 0, 3, 0}} = DOM.put_attr(a, "class", "c")
-      assert {_, _, _, {3, 0, 0, 0, 0, 0, 0, 0}} = DOM.put_tag(a, "span")
-      assert {_, _, _, {3, 0, 0, 0, 0, 0, 3, 0}} = DOM.put_tag(DOM.put_tag(a, "span"), "a")
+      assert {_, _, _, DOM.stats(nonws: 3, link_len: 3, hash_links: 0)} = a
+      assert {_, _, _, DOM.stats(nonws: 3, link_len: 0, hash_links: 1)} = DOM.put_attrs(a, [{"href", "#x"}])
+      assert {_, _, _, DOM.stats(nonws: 3, link_len: 3, hash_links: 0)} = DOM.put_attr(a, "class", "c")
+      assert {_, _, _, DOM.stats(nonws: 3, link_len: 0, hash_links: 0)} = DOM.put_tag(a, "span")
+      assert {_, _, _, DOM.stats(nonws: 3, link_len: 3, hash_links: 0)} = DOM.put_tag(DOM.put_tag(a, "span"), "a")
       assert same?(DOM.put_tag(a, "a"), a)
       assert same?(DOM.delete_attr(a, "nope"), a)
       assert DOM.delete_attr(a, "href") |> DOM.attr("href") == nil

@@ -7,6 +7,8 @@ defmodule Readability.Grab.Score do
   # operations happen in the JS order: contributions in document order, `score / divider`,
   # `score * (1 - linkDensity)` (design §4.2).
 
+  require Readability.DOM
+
   alias Readability.{DOM, Flags, Matchers, Text}
   alias Readability.Grab.Walk
 
@@ -124,8 +126,11 @@ defmodule Readability.Grab.Score do
     densities
   end
 
+  # An `<a>` with text or a `#` href below (or the element itself is one).
+  defguardp links_below?(st) when DOM.stats(st, :link_len) > 0 or DOM.stats(st, :hash_links) > 0
+
   # `#` links among the descendants, and some text (the density of an empty element is 0).
-  defp hash_links_below?({tag, attrs, _, {nw, _, _, _, _, _, _, hash_links}}) do
+  defp hash_links_below?({tag, attrs, _, DOM.stats(nonws: nw, hash_links: hash_links)}) do
     own = if tag == "a" and Text.hash_url?(DOM.attr_value(attrs, "href")), do: 1, else: 0
     nw > 0 and hash_links - own > 0
   end
@@ -165,7 +170,7 @@ defmodule Readability.Grab.Score do
           {open, acc} = visit_candidate(el, path, sub, open, acc)
           {open, trie, acc}
 
-        _ when open != [] and (elem(st, 6) > 0 or elem(st, 7) > 0) ->
+        _ when open != [] and links_below?(st) ->
           {open, acc} = collect_densities(children, 0, [], open, acc)
           {open, trie, acc}
 
@@ -184,7 +189,7 @@ defmodule Readability.Grab.Score do
     else
       acc = Map.put(acc, path, DOM.link_density(el))
 
-      if sub != [] or (open != [] and (elem(st, 6) > 0 or elem(st, 7) > 0)),
+      if sub != [] or (open != [] and links_below?(st)),
         do: collect_densities(children, 0, sub, open, acc),
         else: {open, acc}
     end

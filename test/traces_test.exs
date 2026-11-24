@@ -2,6 +2,8 @@ defmodule Readability.TracesTest do
   @moduledoc "Checks the golden-trace loader (and the traces' path convention) on every page."
   use ExUnit.Case, async: true
 
+  require Readability.DOM
+
   alias Readability.Test.Traces
 
   @moduletag :traces
@@ -68,7 +70,7 @@ defmodule Readability.TracesTest do
 
     assert message =~ "attributes differ"
 
-    assert Traces.diff_trees({"p", [], ["x"], {1, 0, 0, 0, 0, 0, 0, 0}}, {"p", [], ["x"], nil}) == :ok
+    assert Traces.diff_trees({"p", [], ["x"], Readability.DOM.stats(nonws: 1)}, {"p", [], ["x"], nil}) == :ok
   end
 
   test "diff_trees: nil equals only nil" do

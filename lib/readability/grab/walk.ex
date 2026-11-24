@@ -11,6 +11,9 @@ defmodule Readability.Grab.Walk do
   #     `{tag, attrs}` frames above the node (nearest first) and `node` the finished element;
   #   * `_articleByline` (found and removed at most once, across attempts) and `_articleLang`.
 
+  require Readability.DOM
+  require Record
+
   alias Readability.{DOM, Flags, Matchers, Text}
 
   @type entry :: {path :: [non_neg_integer()], ancestors :: [DOM.frame()], DOM.el()}
@@ -167,14 +170,16 @@ defmodule Readability.Grab.Walk do
   end
 
   # ---------------------------------------------------------------------------------------------
-  # The attributes the walk reads, in one pass, as `{class, id, style, hidden, aria-hidden,
-  # aria-modal, role, rel, itemprop}` (`nil` when missing; the first occurrence wins, like
-  # getAttribute).
+  # The attributes the walk reads, in one pass (`nil` when missing; the first occurrence wins,
+  # like getAttribute).
   # ---------------------------------------------------------------------------------------------
 
-  @no_attrs {nil, nil, nil, nil, nil, nil, nil, nil, nil}
+  @info_fields for name <- ~w(class id style hidden aria-hidden aria-modal role rel itemprop),
+                   do: {name, name |> String.replace("-", "_") |> String.to_atom()}
 
-  defp scan_attrs(attrs), do: scan_attrs(attrs, @no_attrs)
+  Record.defrecordp(:info, for({_name, field} <- @info_fields, do: {field, nil}))
+
+  defp scan_attrs(attrs), do: scan_attrs(attrs, info())
 
   defp scan_attrs([], info), do: info
 
@@ -186,8 +191,8 @@ defmodule Readability.Grab.Walk do
     end
   end
 
-  for {name, i} <- Enum.with_index(~w(class id style hidden aria-hidden aria-modal role rel itemprop)) do
-    defp attr_index(unquote(name)), do: unquote(i)
+  for {name, field} <- @info_fields do
+    defp attr_index(unquote(name)), do: info(unquote(field))
   end
 
   defp attr_index(_), do: nil
@@ -197,20 +202,20 @@ defmodule Readability.Grab.Walk do
   # ---------------------------------------------------------------------------------------------
 
   # `!_isProbablyVisible(node)`, or a modal dialog.
-  defp hidden?({_, _, _, _, _, "true", "dialog", _, _}), do: true
-  defp hidden?({_, _, _, hidden, _, _, _, _, _}) when hidden != nil, do: true
-  defp hidden?({class, _, _, _, "true", _, _, _, _}) when class == nil, do: true
+  defp hidden?(info(aria_modal: "true", role: "dialog")), do: true
+  defp hidden?(info(hidden: hidden)) when hidden != nil, do: true
+  defp hidden?(info(class: nil, aria_hidden: "true")), do: true
 
-  defp hidden?({class, _, _, _, "true", _, _, _, _} = info) do
+  defp hidden?(info(class: class, aria_hidden: "true") = info) do
     :binary.match(class, "fallback-image") == :nomatch or hidden_by_style?(info)
   end
 
   defp hidden?(info), do: hidden_by_style?(info)
 
   # JSDOMParser's `style` (design §4.2). A style without "display" and "visibility" can't hide.
-  defp hidden_by_style?({_, _, nil, _, _, _, _, _, _}), do: false
+  defp hidden_by_style?(info(style: nil)), do: false
 
-  defp hidden_by_style?({_, _, style, _, _, _, _, _, _}) do
+  defp hidden_by_style?(info(style: style)) do
     may_hide?(style) and (style_value(style, "display") == "none" or style_value(style, "visibility") == "hidden")
   end
 
@@ -244,9 +249,9 @@ defmodule Readability.Grab.Walk do
     end
   end
 
-  defp byline_like?({_, _, _, _, _, _, _, "author", _}), do: true
+  defp byline_like?(info(rel: "author")), do: true
 
-  defp byline_like?({class, id, _, _, _, _, _, _, itemprop}),
+  defp byline_like?(info(class: class, id: id, itemprop: itemprop)),
     do: contains?(itemprop, "author") or ((class != nil or id != nil) and Matchers.byline?(class, id))
 
   # Whether the text has fewer than `limit` non-whitespace UTF-16 units: a bound for
@@ -257,7 +262,7 @@ defmodule Readability.Grab.Walk do
   defp nonws_left([], limit), do: limit
   defp nonws_left([text | rest], limit) when is_binary(text), do: nonws_left(rest, limit - elem(Text.summary(text), 0))
   defp nonws_left([{_, _, children, nil} | rest], limit), do: nonws_left(rest, nonws_left(children, limit))
-  defp nonws_left([{_, _, _, stats} | rest], limit), do: nonws_left(rest, limit - elem(stats, 0))
+  defp nonws_left([{_, _, _, st} | rest], limit), do: nonws_left(rest, limit - DOM.stats(st, :nonws))
 
   defp contains?(nil, _), do: false
   defp contains?(value, part), do: :binary.match(value, part) != :nomatch
@@ -281,7 +286,7 @@ defmodule Readability.Grab.Walk do
   defp header_duplicates_title?(_el, _title), do: false
 
   # Unlikely candidates and roles (with FLAG_STRIP_UNLIKELYS).
-  defp unlikely?(tag, {class, id, _, _, _, _, role, _, _}, anc) do
+  defp unlikely?(tag, info(class: class, id: id, role: role), anc) do
     unlikely_candidate?(tag, class, id, anc) or role in @unlikely_roles
   end
 

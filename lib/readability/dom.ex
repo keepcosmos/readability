@@ -9,12 +9,12 @@ defmodule Readability.DOM do
   #     text  :: binary                                  # never merged, never normalized
   #     el    :: {tag, attrs, children, stats | nil}
   #     attrs :: [{binary, binary}]                       # plus the internal {:data_table, boolean}
-  #     stats :: {nonws, runs, lead, trail, commas, xcommas, link_len, hash_links}
+  #     stats :: stats(nonws, runs, lead, trail, commas, xcommas, link_len, hash_links)
   #
-  # `stats` aggregates the element's whole subtree (the first six fields are a
+  # `stats` (a record) aggregates the element's whole subtree. `nonws` to `xcommas` are a
   # `Readability.Text.summary/1` of its `textContent`; `link_len` is the sum of the inner-text
   # lengths of the `<a>` elements in the subtree, the element itself included, whose `href` is not
-  # a `#...` hash URL; `hash_links` counts the `<a>` elements whose `href` is one).
+  # a `#...` hash URL; `hash_links` counts the `<a>` elements whose `href` is one.
   #
   # ## Stats rules
   #
@@ -31,22 +31,30 @@ defmodule Readability.DOM do
   # Combinators pass the ancestors of the visited element as a list of `{tag, attrs}` frames,
   # nearest first, as they are at that moment (see each combinator). `has_ancestor_tag?/4` reads it.
 
-  import Bitwise
+  require Record
 
   alias Readability.Text
 
   @type tag :: binary()
   @type attrs :: [{binary() | atom(), term()}]
+  Record.defrecord(:stats, nonws: 0, runs: 0, lead: 0, trail: 0, commas: 0, xcommas: 0, link_len: 0, hash_links: 0)
+
   @type stats ::
-          {non_neg_integer(), non_neg_integer(), 0 | 1, 0 | 1, non_neg_integer(), non_neg_integer(), non_neg_integer(),
-           non_neg_integer()}
+          record(:stats,
+            nonws: non_neg_integer(),
+            runs: non_neg_integer(),
+            lead: 0 | 1,
+            trail: 0 | 1,
+            commas: non_neg_integer(),
+            xcommas: non_neg_integer(),
+            link_len: non_neg_integer(),
+            hash_links: non_neg_integer()
+          )
   @type el :: {tag(), attrs(), [node_()], stats() | nil}
   @type node_ :: el() | binary()
   @type tree :: [node_()]
   @type frame :: {tag(), attrs()}
   @type tags :: [tag()] | :all
-
-  @empty {0, 0, 0, 0, 0, 0, 0, 0}
 
   # ---------------------------------------------------------------------------------------------
   # Tag sets (compile-time generated function heads; JS lists are upper-case, ours lower-case)
@@ -172,22 +180,20 @@ defmodule Readability.DOM do
   @doc "Builds an element and computes its stats (children without stats get them first)."
   @spec el(tag(), attrs(), [node_()]) :: el()
   def el(tag, attrs, []) when is_binary(tag) and is_list(attrs),
-    do: {tag, attrs, [], finish_stats(tag, attrs, @empty)}
+    do: {tag, attrs, [], finish_stats(tag, attrs, stats())}
 
-  def el(tag, attrs, [text] = children) when is_binary(tag) and is_list(attrs) and is_binary(text) do
-    {nw, runs, lead, trail, cm, xc} = Text.summary(text)
-    {tag, attrs, children, finish_stats(tag, attrs, {nw, runs, lead, trail, cm, xc, 0, 0})}
-  end
+  def el(tag, attrs, [text] = children) when is_binary(tag) and is_list(attrs) and is_binary(text),
+    do: {tag, attrs, children, finish_stats(tag, attrs, text_stats(text))}
 
   def el(tag, attrs, [{_, _, _, st}] = children) when is_binary(tag) and is_list(attrs) and st != nil do
     {tag, attrs, children, finish_stats(tag, attrs, st)}
   end
 
   def el(tag, attrs, children) when is_binary(tag) and is_list(attrs) and is_list(children) do
-    case fold_stats(children, 0, 0, 0, 0, 0, 0, 0) do
+    case fold_stats(children) do
       :missing_stats ->
         children = Enum.map(children, &with_stats/1)
-        st = fold_stats(children, 0, 0, 0, 0, 0, 0, 0)
+        st = fold_stats(children)
         {tag, attrs, children, finish_stats(tag, attrs, st)}
 
       st ->
@@ -209,65 +215,91 @@ defmodule Readability.DOM do
   def with_stats({tag, attrs, children, nil}), do: el(tag, attrs, children)
   def with_stats(text) when is_binary(text), do: text
 
-  # Folds children into one stats tuple without intermediate 8-tuples (`edges` packs `lead <<< 1 ||| trail`).
-  defp fold_stats([], nw, runs, edges, cm, xc, ll, hl), do: {nw, runs, edges >>> 1, edges &&& 1, cm, xc, ll, hl}
-  defp fold_stats([{_, _, _, nil} | _], _, _, _, _, _, _, _), do: :missing_stats
+  # The stats of a list of children: `Text.concat/2` on the text part, sums on the link part, as
+  # `cat/2` but without building a record per child. `:missing_stats` when a child has none.
+  # One accumulator per field: clearer than packing two into one integer to get under 9.
+  # credo:disable-for-lines:47 Credo.Check.Refactor.FunctionArity
+  defp fold_stats(children), do: fold_stats(children, 0, 0, 0, 0, 0, 0, 0, 0)
 
-  defp fold_stats([text | rest], nw0, runs0, edges0, cm0, xc0, ll0, hl0) when is_binary(text) do
+  defp fold_stats([], nw, runs, lead, trail, cm, xc, ll, hl),
+    do: stats(nonws: nw, runs: runs, lead: lead, trail: trail, commas: cm, xcommas: xc, link_len: ll, hash_links: hl)
+
+  defp fold_stats([{_, _, _, nil} | _], _, _, _, _, _, _, _, _), do: :missing_stats
+
+  defp fold_stats([text | rest], nw0, runs0, lead0, trail0, cm0, xc0, ll, hl) when is_binary(text) do
     {nw, runs, lead, trail, cm, xc} = Text.summary(text)
 
     cond do
       nw0 == 0 and runs0 == 0 ->
-        fold_stats(rest, nw, runs, lead <<< 1 ||| trail, cm0 + cm, xc0 + xc, ll0, hl0)
+        fold_stats(rest, nw, runs, lead, trail, cm0 + cm, xc0 + xc, ll, hl)
 
       nw == 0 and runs == 0 ->
-        fold_stats(rest, nw0, runs0, edges0, cm0 + cm, xc0 + xc, ll0, hl0)
+        fold_stats(rest, nw0, runs0, lead0, trail0, cm0 + cm, xc0 + xc, ll, hl)
 
       true ->
-        merged = runs0 + runs - (edges0 &&& 1 &&& lead)
-        fold_stats(rest, nw0 + nw, merged, (edges0 &&& 2) ||| trail, cm0 + cm, xc0 + xc, ll0, hl0)
+        fold_stats(rest, nw0 + nw, runs0 + runs - min(trail0, lead), lead0, trail, cm0 + cm, xc0 + xc, ll, hl)
     end
   end
 
-  defp fold_stats([{_, _, _, {nw, runs, lead, trail, cm, xc, ll, hl}} | rest], nw0, runs0, edges0, cm0, xc0, ll0, hl0) do
+  defp fold_stats([{_, _, _, st} | rest], nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0) do
+    stats(nonws: nw, runs: runs, lead: lead, trail: trail, commas: cm, xcommas: xc, link_len: ll, hash_links: hl) = st
+
     cond do
       nw0 == 0 and runs0 == 0 ->
-        fold_stats(rest, nw, runs, lead <<< 1 ||| trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
+        fold_stats(rest, nw, runs, lead, trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
 
       nw == 0 and runs == 0 ->
-        fold_stats(rest, nw0, runs0, edges0, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
+        fold_stats(rest, nw0, runs0, lead0, trail0, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
 
       true ->
-        merged = runs0 + runs - (edges0 &&& 1 &&& lead)
-        fold_stats(rest, nw0 + nw, merged, (edges0 &&& 2) ||| trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl)
+        fold_stats(
+          rest,
+          nw0 + nw,
+          runs0 + runs - min(trail0, lead),
+          lead0,
+          trail,
+          cm0 + cm,
+          xc0 + xc,
+          ll0 + ll,
+          hl0 + hl
+        )
     end
   end
 
   defp text_stats(text) do
     {nw, runs, lead, trail, cm, xc} = Text.summary(text)
-    {nw, runs, lead, trail, cm, xc, 0, 0}
+    stats(nonws: nw, runs: runs, lead: lead, trail: trail, commas: cm, xcommas: xc)
   end
 
-  # Text.concat/2 on the summary part, sums on the link part (used by verify!/1).
-  defp cat({0, 0, _, _, cm0, xc0, ll0, hl0}, {nw, runs, lead, trail, cm, xc, ll, hl}),
-    do: {nw, runs, lead, trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
+  defp text_summary(stats(nonws: nw, runs: runs, lead: lead, trail: trail, commas: cm, xcommas: xc)),
+    do: {nw, runs, lead, trail, cm, xc}
 
-  defp cat({nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0}, {0, 0, _, _, cm, xc, ll, hl}),
-    do: {nw0, runs0, lead0, trail0, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
+  # `Text.concat/2` on the text part, sums on the link part (used by `verify!/1`).
+  defp cat(a, b) do
+    {nw, runs, lead, trail, cm, xc} = Text.concat(text_summary(a), text_summary(b))
 
-  defp cat({nw0, runs0, lead0, trail0, cm0, xc0, ll0, hl0}, {nw, runs, lead, trail, cm, xc, ll, hl}),
-    do: {nw0 + nw, runs0 + runs - min(trail0, lead), lead0, trail, cm0 + cm, xc0 + xc, ll0 + ll, hl0 + hl}
+    stats(
+      nonws: nw,
+      runs: runs,
+      lead: lead,
+      trail: trail,
+      commas: cm,
+      xcommas: xc,
+      link_len: stats(a, :link_len) + stats(b, :link_len),
+      hash_links: stats(a, :hash_links) + stats(b, :hash_links)
+    )
+  end
 
-  defp finish_stats("a", attrs, {nw, runs, lead, trail, cm, xc, ll, hl} = st) do
+  defp finish_stats("a", attrs, st) do
     if hash_href?(attrs),
-      do: {nw, runs, lead, trail, cm, xc, ll, hl + 1},
-      else: {nw, runs, lead, trail, cm, xc, ll + stats_length(st), hl}
+      do: stats(st, hash_links: stats(st, :hash_links) + 1),
+      else: stats(st, link_len: stats(st, :link_len) + stats_length(st))
   end
 
   defp finish_stats(_tag, _attrs, st), do: st
 
-  defp stats_length({0, _, _, _, _, _, _, _}), do: 0
-  defp stats_length({nw, runs, lead, trail, _, _, _, _}), do: nw + runs - lead - trail
+  defp stats_length(stats(nonws: 0)), do: 0
+  defp stats_length(stats(nonws: nw, runs: runs, lead: lead, trail: trail)), do: nw + runs - lead - trail
 
   defp hash_href?(attrs), do: Text.hash_url?(attr_value(attrs, "href"))
 
@@ -367,7 +399,7 @@ defmodule Readability.DOM do
   nine code points of `REGEXPS.commas` (`innerText.split(REGEXPS.commas).length - 1`).
   """
   @spec comma_count(node_(), :ascii | :all) :: non_neg_integer()
-  def comma_count({_, _, _, {_, _, _, _, cm, xc, _, _}}, kind), do: commas(cm, xc, kind)
+  def comma_count({_, _, _, stats(commas: cm, xcommas: xc)}, kind), do: commas(cm, xc, kind)
 
   def comma_count(node, kind) do
     {_, _, _, _, cm, xc} = summary(node)
@@ -381,7 +413,7 @@ defmodule Readability.DOM do
   @spec blank?(node_()) :: boolean()
   def blank?(text) when is_binary(text), do: Text.blank?(text)
   def blank?({_, _, children, nil}), do: blank_list?(children)
-  def blank?({_, _, _, st}), do: elem(st, 0) == 0
+  def blank?({_, _, _, st}), do: stats(st, :nonws) == 0
 
   defp blank_list?([]), do: true
   defp blank_list?([h | t]), do: blank?(h) and blank_list?(t)
@@ -389,7 +421,7 @@ defmodule Readability.DOM do
   # Text summary of a node's subtree, using stats where present.
   defp summary(text) when is_binary(text), do: Text.summary(text)
   defp summary({_, _, children, nil}), do: summary_list(children, Text.empty())
-  defp summary({_, _, _, {nw, runs, lead, trail, cm, xc, _, _}}), do: {nw, runs, lead, trail, cm, xc}
+  defp summary({_, _, _, st}), do: text_summary(st)
 
   defp summary_list([], acc), do: acc
   defp summary_list([h | t], acc), do: summary_list(t, Text.concat(acc, summary(h)))
@@ -413,7 +445,7 @@ defmodule Readability.DOM do
   end
 
   # From stats, minus the element's own contribution when it is an <a> itself.
-  defp link_length({tag, attrs, children, {_, _, _, _, _, _, ll, hl}}, len) do
+  defp link_length({tag, attrs, children, stats(link_len: ll, hash_links: hl)}, len) do
     {own_ll, own_hl} =
       cond do
         tag != "a" -> {0, 0}
@@ -427,7 +459,7 @@ defmodule Readability.DOM do
   # Document-order float sum over <a> elements, as in the JS loop.
   defp link_sum([], acc), do: acc
   defp link_sum([text | rest], acc) when is_binary(text), do: link_sum(rest, acc)
-  defp link_sum([{_, _, _, {_, _, _, _, _, _, 0, 0}} | rest], acc), do: link_sum(rest, acc)
+  defp link_sum([{_, _, _, stats(link_len: 0, hash_links: 0)} | rest], acc), do: link_sum(rest, acc)
 
   defp link_sum([{"a", attrs, children, _} = a | rest], acc) do
     len = inner_text_length(a)
@@ -731,7 +763,7 @@ defmodule Readability.DOM do
     fresh =
       children
       |> Enum.with_index()
-      |> Enum.reduce(@empty, fn {child, i}, acc -> cat(acc, verify_node(child, path ++ [i], st != nil)) end)
+      |> Enum.reduce(stats(), fn {child, i}, acc -> cat(acc, verify_node(child, path ++ [i], st != nil)) end)
 
     fresh = finish_stats(tag, attrs, fresh)
 
