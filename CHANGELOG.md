@@ -54,6 +54,8 @@ A rewrite: Readability is now a port of Mozilla's
 - `Readability.article/2` can work in a short-lived process (option `:spawn`, off by default)
   whose heap is sized for pages up to 2 MB (16 MB at most), which keeps garbage collection out of
   the way.
+- A page that isn't UTF-8 and declares another encoding is rejected with
+  `{:error, {:unsupported_charset, label}}` instead of extracted as replacement characters.
 - Benchmarks (`benchmarks/benchmark.exs`) against 0.x and the cost of parsing alone.
 
 ### Fixed

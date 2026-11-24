@@ -104,6 +104,14 @@ html = Req.get!(url).body
 {:ok, article} = Readability.article(html, url: url)
 ```
 
+The HTML must be UTF-8, as it is on almost every page today. Readability.js never sees bytes (the
+browser decodes the page first), but here a page in another encoding would come out as
+replacement characters. So when most of a page's non-ASCII bytes aren't UTF-8 and it declares
+another encoding in a `<meta>`, `article/2` returns `{:error, {:unsupported_charset, label}}`
+(with the encoding's label, such as `"shift_jis"`) and `readerable?/2` returns `false`. Decode
+such pages to UTF-8 first, with an encoding library such as
+[encoding_rs](https://hex.pm/packages/encoding_rs).
+
 ## Performance
 
 Readability works on LazyHTML's tree with precomputed text statistics instead of a DOM, and avoids

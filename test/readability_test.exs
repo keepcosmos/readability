@@ -108,6 +108,72 @@ defmodule ReadabilityTest do
       end
     end
 
+    test "invalid UTF-8 in a document that declares another encoding is rejected" do
+      # "日本" in Shift_JIS
+      sjis = <<0x93, 0xFA, 0x96, 0x7B>>
+      body = "<body><article><h1>Some title</h1><p>#{sjis} #{@paragraph}</p></article></body>"
+
+      for head <- [
+            ~s(<meta charset="Shift_JIS">),
+            ~s(<meta charset=" shift_jis ">),
+            ~s(<meta http-equiv="Content-Type" content="text/html; charset=shift_jis">),
+            ~s(<meta http-equiv="content-type" content='text/html;charset="Shift_JIS"'>),
+            ~s(<meta name="x" content="y"><meta charset="shift_jis"><meta charset="utf-8">),
+            # not an encoding: skipped
+            ~s(<meta charset="utf-"><meta charset="shift_jis">)
+          ] do
+        html = "<html><head>#{head}</head>#{body}</html>"
+        assert Readability.article(html) == {:error, {:unsupported_charset, "shift_jis"}}, head
+        assert Readability.article(LazyHTML.from_document(html)) == {:error, {:unsupported_charset, "shift_jis"}}
+        refute Readability.readerable?(html)
+        refute Readability.readerable?(LazyHTML.from_document(html))
+      end
+
+      error = assert_raise Readability.Error, fn -> Readability.article!(~s(<meta charset="koi8-r">#{body})) end
+      assert error.reason == {:unsupported_charset, "koi8-r"}
+      assert Exception.message(error) == "the document is encoded in koi8-r, not UTF-8: decode it to UTF-8 first"
+    end
+
+    test "a UTF-8 document that declares another encoding keeps its few stray bytes as U+FFFD" do
+      text = String.duplicate("Zażółć gęślą jaźń. ", 3)
+
+      html =
+        ~s(<html><head><meta charset="gb2312"></head><body><article><p>#{text}\xFF\xFE #{@paragraph}</p></article></body></html>)
+
+      assert {:ok, article} = Readability.article(html)
+      assert article.text_content =~ "jaźń. �� This sentence"
+      assert Readability.readerable?(html)
+
+      # mostly another encoding: Latin-1 "Zażółć" has 4 bytes that aren't UTF-8 and no character that is
+      latin1 = String.replace(html, text, "Za\xBF\xF3\xB3\xE6")
+      assert Readability.article(latin1) == {:error, {:unsupported_charset, "gb2312"}}
+    end
+
+    test "invalid UTF-8 becomes U+FFFD when the document declares UTF-8 or nothing" do
+      body = "<body><article><h1>Some title</h1><p>\xFF #{@paragraph}</p></article></body>"
+
+      for head <- [
+            "",
+            ~s(<meta charset="utf-8">),
+            ~s(<meta charset="UTF-16LE">),
+            ~s(<meta charset="">),
+            ~s(<meta charset="Ab">)
+          ] do
+        assert {:ok, article} = Readability.article("<html><head>#{head}</head>#{body}</html>"), head
+        assert article.text_content =~ "� This sentence"
+        assert Readability.readerable?("<html><head>#{head}</head>#{body}</html>")
+      end
+    end
+
+    test "a document that declares another encoding but is valid UTF-8 is read as UTF-8" do
+      html = ~s(<html><head><meta charset="windows-1252"></head>) <> String.replace(@html, "<html lang=\"en\">", "")
+      assert {:ok, %Article{title: "Some title"}} = Readability.article(html)
+
+      # also when the only invalid UTF-8 is in a comment, which isn't part of the document's text
+      assert {:ok, %Article{title: "Some title"}} =
+               Readability.article(String.replace(html, "<body>", "<body><!--\xFF-->"))
+    end
+
     test "relative URLs resolve against :url and stay relative without it" do
       {:ok, article} = Readability.article(@html, url: "https://example.com/posts/1")
       assert article.content =~ ~s(href="https://example.com/relative/link")

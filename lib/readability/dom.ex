@@ -87,6 +87,10 @@ defmodule Readability.DOM do
   @spec valid_utf8(list()) :: list()
   def valid_utf8(tree), do: if(valid_list?(tree), do: tree, else: scrub_list(tree))
 
+  @doc "Whether the text, tag and attribute names and values in `LazyHTML.to_tree/1` output are valid UTF-8."
+  @spec valid_utf8?(list()) :: boolean()
+  def valid_utf8?(tree), do: valid_list?(tree)
+
   @doc """
   `LazyHTML.to_tree/1` output without a byte order mark at the start of its first text. A decoder
   drops the BOM, LazyHTML keeps it as text (in `<body>`, the first character being text).
