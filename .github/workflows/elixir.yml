@@ -74,6 +74,10 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
+      - name: Credo
+        if: matrix.latest
+        run: mix credo --strict
+
       - name: Run tests
         if: ${{ !matrix.latest }}
         run: mix test

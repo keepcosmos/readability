@@ -1,0 +1,2 @@
+# Readability.js conformance checks that currently fail. This list may only shrink.
+# Regenerate with: MIX_ENV=test mix run scripts/conformance.exs --write

@@ -5,6 +5,90 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-rc.1] - 2026-11-25
+
+A rewrite: Readability is now a port of Mozilla's
+[Readability.js](https://github.com/mozilla/readability) on top of
+[LazyHTML](https://hex.pm/packages/lazy_html). The API is new; see the migration table below
+([#71](https://github.com/keepcosmos/readability/issues/71)).
+
+### Breaking
+
+- No HTTP client: `Readability.summarize/2` and the `httpoison` dependency are gone. Fetch pages
+  with the client you already use and pass the HTML to `Readability.article/2`
+  ([#64](https://github.com/keepcosmos/readability/issues/64)).
+- `Readability.article/2` returns `{:ok, %Readability.Article{}}` or
+  `{:error, :not_readable | :too_many_elements | :too_deep | {:unsupported_charset, label}}`
+  instead of a Floki tree.
+- Removed `title/1`, `authors/1`, `published_at/1`, `readable_html/1`, `readable_text/1`,
+  `raw_html/1`, `parse/1`, `regexes/1`, `mime/1`, `is_response_markup/1`, `default_options/0` and
+  `Readability.Summary`. Their results are fields of `Readability.Article`.
+- Floki is replaced by LazyHTML (Lexbor, a spec-compliant HTML parser). `floki` is no longer a
+  dependency, and there's no parser to choose
+  ([#68](https://github.com/keepcosmos/readability/issues/68) no longer applies).
+- New options, named after Readability.js's (`:url`, `:char_threshold`, `:nb_top_candidates`,
+  `:max_elems_to_parse`, `:classes_to_preserve`, `:keep_classes`, `:disable_json_ld`,
+  `:allowed_video_regex`, `:link_density_modifier`), validated with NimbleOptions: unknown or
+  invalid options raise. The 0.x options are gone.
+- `byline` is a string (Readability.js's byline), not a list of authors, and `published_time` is
+  the string found in the page's metadata, not a parsed `DateTime`.
+- Requires OTP 27 or newer.
+
+### Added
+
+- Passes every check of Readability.js's test suite on all 130 of its pages (content as a
+  normalized DOM, attributes, title, byline, excerpt, site name, and direction, language and
+  published time where the page has them), checked in CI by a conformance suite built on those
+  pages
+  ([#61](https://github.com/keepcosmos/readability/issues/61),
+  [#63](https://github.com/keepcosmos/readability/issues/63)).
+- `Readability.article!/2`, raising `Readability.Error`.
+- `Readability.readerable?/2`, a port of Readability.js's `isProbablyReaderable`.
+- Article fields: `excerpt`, `site_name`, `dir`, `lang`, `length`; metadata from JSON-LD and
+  `<meta>` tags.
+- Relative links and image sources are made absolute with the `:url` option.
+- Both functions accept a `%LazyHTML{}` document, so a page can be parsed once (with LazyHTML's
+  limits, for untrusted input) for both.
+- HTML nested deeper than the `:max_depth` option (1000 levels by default) is rejected while
+  parsing, with `{:error, :too_deep}` from `Readability.article/2` and `false` from
+  `Readability.readerable?/2`: parsing time grows quadratically with the depth.
+- `Readability.article/2` can work in a short-lived process (option `:spawn`, off by default)
+  whose heap is sized for pages up to 2 MB (16 MB at most), which keeps garbage collection out of
+  the way.
+- A page that isn't UTF-8 and declares another encoding is rejected with
+  `{:error, {:unsupported_charset, label}}` instead of extracted as replacement characters.
+- Benchmarks (`benchmarks/benchmark.exs`) against 0.x and the cost of parsing alone.
+
+### Fixed
+
+- `content` is serialized per the HTML standard, so text is escaped
+  ([#62](https://github.com/keepcosmos/readability/issues/62)).
+- Options are validated in one place ([#57](https://github.com/keepcosmos/readability/issues/57)
+  no longer applies: `summarize` is gone).
+
+### Differences from Readability.js
+
+- Relative URLs are resolved with a subset of the WHATWG URL Standard: hosts with non-ASCII
+  characters are kept as written (lower-cased only for ASCII letters) instead of being converted
+  to Punycode, and numeric hosts such as `0x7f.1` are not rewritten as IPv4 addresses (or
+  rejected when out of range). Links on such hosts can differ from Readability.js's output.
+
+### Migrating from 0.x
+
+| 0.x | 1.0 |
+|---|---|
+| `Readability.summarize(url)` | fetch the page, then `Readability.article(html, url: final_url)`; the README has an example with Req |
+| `Readability.readable_html(Readability.article(html))` | `{:ok, a} = Readability.article(html)`, then `a.content` |
+| `Readability.readable_text(Readability.article(html))` | `a.text_content` |
+| `Readability.title(html)` | `a.title` |
+| `Readability.authors(html)` | `a.byline` (a string) |
+| `Readability.published_at(html)` | `a.published_time` (a string) |
+| `summary.article_html` / `summary.article_text` | `a.content` / `a.text_content` |
+| options `:page_url` | `:url` |
+| option `:retry_length` | `:char_threshold`, roughly |
+| other 0.x options (`:min_text_length`, `:weight_classes`, ...) | none; see `Readability` for the new ones |
+| `Floki` operations on the result | parse `a.content` with `LazyHTML.from_fragment/1` (or Floki) |
+
 ## [0.13.0] - 2026-11-22
 
 ### Breaking
@@ -57,6 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For older releases, see [Hex](https://hex.pm/packages/readability/versions) and the [commit history](https://github.com/keepcosmos/readability/commits/master).
 
+[1.0.0-rc.1]: https://github.com/keepcosmos/readability/compare/v0.13.0...v1.0.0-rc.1
 [0.13.0]: https://github.com/keepcosmos/readability/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/keepcosmos/readability/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/keepcosmos/readability/releases/tag/v0.12.0

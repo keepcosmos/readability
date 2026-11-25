@@ -1,0 +1,504 @@
+{
+"text": [
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"  ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a","trim":"a","length":1,"normalize":"a","inner_text_length":1,"word_count":1,"split_ws":["a"],"remove_ws":"a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" a ","trim":"a","length":3,"normalize":" a ","inner_text_length":1,"word_count":3,"split_ws":["","a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a  b","trim":"a  b","length":4,"normalize":"a b","inner_text_length":3,"word_count":2,"split_ws":["a","b"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a \n b","trim":"a \n b","length":5,"normalize":"a b","inner_text_length":3,"word_count":2,"split_ws":["a","b"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a\nb","trim":"a\nb","length":3,"normalize":"a\nb","inner_text_length":3,"word_count":2,"split_ws":["a","b"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\n\na\n\n","trim":"a","length":5,"normalize":" a ","inner_text_length":1,"word_count":3,"split_ws":["","a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a  b","trim":"a  b","length":4,"normalize":"a b","inner_text_length":3,"word_count":2,"split_ws":["a","b"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" a ","trim":"a","length":3,"normalize":" a ","inner_text_length":1,"word_count":3,"split_ws":["","a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿a﻿","trim":"a","length":3,"normalize":"﻿a﻿","inner_text_length":1,"word_count":3,"split_ws":["","a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a","trim":"a","length":3,"normalize":"a","inner_text_length":3,"word_count":1,"split_ws":["a"],"remove_ws":"a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"ab","trim":"ab","length":4,"normalize":"ab","inner_text_length":4,"word_count":1,"split_ws":["ab"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"😀","trim":"😀","length":2,"normalize":"😀","inner_text_length":2,"word_count":1,"split_ws":["😀"],"remove_ws":"😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" 😀 😀 ","trim":"😀 😀","length":7,"normalize":" 😀 😀 ","inner_text_length":5,"word_count":4,"split_ws":["","😀","😀",""],"remove_ws":"😀😀","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a\r\nb","trim":"a\r\nb","length":4,"normalize":"a b","inner_text_length":3,"word_count":2,"split_ws":["a","b"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a\r\n\r\nb","trim":"a\r\n\r\nb","length":6,"normalize":"a b","inner_text_length":3,"word_count":2,"split_ws":["a","b"],"remove_ws":"ab","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"foo\n","trim":"foo","length":4,"normalize":"foo\n","inner_text_length":3,"word_count":2,"split_ws":["foo",""],"remove_ws":"foo","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"foo ","trim":"foo","length":4,"normalize":"foo ","inner_text_length":3,"word_count":2,"split_ws":["foo",""],"remove_ws":"foo","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"foo","trim":"foo","length":3,"normalize":"foo","inner_text_length":3,"word_count":1,"split_ws":["foo"],"remove_ws":"foo","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#","trim":"#","length":1,"normalize":"#","inner_text_length":1,"word_count":1,"split_ws":["#"],"remove_ws":"#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#a","trim":"#a","length":2,"normalize":"#a","inner_text_length":2,"word_count":1,"split_ws":["#a"],"remove_ws":"#a","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"#\n","trim":"#","length":2,"normalize":"#\n","inner_text_length":1,"word_count":2,"split_ws":["#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#\r","trim":"#","length":2,"normalize":"#\r","inner_text_length":1,"word_count":2,"split_ws":["#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"# ","trim":"#","length":2,"normalize":"# ","inner_text_length":1,"word_count":2,"split_ws":["#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"# ","trim":"#","length":2,"normalize":"# ","inner_text_length":1,"word_count":2,"split_ws":["#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#","trim":"#","length":2,"normalize":"#","inner_text_length":2,"word_count":1,"split_ws":["#"],"remove_ws":"#","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"##","trim":"##","length":2,"normalize":"##","inner_text_length":2,"word_count":1,"split_ws":["##"],"remove_ws":"##","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":" #a","trim":"#a","length":3,"normalize":" #a","inner_text_length":2,"word_count":2,"split_ws":["","#a"],"remove_ws":"#a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#😀","trim":"#😀","length":3,"normalize":"#😀","inner_text_length":3,"word_count":1,"split_ws":["#😀"],"remove_ws":"#😀","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"  ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a,b","trim":"a,b","length":3,"normalize":"a,b","inner_text_length":3,"word_count":1,"split_ws":["a,b"],"remove_ws":"a,b","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":1},
+{"s":"a，b、c","trim":"a，b、c","length":5,"normalize":"a，b、c","inner_text_length":5,"word_count":1,"split_ws":["a，b、c"],"remove_ws":"a，b、c","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"a،b﹐c︐d︑e⹁f⸴g⸲h，i","trim":"a،b﹐c︐d︑e⹁f⸴g⸲h，i","length":17,"normalize":"a،b﹐c︐d︑e⹁f⸴g⸲h，i","inner_text_length":17,"word_count":1,"split_ws":["a،b﹐c︐d︑e⹁f⸴g⸲h，i"],"remove_ws":"a،b﹐c︐d︑e⹁f⸴g⸲h，i","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":8},
+{"s":"\t\u000b\f","trim":"","length":3,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"x　　y","trim":"x　　y","length":4,"normalize":"x y","inner_text_length":3,"word_count":2,"split_ws":["x","y"],"remove_ws":"xy","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" a ","trim":"a","length":3,"normalize":" a ","inner_text_length":1,"word_count":3,"split_ws":["","a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"​a​","trim":"​a​","length":3,"normalize":"​a​","inner_text_length":3,"word_count":1,"split_ws":["​a​"],"remove_ws":"​a​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"᠎","trim":"᠎","length":1,"normalize":"᠎","inner_text_length":1,"word_count":1,"split_ws":["᠎"],"remove_ws":"᠎","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ︑\f;-⹁𝒜-é","trim":"︑\f;-⹁𝒜-é","length":10,"normalize":" ︑\f;-⹁𝒜-é","inner_text_length":9,"word_count":3,"split_ws":["","︑",";-⹁𝒜-é"],"remove_ws":"︑;-⹁𝒜-é","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"_，\t 　 ","trim":"_，","length":6,"normalize":"_， ","inner_text_length":2,"word_count":2,"split_ws":["_，",""],"remove_ws":"_，","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#⸴","trim":"#⸴","length":2,"normalize":"#⸴","inner_text_length":2,"word_count":1,"split_ws":["#⸴"],"remove_ws":"#⸴","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":1},
+{"s":"𝒜⁠_","trim":"𝒜⁠_","length":4,"normalize":"𝒜⁠_","inner_text_length":4,"word_count":1,"split_ws":["𝒜⁠_"],"remove_ws":"𝒜⁠_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"..⁠&\f   \u000b9","trim":"..⁠&\f   \u000b9","length":10,"normalize":"..⁠& 9","inner_text_length":6,"word_count":2,"split_ws":["..⁠&","9"],"remove_ws":"..⁠&9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"​;😀İ ","trim":"​;😀İ","length":6,"normalize":"​;😀İ ","inner_text_length":5,"word_count":2,"split_ws":["​;😀İ",""],"remove_ws":"​;😀İ","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"😀é\u0000\n İ","trim":"😀é\u0000\n İ","length":9,"normalize":"😀é\u0000 İ","inner_text_length":8,"word_count":2,"split_ws":["😀é\u0000","İ"],"remove_ws":"😀é\u0000İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"&K -İß᠎⸲","trim":"&K -İß᠎⸲","length":9,"normalize":"&K -İß᠎⸲","inner_text_length":9,"word_count":2,"split_ws":["&K","-İß᠎⸲"],"remove_ws":"&K-İß᠎⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"0日 ## _","trim":"0日 ## _","length":7,"normalize":"0日 ## _","inner_text_length":7,"word_count":3,"split_ws":["0日","##","_"],"remove_ws":"0日##_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" İ_\n𝒜&︐⸴","trim":"İ_\n𝒜&︐⸴","length":9,"normalize":" İ_\n𝒜&︐⸴","inner_text_length":8,"word_count":3,"split_ws":["","İ_","𝒜&︐⸴"],"remove_ws":"İ_𝒜&︐⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"K","trim":"K","length":1,"normalize":"K","inner_text_length":1,"word_count":1,"split_ws":["K"],"remove_ws":"K","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"aİ，","trim":"aİ，","length":3,"normalize":"aİ，","inner_text_length":3,"word_count":1,"split_ws":["aİ，"],"remove_ws":"aİ，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"᠎KKKa_","trim":"᠎KKKa_","length":6,"normalize":"᠎KKKa_","inner_text_length":6,"word_count":1,"split_ws":["᠎KKKa_"],"remove_ws":"᠎KKKa_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" é日a -,","trim":"é日a -,","length":7,"normalize":" é日a -,","inner_text_length":6,"word_count":3,"split_ws":["","é日a","-,"],"remove_ws":"é日a-,","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":1},
+{"s":"é😀","trim":"é😀","length":3,"normalize":"é😀","inner_text_length":3,"word_count":1,"split_ws":["é😀"],"remove_ws":"é😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" .︐⁠","trim":".︐⁠","length":4,"normalize":" .︐⁠","inner_text_length":3,"word_count":2,"split_ws":["",".︐⁠"],"remove_ws":".︐⁠","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"-日︐﻿　 0","trim":"-日︐﻿　 0","length":7,"normalize":"-日︐ 0","inner_text_length":5,"word_count":2,"split_ws":["-日︐","0"],"remove_ws":"-日︐0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"; ⹁ß9İ","trim":"; ⹁ß9İ","length":6,"normalize":"; ⹁ß9İ","inner_text_length":6,"word_count":2,"split_ws":[";","⹁ß9İ"],"remove_ws":";⹁ß9İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"⸴﹐  日a,⁠","trim":"⸴﹐  日a,⁠","length":9,"normalize":"⸴﹐ 日a,⁠","inner_text_length":8,"word_count":2,"split_ws":["⸴﹐","日a,⁠"],"remove_ws":"⸴﹐日a,⁠","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"\n0","trim":"0","length":2,"normalize":"\n0","inner_text_length":1,"word_count":2,"split_ws":["","0"],"remove_ws":"0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"，⸴9⹁0  ︑日","trim":"，⸴9⹁0  ︑日","length":9,"normalize":"，⸴9⹁0 ︑日","inner_text_length":8,"word_count":2,"split_ws":["，⸴9⹁0","︑日"],"remove_ws":"，⸴9⹁0︑日","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"﻿-⸴.0İé﹐","trim":"﻿-⸴.0İé﹐","length":9,"normalize":"﻿-⸴.0İé﹐","inner_text_length":9,"word_count":2,"split_ws":["","-⸴.0İé﹐"],"remove_ws":"-⸴.0İé﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"︑ß　0","trim":"︑ß　0","length":4,"normalize":"︑ß　0","inner_text_length":4,"word_count":2,"split_ws":["︑ß","0"],"remove_ws":"︑ß0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"#日","trim":"#日","length":2,"normalize":"#日","inner_text_length":2,"word_count":1,"split_ws":["#日"],"remove_ws":"#日","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"KéZ，⸴ &\t ﻿","trim":"KéZ，⸴ &","length":10,"normalize":"KéZ，⸴ & ","inner_text_length":7,"word_count":3,"split_ws":["KéZ，⸴","&",""],"remove_ws":"KéZ，⸴&","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":",#\r  & ︑︑ 0","trim":",#\r  & ︑︑ 0","length":11,"normalize":",# & ︑︑ 0","inner_text_length":9,"word_count":4,"split_ws":[",#","&","︑︑","0"],"remove_ws":",#&︑︑0","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":" K. ","trim":"K.","length":4,"normalize":" K. ","inner_text_length":2,"word_count":3,"split_ws":["","K.",""],"remove_ws":"K.","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︐ 9😀 ","trim":"︐ 9😀","length":6,"normalize":"︐ 9😀 ","inner_text_length":5,"word_count":3,"split_ws":["︐","9😀",""],"remove_ws":"︐9😀","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"İ  '\r0😀\u000b#","trim":"İ  '\r0😀\u000b#","length":10,"normalize":"İ '\r0😀\u000b#","inner_text_length":9,"word_count":4,"split_ws":["İ","'","0😀","#"],"remove_ws":"İ'0😀#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\f ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\n𝒜_😀⁠","trim":"𝒜_😀⁠","length":7,"normalize":"\n𝒜_😀⁠","inner_text_length":6,"word_count":2,"split_ws":["","𝒜_😀⁠"],"remove_ws":"𝒜_😀⁠","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"😀𝒜#，-","trim":"😀𝒜#，-","length":7,"normalize":"😀𝒜#，-","inner_text_length":7,"word_count":1,"split_ws":["😀𝒜#，-"],"remove_ws":"😀𝒜#，-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ︐😀 .,","trim":"︐😀 .,","length":7,"normalize":" ︐😀 .,","inner_text_length":6,"word_count":3,"split_ws":["","︐😀",".,"],"remove_ws":"︐😀.,","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"İ﹐ß\u000b,\r,a𝒜","trim":"İ﹐ß\u000b,\r,a𝒜","length":10,"normalize":"İ﹐ß\u000b,\r,a𝒜","inner_text_length":10,"word_count":3,"split_ws":["İ﹐ß",",",",a𝒜"],"remove_ws":"İ﹐ß,,a𝒜","blank":false,"has_content":true,"hash_url":false,"commas":2,"all_commas":3},
+{"s":"; éK⹁#,,\rZ ","trim":"; éK⹁#,,\rZ","length":11,"normalize":"; éK⹁#,,\rZ ","inner_text_length":10,"word_count":4,"split_ws":[";","éK⹁#,,","Z",""],"remove_ws":";éK⹁#,,Z","blank":false,"has_content":false,"hash_url":false,"commas":2,"all_commas":3},
+{"s":",ßZ\t﹐😀،\fa","trim":",ßZ\t﹐😀،\fa","length":10,"normalize":",ßZ\t﹐😀،\fa","inner_text_length":10,"word_count":3,"split_ws":[",ßZ","﹐😀،","a"],"remove_ws":",ßZ﹐😀،a","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"9","trim":"9","length":1,"normalize":"9","inner_text_length":1,"word_count":1,"split_ws":["9"],"remove_ws":"9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"ß_","trim":"ß_","length":3,"normalize":"ß_","inner_text_length":3,"word_count":1,"split_ws":["ß_"],"remove_ws":"ß_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ﹐　 ⸲&","trim":"﹐　 ⸲&","length":6,"normalize":" ﹐ ⸲&","inner_text_length":4,"word_count":3,"split_ws":["","﹐","⸲&"],"remove_ws":"﹐⸲&","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"  #﹐ a -","trim":"#﹐ a -","length":8,"normalize":" #﹐ a -","inner_text_length":6,"word_count":4,"split_ws":["","#﹐","a","-"],"remove_ws":"#﹐a-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"  ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"0⁠ #ß","trim":"0⁠ #ß","length":5,"normalize":"0⁠ #ß","inner_text_length":5,"word_count":2,"split_ws":["0⁠","#ß"],"remove_ws":"0⁠#ß","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a é︐a︑\r ","trim":"a é︐a︑","length":8,"normalize":"a é︐a︑ ","inner_text_length":6,"word_count":3,"split_ws":["a","é︐a︑",""],"remove_ws":"aé︐a︑","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"\f  ⁠","trim":"⁠","length":4,"normalize":" ⁠","inner_text_length":1,"word_count":2,"split_ws":["","⁠"],"remove_ws":"⁠","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿İ ⁠\f︐&،İ﹐ ","trim":"İ ⁠\f︐&،İ﹐","length":11,"normalize":"﻿İ ⁠\f︐&،İ﹐ ","inner_text_length":9,"word_count":5,"split_ws":["","İ","⁠","︐&،İ﹐",""],"remove_ws":"İ⁠︐&،İ﹐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"︑\t ","trim":"︑","length":3,"normalize":"︑ ","inner_text_length":1,"word_count":2,"split_ws":["︑",""],"remove_ws":"︑","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"　İ0日⸲","trim":"İ0日⸲","length":5,"normalize":"　İ0日⸲","inner_text_length":4,"word_count":2,"split_ws":["","İ0日⸲"],"remove_ws":"İ0日⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" 日 𝒜日😀⸲","trim":"日 𝒜日😀⸲","length":10,"normalize":" 日 𝒜日😀⸲","inner_text_length":9,"word_count":3,"split_ws":["","日","𝒜日😀⸲"],"remove_ws":"日𝒜日😀⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"，︐ ،﹐#⸲ ᠎︐","trim":"，︐ ،﹐#⸲ ᠎︐","length":10,"normalize":"，︐ ،﹐#⸲ ᠎︐","inner_text_length":10,"word_count":3,"split_ws":["，︐","،﹐#⸲","᠎︐"],"remove_ws":"，︐،﹐#⸲᠎︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":6},
+{"s":"  İ⁠︐ _ ﹐","trim":"İ⁠︐ _ ﹐","length":9,"normalize":" İ⁠︐ _ ﹐","inner_text_length":7,"word_count":4,"split_ws":["","İ⁠︐","_","﹐"],"remove_ws":"İ⁠︐_﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"##K& ","trim":"##K&","length":5,"normalize":"##K& ","inner_text_length":4,"word_count":2,"split_ws":["##K&",""],"remove_ws":"##K&","blank":false,"has_content":false,"hash_url":true,"commas":0,"all_commas":0},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ⸴Z，\t \ra日","trim":"⸴Z，\t \ra日","length":9,"normalize":" ⸴Z， a日","inner_text_length":6,"word_count":3,"split_ws":["","⸴Z，","a日"],"remove_ws":"⸴Z，a日","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"#_⸲︐⁠ \u000b\r","trim":"#_⸲︐⁠","length":9,"normalize":"#_⸲︐⁠ ","inner_text_length":6,"word_count":2,"split_ws":["#_⸲︐⁠",""],"remove_ws":"#_⸲︐⁠","blank":false,"has_content":false,"hash_url":true,"commas":0,"all_commas":2},
+{"s":"،᠎Zß9،K-.","trim":"،᠎Zß9،K-.","length":9,"normalize":"،᠎Zß9،K-.","inner_text_length":9,"word_count":1,"split_ws":["،᠎Zß9،K-."],"remove_ws":"،᠎Zß9،K-.","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"é\u000b︑\t  ","trim":"é\u000b︑","length":6,"normalize":"é\u000b︑ ","inner_text_length":3,"word_count":3,"split_ws":["é","︑",""],"remove_ws":"é︑","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"a\u000b ﻿","trim":"a","length":4,"normalize":"a ","inner_text_length":1,"word_count":2,"split_ws":["a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"，","trim":"，","length":1,"normalize":"，","inner_text_length":1,"word_count":1,"split_ws":["，"],"remove_ws":"，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"'\n⸴  ⸴'' ","trim":"'\n⸴  ⸴''","length":9,"normalize":"'\n⸴ ⸴'' ","inner_text_length":7,"word_count":4,"split_ws":["'","⸴","⸴''",""],"remove_ws":"'⸴⸴''","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"\u0000,日 #︐⸴","trim":"\u0000,日 #︐⸴","length":8,"normalize":"\u0000,日 #︐⸴","inner_text_length":8,"word_count":2,"split_ws":["\u0000,日","#︐⸴"],"remove_ws":"\u0000,日#︐⸴","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"  ⸲","trim":"⸲","length":3,"normalize":" ⸲","inner_text_length":1,"word_count":2,"split_ws":["","⸲"],"remove_ws":"⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"9;\r ᠎_ ","trim":"9;\r ᠎_","length":7,"normalize":"9; ᠎_ ","inner_text_length":5,"word_count":3,"split_ws":["9;","᠎_",""],"remove_ws":"9;᠎_","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"  ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" a   𝒜​'\r","trim":"a   𝒜​'","length":10,"normalize":" a 𝒜​'\r","inner_text_length":6,"word_count":4,"split_ws":["","a","𝒜​'",""],"remove_ws":"a𝒜​'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\f\u0000𝒜","trim":"\u0000𝒜","length":4,"normalize":"\f\u0000𝒜","inner_text_length":3,"word_count":2,"split_ws":["","\u0000𝒜"],"remove_ws":"\u0000𝒜","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"- . \n ","trim":"- .","length":6,"normalize":"- . ","inner_text_length":3,"word_count":3,"split_ws":["-",".",""],"remove_ws":"-.","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"，​︑︑⸴-;\n","trim":"，​︑︑⸴-;","length":8,"normalize":"，​︑︑⸴-;\n","inner_text_length":7,"word_count":2,"split_ws":["，​︑︑⸴-;",""],"remove_ws":"，​︑︑⸴-;","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"K﻿  𝒜\f\f","trim":"K﻿  𝒜","length":8,"normalize":"K 𝒜 ","inner_text_length":4,"word_count":3,"split_ws":["K","𝒜",""],"remove_ws":"K𝒜","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⹁9&-\f\r\u000b","trim":"⹁9&-","length":7,"normalize":"⹁9&- ","inner_text_length":4,"word_count":2,"split_ws":["⹁9&-",""],"remove_ws":"⹁9&-","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"⹁\u000b ","trim":"⹁","length":3,"normalize":"⹁ ","inner_text_length":1,"word_count":2,"split_ws":["⹁",""],"remove_ws":"⹁","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"⹁","trim":"⹁","length":1,"normalize":"⹁","inner_text_length":1,"word_count":1,"split_ws":["⹁"],"remove_ws":"⹁","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"#\na\tK","trim":"#\na\tK","length":5,"normalize":"#\na\tK","inner_text_length":5,"word_count":3,"split_ws":["#","a","K"],"remove_ws":"#aK","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"&;. ⸲ ","trim":"&;. ⸲","length":7,"normalize":"&;. ⸲ ","inner_text_length":6,"word_count":3,"split_ws":["&;.","⸲",""],"remove_ws":"&;.⸲","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\n 9","trim":"9","length":3,"normalize":" 9","inner_text_length":1,"word_count":2,"split_ws":["","9"],"remove_ws":"9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" é_\f  ","trim":"é_","length":6,"normalize":" é_ ","inner_text_length":2,"word_count":3,"split_ws":["","é_",""],"remove_ws":"é_","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":";\r 日_\r᠎a","trim":";\r 日_\r᠎a","length":8,"normalize":"; 日_\r᠎a","inner_text_length":7,"word_count":3,"split_ws":[";","日_","᠎a"],"remove_ws":";日_᠎a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" \n '𝒜⸲,İ&0᠎","trim":"'𝒜⸲,İ&0᠎","length":12,"normalize":" '𝒜⸲,İ&0᠎","inner_text_length":9,"word_count":2,"split_ws":["","'𝒜⸲,İ&0᠎"],"remove_ws":"'𝒜⸲,İ&0᠎","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":" .﻿0","trim":".﻿0","length":4,"normalize":" .﻿0","inner_text_length":3,"word_count":3,"split_ws":["",".","0"],"remove_ws":".0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⸴#.-","trim":"⸴#.-","length":4,"normalize":"⸴#.-","inner_text_length":4,"word_count":1,"split_ws":["⸴#.-"],"remove_ws":"⸴#.-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" 9 ;​⸴","trim":"9 ;​⸴","length":6,"normalize":" 9 ;​⸴","inner_text_length":5,"word_count":3,"split_ws":["","9",";​⸴"],"remove_ws":"9;​⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"​⹁İ","trim":"​⹁İ","length":3,"normalize":"​⹁İ","inner_text_length":3,"word_count":1,"split_ws":["​⹁İ"],"remove_ws":"​⹁İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":".𝒜　 ß \n ","trim":".𝒜　 ß","length":9,"normalize":".𝒜 ß ","inner_text_length":5,"word_count":3,"split_ws":[".𝒜","ß",""],"remove_ws":".𝒜ß","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"İ\n⁠#　 ","trim":"İ\n⁠#","length":6,"normalize":"İ\n⁠# ","inner_text_length":4,"word_count":3,"split_ws":["İ","⁠#",""],"remove_ws":"İ⁠#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"　Z. ︐","trim":"Z. ︐","length":5,"normalize":"　Z. ︐","inner_text_length":4,"word_count":3,"split_ws":["","Z.","︐"],"remove_ws":"Z.︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ​","trim":"​","length":2,"normalize":" ​","inner_text_length":1,"word_count":2,"split_ws":["","​"],"remove_ws":"​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#","trim":"#","length":2,"normalize":"#","inner_text_length":2,"word_count":1,"split_ws":["#"],"remove_ws":"#","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"😀;&\t ⹁&⁠ \t","trim":"😀;&\t ⹁&⁠","length":11,"normalize":"😀;& ⹁&⁠ ","inner_text_length":8,"word_count":3,"split_ws":["😀;&","⹁&⁠",""],"remove_ws":"😀;&⹁&⁠","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"︐","trim":"︐","length":1,"normalize":"︐","inner_text_length":1,"word_count":1,"split_ws":["︐"],"remove_ws":"︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"& -ß⁠a\f","trim":"& -ß⁠a","length":7,"normalize":"& -ß⁠a\f","inner_text_length":6,"word_count":3,"split_ws":["&","-ß⁠a",""],"remove_ws":"&-ß⁠a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"K ß\n_İK","trim":"K ß\n_İK","length":7,"normalize":"K ß\n_İK","inner_text_length":7,"word_count":3,"split_ws":["K","ß","_İK"],"remove_ws":"Kß_İK","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⁠ ","trim":"⁠","length":2,"normalize":"⁠ ","inner_text_length":1,"word_count":2,"split_ws":["⁠",""],"remove_ws":"⁠","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⸲ \r.& 0","trim":"⸲ \r.& 0","length":8,"normalize":"⸲ .& 0","inner_text_length":7,"word_count":3,"split_ws":["⸲",".&","0"],"remove_ws":"⸲.&0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" \u0000\t'Z\t﹐​","trim":"\u0000\t'Z\t﹐​","length":8,"normalize":" \u0000\t'Z\t﹐​","inner_text_length":7,"word_count":4,"split_ws":["","\u0000","'Z","﹐​"],"remove_ws":"\u0000'Z﹐​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"#;😀ß⸲,  ","trim":"#;😀ß⸲,","length":9,"normalize":"#;😀ß⸲, ","inner_text_length":7,"word_count":2,"split_ws":["#;😀ß⸲,",""],"remove_ws":"#;😀ß⸲,","blank":false,"has_content":false,"hash_url":true,"commas":1,"all_commas":2},
+{"s":"　︑ß⹁Z&","trim":"︑ß⹁Z&","length":6,"normalize":"　︑ß⹁Z&","inner_text_length":5,"word_count":2,"split_ws":["","︑ß⹁Z&"],"remove_ws":"︑ß⹁Z&","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"-︐︐﹐﹐​︐\f😀a","trim":"-︐︐﹐﹐​︐\f😀a","length":11,"normalize":"-︐︐﹐﹐​︐\f😀a","inner_text_length":11,"word_count":2,"split_ws":["-︐︐﹐﹐​︐","😀a"],"remove_ws":"-︐︐﹐﹐​︐😀a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":5},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"_Z﻿，'⸲،","trim":"_Z﻿，'⸲،","length":7,"normalize":"_Z﻿，'⸲،","inner_text_length":7,"word_count":2,"split_ws":["_Z","，'⸲،"],"remove_ws":"_Z，'⸲،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"⁠a#﻿Zİ. é,,","trim":"⁠a#﻿Zİ. é,,","length":11,"normalize":"⁠a#﻿Zİ. é,,","inner_text_length":11,"word_count":3,"split_ws":["⁠a#","Zİ.","é,,"],"remove_ws":"⁠a#Zİ.é,,","blank":false,"has_content":true,"hash_url":false,"commas":2,"all_commas":2},
+{"s":"#-. ; &.𝒜","trim":"#-. ; &.𝒜","length":10,"normalize":"#-. ; &.𝒜","inner_text_length":10,"word_count":3,"split_ws":["#-.",";","&.𝒜"],"remove_ws":"#-.;&.𝒜","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"ß  ","trim":"ß","length":3,"normalize":"ß ","inner_text_length":1,"word_count":2,"split_ws":["ß",""],"remove_ws":"ß","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"&﻿_𝒜⁠,9﹐9","trim":"&﻿_𝒜⁠,9﹐9","length":10,"normalize":"&﻿_𝒜⁠,9﹐9","inner_text_length":10,"word_count":2,"split_ws":["&","_𝒜⁠,9﹐9"],"remove_ws":"&_𝒜⁠,9﹐9","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"︐︑\r﻿،","trim":"︐︑\r﻿،","length":5,"normalize":"︐︑ ،","inner_text_length":4,"word_count":2,"split_ws":["︐︑","،"],"remove_ws":"︐︑،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿Z،\r ; aa ","trim":"Z،\r ; aa","length":10,"normalize":"﻿Z، ; aa ","inner_text_length":7,"word_count":5,"split_ws":["","Z،",";","aa",""],"remove_ws":"Z،;aa","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"-﹐\r#","trim":"-﹐\r#","length":4,"normalize":"-﹐\r#","inner_text_length":4,"word_count":2,"split_ws":["-﹐","#"],"remove_ws":"-﹐#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"İ，","trim":"İ，","length":2,"normalize":"İ，","inner_text_length":2,"word_count":1,"split_ws":["İ，"],"remove_ws":"İ，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"  \u000b'︐᠎ß\u0000","trim":"'︐᠎ß\u0000","length":8,"normalize":" '︐᠎ß\u0000","inner_text_length":5,"word_count":2,"split_ws":["","'︐᠎ß\u0000"],"remove_ws":"'︐᠎ß\u0000","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"　aé\f 9 \t ","trim":"aé\f 9","length":9,"normalize":"　aé 9 ","inner_text_length":4,"word_count":4,"split_ws":["","aé","9",""],"remove_ws":"aé9","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ;''😀 09","trim":";''😀 09","length":10,"normalize":" ;''😀 09","inner_text_length":9,"word_count":3,"split_ws":["",";''😀","09"],"remove_ws":";''😀09","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⹁  ⸲\t ß ß","trim":"⹁  ⸲\t ß ß","length":9,"normalize":"⹁ ⸲ ß ß","inner_text_length":7,"word_count":4,"split_ws":["⹁","⸲","ß","ß"],"remove_ws":"⹁⸲ßß","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"\t⸲𝒜0_\r","trim":"⸲𝒜0_","length":7,"normalize":"\t⸲𝒜0_\r","inner_text_length":5,"word_count":3,"split_ws":["","⸲𝒜0_",""],"remove_ws":"⸲𝒜0_","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"#","trim":"#","length":1,"normalize":"#","inner_text_length":1,"word_count":1,"split_ws":["#"],"remove_ws":"#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":".İ","trim":".İ","length":2,"normalize":".İ","inner_text_length":2,"word_count":1,"split_ws":[".İ"],"remove_ws":".İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"Z0","trim":"Z0","length":2,"normalize":"Z0","inner_text_length":2,"word_count":1,"split_ws":["Z0"],"remove_ws":"Z0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\f 😀-","trim":"😀-","length":5,"normalize":" 😀-","inner_text_length":3,"word_count":2,"split_ws":["","😀-"],"remove_ws":"😀-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\r 0","trim":"0","length":3,"normalize":" 0","inner_text_length":1,"word_count":2,"split_ws":["","0"],"remove_ws":"0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︐#︑_ ⹁ ","trim":"︐#︑_ ⹁","length":7,"normalize":"︐#︑_ ⹁ ","inner_text_length":6,"word_count":3,"split_ws":["︐#︑_","⹁",""],"remove_ws":"︐#︑_⹁","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"9，， _é -\n '","trim":"9，， _é -\n '","length":11,"normalize":"9，， _é - '","inner_text_length":10,"word_count":4,"split_ws":["9，，","_é","-","'"],"remove_ws":"9，，_é-'","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":",⸲\r︑﹐日. ⹁","trim":",⸲\r︑﹐日. ⹁","length":9,"normalize":",⸲\r︑﹐日. ⹁","inner_text_length":9,"word_count":3,"split_ws":[",⸲","︑﹐日.","⹁"],"remove_ws":",⸲︑﹐日.⹁","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":5},
+{"s":"᠎⹁, \n ","trim":"᠎⹁,","length":6,"normalize":"᠎⹁, ","inner_text_length":3,"word_count":2,"split_ws":["᠎⹁,",""],"remove_ws":"᠎⹁,","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"0 ⸴⁠","trim":"0 ⸴⁠","length":4,"normalize":"0 ⸴⁠","inner_text_length":4,"word_count":2,"split_ws":["0","⸴⁠"],"remove_ws":"0⸴⁠","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"é  \nßK︑","trim":"é  \nßK︑","length":7,"normalize":"é ßK︑","inner_text_length":5,"word_count":2,"split_ws":["é","ßK︑"],"remove_ws":"éßK︑","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"İ⹁ ⸲a﻿\r日 ﻿İ","trim":"İ⹁ ⸲a﻿\r日 ﻿İ","length":11,"normalize":"İ⹁ ⸲a 日 İ","inner_text_length":9,"word_count":4,"split_ws":["İ⹁","⸲a","日","İ"],"remove_ws":"İ⹁⸲a日İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"﹐ İ⸴ #&","trim":"﹐ İ⸴ #&","length":8,"normalize":"﹐ İ⸴ #&","inner_text_length":8,"word_count":3,"split_ws":["﹐","İ⸴","#&"],"remove_ws":"﹐İ⸴#&","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"&⸲'\r\r ⹁\u000b ︐","trim":"&⸲'\r\r ⹁\u000b ︐","length":10,"normalize":"&⸲' ⹁ ︐","inner_text_length":7,"word_count":3,"split_ws":["&⸲'","⹁","︐"],"remove_ws":"&⸲'⹁︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"9​İ ","trim":"9​İ","length":4,"normalize":"9​İ ","inner_text_length":3,"word_count":2,"split_ws":["9​İ",""],"remove_ws":"9​İ","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"​\u0000⸲⸴⁠_⸲ -","trim":"​\u0000⸲⸴⁠_⸲ -","length":10,"normalize":"​\u0000⸲⸴⁠_⸲ -","inner_text_length":10,"word_count":2,"split_ws":["​\u0000⸲⸴⁠_⸲","-"],"remove_ws":"​\u0000⸲⸴⁠_⸲-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"​ ;K​ ","trim":"​ ;K​","length":6,"normalize":"​ ;K​ ","inner_text_length":5,"word_count":3,"split_ws":["​",";K​",""],"remove_ws":"​;K​","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﹐.⹁\r,_\u0000","trim":"﹐.⹁\r,_\u0000","length":7,"normalize":"﹐.⹁\r,_\u0000","inner_text_length":7,"word_count":2,"split_ws":["﹐.⹁",",_\u0000"],"remove_ws":"﹐.⹁,_\u0000","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"⸲︑ 0⸲，K\fé","trim":"⸲︑ 0⸲，K\fé","length":9,"normalize":"⸲︑ 0⸲，K\fé","inner_text_length":9,"word_count":3,"split_ws":["⸲︑","0⸲，K","é"],"remove_ws":"⸲︑0⸲，Ké","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"- ","trim":"-","length":2,"normalize":"- ","inner_text_length":1,"word_count":2,"split_ws":["-",""],"remove_ws":"-","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\u000b \u000bK😀  \u000b","trim":"K😀","length":9,"normalize":" K😀 ","inner_text_length":3,"word_count":3,"split_ws":["","K😀",""],"remove_ws":"K😀","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\u000b⹁﹐","trim":"⹁﹐","length":3,"normalize":"\u000b⹁﹐","inner_text_length":2,"word_count":2,"split_ws":["","⹁﹐"],"remove_ws":"⹁﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"⸲،﹐ 　,\t،İ","trim":"⸲،﹐ 　,\t،İ","length":9,"normalize":"⸲،﹐ ,\t،İ","inner_text_length":8,"word_count":3,"split_ws":["⸲،﹐",",","،İ"],"remove_ws":"⸲،﹐,،İ","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":5},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⹁⸲，\nZ\u0000;","trim":"⹁⸲，\nZ\u0000;","length":7,"normalize":"⹁⸲，\nZ\u0000;","inner_text_length":7,"word_count":2,"split_ws":["⹁⸲，","Z\u0000;"],"remove_ws":"⹁⸲，Z\u0000;","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"﹐，9","trim":"﹐，9","length":3,"normalize":"﹐，9","inner_text_length":3,"word_count":1,"split_ws":["﹐，9"],"remove_ws":"﹐，9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"​ ,  ;,é 日K","trim":"​ ,  ;,é 日K","length":11,"normalize":"​ , ;,é 日K","inner_text_length":10,"word_count":4,"split_ws":["​",",",";,é","日K"],"remove_ws":"​,;,é日K","blank":false,"has_content":true,"hash_url":false,"commas":2,"all_commas":2},
+{"s":"𝒜' ","trim":"𝒜'","length":4,"normalize":"𝒜' ","inner_text_length":3,"word_count":2,"split_ws":["𝒜'",""],"remove_ws":"𝒜'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a,᠎9.\u0000_0 #﹐","trim":"a,᠎9.\u0000_0 #﹐","length":11,"normalize":"a,᠎9.\u0000_0 #﹐","inner_text_length":11,"word_count":2,"split_ws":["a,᠎9.\u0000_0","#﹐"],"remove_ws":"a,᠎9.\u0000_0#﹐","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":" ;﹐\f  𝒜 9Z，","trim":";﹐\f  𝒜 9Z，","length":12,"normalize":" ;﹐ 𝒜 9Z，","inner_text_length":9,"word_count":4,"split_ws":["",";﹐","𝒜","9Z，"],"remove_ws":";﹐𝒜9Z，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":".;&İ&a⁠. ","trim":".;&İ&a⁠.","length":9,"normalize":".;&İ&a⁠. ","inner_text_length":8,"word_count":2,"split_ws":[".;&İ&a⁠.",""],"remove_ws":".;&İ&a⁠.","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⸴︑a⸴","trim":"⸴︑a⸴","length":4,"normalize":"⸴︑a⸴","inner_text_length":4,"word_count":1,"split_ws":["⸴︑a⸴"],"remove_ws":"⸴︑a⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"_;.﻿İ é\f;","trim":"_;.﻿İ é\f;","length":9,"normalize":"_;.﻿İ é\f;","inner_text_length":9,"word_count":4,"split_ws":["_;.","İ","é",";"],"remove_ws":"_;.İé;","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"𝒜︑Z","trim":"𝒜︑Z","length":4,"normalize":"𝒜︑Z","inner_text_length":4,"word_count":1,"split_ws":["𝒜︑Z"],"remove_ws":"𝒜︑Z","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﹐","trim":"﹐","length":2,"normalize":"﹐","inner_text_length":2,"word_count":1,"split_ws":["﹐"],"remove_ws":"﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"; 𝒜& \f ","trim":"; 𝒜&","length":8,"normalize":"; 𝒜& ","inner_text_length":5,"word_count":3,"split_ws":[";","𝒜&",""],"remove_ws":";𝒜&","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\n#a ⹁\r𝒜 \n","trim":"#a ⹁\r𝒜","length":10,"normalize":"\n#a ⹁\r𝒜 ","inner_text_length":7,"word_count":5,"split_ws":["","#a","⹁","𝒜",""],"remove_ws":"#a⹁𝒜","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\r ⹁日 \t\t،⸲︐-","trim":"⹁日 \t\t،⸲︐-","length":11,"normalize":" ⹁日 ،⸲︐-","inner_text_length":7,"word_count":3,"split_ws":["","⹁日","،⸲︐-"],"remove_ws":"⹁日،⸲︐-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"，😀.日 ⸲᠎. \u0000","trim":"，😀.日 ⸲᠎. \u0000","length":11,"normalize":"，😀.日 ⸲᠎. \u0000","inner_text_length":11,"word_count":3,"split_ws":["，😀.日","⸲᠎.","\u0000"],"remove_ws":"，😀.日⸲᠎.\u0000","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"-　","trim":"-","length":2,"normalize":"-　","inner_text_length":1,"word_count":2,"split_ws":["-",""],"remove_ws":"-","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"𝒜","trim":"𝒜","length":2,"normalize":"𝒜","inner_text_length":2,"word_count":1,"split_ws":["𝒜"],"remove_ws":"𝒜","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"　﹐9_⸲，","trim":"﹐9_⸲，","length":6,"normalize":"　﹐9_⸲，","inner_text_length":5,"word_count":2,"split_ws":["","﹐9_⸲，"],"remove_ws":"﹐9_⸲，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"︑'","trim":"︑'","length":2,"normalize":"︑'","inner_text_length":2,"word_count":1,"split_ws":["︑'"],"remove_ws":"︑'","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"İ","trim":"İ","length":1,"normalize":"İ","inner_text_length":1,"word_count":1,"split_ws":["İ"],"remove_ws":"İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"日⹁， ︑⹁0\f𝒜 ","trim":"日⹁， ︑⹁0\f𝒜","length":11,"normalize":"日⹁， ︑⹁0\f𝒜 ","inner_text_length":10,"word_count":4,"split_ws":["日⹁，","︑⹁0","𝒜",""],"remove_ws":"日⹁，︑⹁0𝒜","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"0_،︐\r︑","trim":"0_،︐\r︑","length":6,"normalize":"0_،︐\r︑","inner_text_length":6,"word_count":2,"split_ws":["0_،︐","︑"],"remove_ws":"0_،︐︑","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"⁠\u000b，","trim":"⁠\u000b，","length":3,"normalize":"⁠\u000b，","inner_text_length":3,"word_count":2,"split_ws":["⁠","，"],"remove_ws":"⁠，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" \n ᠎　","trim":"᠎","length":5,"normalize":" ᠎　","inner_text_length":1,"word_count":3,"split_ws":["","᠎",""],"remove_ws":"᠎","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" é ⁠︑𝒜  ","trim":"é ⁠︑𝒜","length":9,"normalize":" é ⁠︑𝒜 ","inner_text_length":6,"word_count":4,"split_ws":["","é","⁠︑𝒜",""],"remove_ws":"é⁠︑𝒜","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"aa\n\t 　 9;﻿،","trim":"aa\n\t 　 9;﻿،","length":11,"normalize":"aa 9;﻿،","inner_text_length":7,"word_count":3,"split_ws":["aa","9;","،"],"remove_ws":"aa9;،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":".﻿","trim":".","length":2,"normalize":".﻿","inner_text_length":1,"word_count":2,"split_ws":[".",""],"remove_ws":".","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⁠;\r,﹐⹁","trim":"⁠;\r,﹐⹁","length":6,"normalize":"⁠;\r,﹐⹁","inner_text_length":6,"word_count":2,"split_ws":["⁠;",",﹐⹁"],"remove_ws":"⁠;,﹐⹁","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"ß _","trim":"ß _","length":3,"normalize":"ß _","inner_text_length":3,"word_count":2,"split_ws":["ß","_"],"remove_ws":"ß_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"'︑，","trim":"'︑，","length":3,"normalize":"'︑，","inner_text_length":3,"word_count":1,"split_ws":["'︑，"],"remove_ws":"'︑，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"# .﹐-","trim":"# .﹐-","length":5,"normalize":"# .﹐-","inner_text_length":5,"word_count":2,"split_ws":["#",".﹐-"],"remove_ws":"#.﹐-","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":1},
+{"s":"\t，日𝒜﹐","trim":"，日𝒜﹐","length":6,"normalize":"\t，日𝒜﹐","inner_text_length":5,"word_count":2,"split_ws":["","，日𝒜﹐"],"remove_ws":"，日𝒜﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"K😀⸲， ","trim":"K😀⸲，","length":6,"normalize":"K😀⸲， ","inner_text_length":5,"word_count":2,"split_ws":["K😀⸲，",""],"remove_ws":"K😀⸲，","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"\t&aK -⸴","trim":"&aK -⸴","length":7,"normalize":"\t&aK -⸴","inner_text_length":6,"word_count":3,"split_ws":["","&aK","-⸴"],"remove_ws":"&aK-⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"_日،،,0 ⸴،\u000b","trim":"_日،،,0 ⸴،","length":10,"normalize":"_日،،,0 ⸴،\u000b","inner_text_length":9,"word_count":3,"split_ws":["_日،،,0","⸴،",""],"remove_ws":"_日،،,0⸴،","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":5},
+{"s":" ß\r0","trim":"ß\r0","length":4,"normalize":" ß\r0","inner_text_length":3,"word_count":3,"split_ws":["","ß","0"],"remove_ws":"ß0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"😀日\r","trim":"😀日","length":4,"normalize":"😀日\r","inner_text_length":3,"word_count":2,"split_ws":["😀日",""],"remove_ws":"😀日","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⹁日⹁","trim":"⹁日⹁","length":3,"normalize":"⹁日⹁","inner_text_length":3,"word_count":1,"split_ws":["⹁日⹁"],"remove_ws":"⹁日⹁","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"\t\na\u000b","trim":"a","length":4,"normalize":" a\u000b","inner_text_length":1,"word_count":3,"split_ws":["","a",""],"remove_ws":"a","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ßaé","trim":"ßaé","length":4,"normalize":" ßaé","inner_text_length":3,"word_count":2,"split_ws":["","ßaé"],"remove_ws":"ßaé","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"é\f 😀 a⁠é","trim":"é\f 😀 a⁠é","length":9,"normalize":"é 😀 a⁠é","inner_text_length":8,"word_count":3,"split_ws":["é","😀","a⁠é"],"remove_ws":"é😀a⁠é","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" \f،K' ","trim":"،K'","length":6,"normalize":" ،K' ","inner_text_length":3,"word_count":3,"split_ws":["","،K'",""],"remove_ws":"،K'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ⸴_\u000b\n.，︑","trim":"⸴_\u000b\n.，︑","length":8,"normalize":" ⸴_ .，︑","inner_text_length":6,"word_count":3,"split_ws":["","⸴_",".，︑"],"remove_ws":"⸴_.，︑","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"&\u000b# &， ","trim":"&\u000b# &，","length":8,"normalize":"&\u000b# &， ","inner_text_length":7,"word_count":4,"split_ws":["&","#","&，",""],"remove_ws":"&#&，","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"，a;،0😀\f⹁","trim":"，a;،0😀\f⹁","length":9,"normalize":"，a;،0😀\f⹁","inner_text_length":9,"word_count":2,"split_ws":["，a;،0😀","⹁"],"remove_ws":"，a;،0😀⹁","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"\n 　","trim":"","length":3,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ⹁0Z\t -","trim":"⹁0Z\t -","length":7,"normalize":" ⹁0Z -","inner_text_length":5,"word_count":3,"split_ws":["","⹁0Z","-"],"remove_ws":"⹁0Z-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ⹁😀","trim":"⹁😀","length":4,"normalize":" ⹁😀","inner_text_length":3,"word_count":2,"split_ws":["","⹁😀"],"remove_ws":"⹁😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"Za","trim":"Za","length":2,"normalize":"Za","inner_text_length":2,"word_count":1,"split_ws":["Za"],"remove_ws":"Za","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"𝒜é\t 0日 \f","trim":"𝒜é\t 0日","length":9,"normalize":"𝒜é 0日 ","inner_text_length":6,"word_count":3,"split_ws":["𝒜é","0日",""],"remove_ws":"𝒜é0日","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"-0⸲ \u0000-\u0000éİ﹐","trim":"-0⸲ \u0000-\u0000éİ﹐","length":10,"normalize":"-0⸲ \u0000-\u0000éİ﹐","inner_text_length":10,"word_count":2,"split_ws":["-0⸲","\u0000-\u0000éİ﹐"],"remove_ws":"-0⸲\u0000-\u0000éİ﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"0","trim":"0","length":1,"normalize":"0","inner_text_length":1,"word_count":1,"split_ws":["0"],"remove_ws":"0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿ 0\u0000","trim":"0\u0000","length":4,"normalize":" 0\u0000","inner_text_length":2,"word_count":2,"split_ws":["","0\u0000"],"remove_ws":"0\u0000","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⸲⹁𝒜  İ K#","trim":"⸲⹁𝒜  İ K#","length":10,"normalize":"⸲⹁𝒜 İ K#","inner_text_length":9,"word_count":3,"split_ws":["⸲⹁𝒜","İ","K#"],"remove_ws":"⸲⹁𝒜İK#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"ß﻿⸴\u0000 ","trim":"ß﻿⸴\u0000","length":5,"normalize":"ß﻿⸴\u0000 ","inner_text_length":4,"word_count":3,"split_ws":["ß","⸴\u0000",""],"remove_ws":"ß⸴\u0000","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"0 \t😀'","trim":"0 \t😀'","length":6,"normalize":"0 😀'","inner_text_length":5,"word_count":2,"split_ws":["0","😀'"],"remove_ws":"0😀'","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"&،","trim":"&،","length":2,"normalize":"&،","inner_text_length":2,"word_count":1,"split_ws":["&،"],"remove_ws":"&،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" \r","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\n","trim":"","length":1,"normalize":"\n","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ⸲﹐𝒜  ⹁،","trim":"⸲﹐𝒜  ⹁،","length":9,"normalize":" ⸲﹐𝒜 ⹁،","inner_text_length":7,"word_count":3,"split_ws":["","⸲﹐𝒜","⹁،"],"remove_ws":"⸲﹐𝒜⹁،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"　 ⸲","trim":"⸲","length":3,"normalize":" ⸲","inner_text_length":1,"word_count":2,"split_ws":["","⸲"],"remove_ws":"⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"،#0\r","trim":"،#0","length":4,"normalize":"،#0\r","inner_text_length":3,"word_count":2,"split_ws":["،#0",""],"remove_ws":"،#0","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" \u000ba-","trim":"a-","length":4,"normalize":" a-","inner_text_length":2,"word_count":2,"split_ws":["","a-"],"remove_ws":"a-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" '︐ ⹁日'\n","trim":"'︐ ⹁日'","length":8,"normalize":" '︐ ⹁日'\n","inner_text_length":6,"word_count":4,"split_ws":["","'︐","⹁日'",""],"remove_ws":"'︐⹁日'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":";᠎#⁠","trim":";᠎#⁠","length":4,"normalize":";᠎#⁠","inner_text_length":4,"word_count":1,"split_ws":[";᠎#⁠"],"remove_ws":";᠎#⁠","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" 日ß- Z︐","trim":"日ß- Z︐","length":7,"normalize":" 日ß- Z︐","inner_text_length":6,"word_count":3,"split_ws":["","日ß-","Z︐"],"remove_ws":"日ß-Z︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ⸴︐","trim":"⸴︐","length":3,"normalize":" ⸴︐","inner_text_length":2,"word_count":2,"split_ws":["","⸴︐"],"remove_ws":"⸴︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"⸴ -،é\t\n ⹁İ","trim":"⸴ -،é\t\n ⹁İ","length":10,"normalize":"⸴ -،é ⹁İ","inner_text_length":8,"word_count":3,"split_ws":["⸴","-،é","⹁İ"],"remove_ws":"⸴-،é⹁İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":" \u000bé𝒜-.'\n⁠𝒜.","trim":"é𝒜-.'\n⁠𝒜.","length":13,"normalize":" é𝒜-.'\n⁠𝒜.","inner_text_length":11,"word_count":3,"split_ws":["","é𝒜-.'","⁠𝒜."],"remove_ws":"é𝒜-.'⁠𝒜.","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ﻿ a,\t𝒜⹁ &︑","trim":"a,\t𝒜⹁ &︑","length":12,"normalize":" a,\t𝒜⹁ &︑","inner_text_length":9,"word_count":4,"split_ws":["","a,","𝒜⹁","&︑"],"remove_ws":"a,𝒜⹁&︑","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"︑'.","trim":"︑'.","length":3,"normalize":"︑'.","inner_text_length":3,"word_count":1,"split_ws":["︑'."],"remove_ws":"︑'.","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"'  \u0000︐﻿","trim":"'  \u0000︐","length":6,"normalize":"' \u0000︐﻿","inner_text_length":4,"word_count":3,"split_ws":["'","\u0000︐",""],"remove_ws":"'\u0000︐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ⸴ ،. 日","trim":"⸴ ،. 日","length":7,"normalize":" ⸴ ،. 日","inner_text_length":6,"word_count":4,"split_ws":["","⸴","،.","日"],"remove_ws":"⸴،.日","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":" 日​","trim":"日​","length":4,"normalize":" 日​","inner_text_length":3,"word_count":2,"split_ws":["","日​"],"remove_ws":"日​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"&\u000b，,\r","trim":"&\u000b，,","length":5,"normalize":"&\u000b，,\r","inner_text_length":4,"word_count":3,"split_ws":["&","，,",""],"remove_ws":"&，,","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"\u000b\u000b\fK#﻿0","trim":"K#﻿0","length":7,"normalize":" K#﻿0","inner_text_length":4,"word_count":3,"split_ws":["","K#","0"],"remove_ws":"K#0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"😀   \t ᠎","trim":"😀   \t ᠎","length":8,"normalize":"😀 ᠎","inner_text_length":4,"word_count":2,"split_ws":["😀","᠎"],"remove_ws":"😀᠎","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︐-_9\t,  0︐Z","trim":"︐-_9\t,  0︐Z","length":11,"normalize":"︐-_9\t, 0︐Z","inner_text_length":10,"word_count":3,"split_ws":["︐-_9",",","0︐Z"],"remove_ws":"︐-_9,0︐Z","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"İ&İ\u000bé日 ︐﻿ ","trim":"İ&İ\u000bé日 ︐","length":10,"normalize":"İ&İ\u000bé日 ︐ ","inner_text_length":8,"word_count":4,"split_ws":["İ&İ","é日","︐",""],"remove_ws":"İ&İé日︐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"'","trim":"'","length":1,"normalize":"'","inner_text_length":1,"word_count":1,"split_ws":["'"],"remove_ws":"'","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"K﹐","trim":"K﹐","length":2,"normalize":"K﹐","inner_text_length":2,"word_count":1,"split_ws":["K﹐"],"remove_ws":"K﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"︐⸲-_,，\n- ","trim":"︐⸲-_,，\n-","length":9,"normalize":"︐⸲-_,，\n- ","inner_text_length":8,"word_count":3,"split_ws":["︐⸲-_,，","-",""],"remove_ws":"︐⸲-_,，-","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":4},
+{"s":"\t𝒜-᠎ ⸲​","trim":"𝒜-᠎ ⸲​","length":8,"normalize":"\t𝒜-᠎ ⸲​","inner_text_length":7,"word_count":3,"split_ws":["","𝒜-᠎","⸲​"],"remove_ws":"𝒜-᠎⸲​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"︑⹁K\t​.'︑，","trim":"︑⹁K\t​.'︑，","length":10,"normalize":"︑⹁K\t​.'︑，","inner_text_length":10,"word_count":2,"split_ws":["︑⹁K","​.'︑，"],"remove_ws":"︑⹁K​.'︑，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"Z. ﻿.،0&","trim":"Z. ﻿.،0&","length":8,"normalize":"Z. .،0&","inner_text_length":7,"word_count":2,"split_ws":["Z.",".،0&"],"remove_ws":"Z..،0&","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"-᠎9 #،","trim":"-᠎9 #،","length":6,"normalize":"-᠎9 #،","inner_text_length":6,"word_count":2,"split_ws":["-᠎9","#،"],"remove_ws":"-᠎9#،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":",Zİ#︑ß𝒜  ","trim":",Zİ#︑ß𝒜","length":10,"normalize":",Zİ#︑ß𝒜 ","inner_text_length":8,"word_count":2,"split_ws":[",Zİ#︑ß𝒜",""],"remove_ws":",Zİ#︑ß𝒜","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"​9,，﹐İ \t\r","trim":"​9,，﹐İ","length":9,"normalize":"​9,，﹐İ ","inner_text_length":6,"word_count":2,"split_ws":["​9,，﹐İ",""],"remove_ws":"​9,，﹐İ","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"a， \t\fé ⸴","trim":"a， \t\fé ⸴","length":8,"normalize":"a， é ⸴","inner_text_length":6,"word_count":3,"split_ws":["a，","é","⸴"],"remove_ws":"a，é⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"K⸴᠎,'﻿ ","trim":"K⸴᠎,'","length":7,"normalize":"K⸴᠎,' ","inner_text_length":5,"word_count":2,"split_ws":["K⸴᠎,'",""],"remove_ws":"K⸴᠎,'","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"K𝒜","trim":"K𝒜","length":3,"normalize":"K𝒜","inner_text_length":3,"word_count":1,"split_ws":["K𝒜"],"remove_ws":"K𝒜","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\u000bé","trim":"é","length":2,"normalize":"\u000bé","inner_text_length":1,"word_count":2,"split_ws":["","é"],"remove_ws":"é","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\u000b","trim":"","length":1,"normalize":"\u000b","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"𝒜⸴ ︐\f﹐Z","trim":"𝒜⸴ ︐\f﹐Z","length":8,"normalize":"𝒜⸴ ︐\f﹐Z","inner_text_length":8,"word_count":3,"split_ws":["𝒜⸴","︐","﹐Z"],"remove_ws":"𝒜⸴︐﹐Z","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"،𝒜","trim":"،𝒜","length":3,"normalize":"،𝒜","inner_text_length":3,"word_count":1,"split_ws":["،𝒜"],"remove_ws":"،𝒜","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"日Za\u000b⁠,ß; ","trim":"日Za\u000b⁠,ß;","length":9,"normalize":"日Za\u000b⁠,ß; ","inner_text_length":8,"word_count":3,"split_ws":["日Za","⁠,ß;",""],"remove_ws":"日Za⁠,ß;","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":1},
+{"s":"᠎, ⹁ éa","trim":"᠎, ⹁ éa","length":7,"normalize":"᠎, ⹁ éa","inner_text_length":7,"word_count":3,"split_ws":["᠎,","⹁","éa"],"remove_ws":"᠎,⹁éa","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ，⹁⸴.;😀","trim":"，⹁⸴.;😀","length":8,"normalize":" ，⹁⸴.;😀","inner_text_length":7,"word_count":2,"split_ws":["","，⹁⸴.;😀"],"remove_ws":"，⹁⸴.;😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"ß '﻿ \r","trim":"ß '","length":6,"normalize":"ß ' ","inner_text_length":3,"word_count":3,"split_ws":["ß","'",""],"remove_ws":"ß'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"İ⸴ ","trim":"İ⸴","length":3,"normalize":"İ⸴ ","inner_text_length":2,"word_count":2,"split_ws":["İ⸴",""],"remove_ws":"İ⸴","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"​ 日\u0000 \t  ","trim":"​ 日\u0000","length":9,"normalize":"​ 日\u0000 ","inner_text_length":5,"word_count":3,"split_ws":["​","日\u0000",""],"remove_ws":"​日\u0000","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︑","trim":"︑","length":1,"normalize":"︑","inner_text_length":1,"word_count":1,"split_ws":["︑"],"remove_ws":"︑","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⹁# .'\f ","trim":"⹁# .'","length":7,"normalize":"⹁# .' ","inner_text_length":5,"word_count":3,"split_ws":["⹁#",".'",""],"remove_ws":"⹁#.'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\r ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﹐K \u0000.","trim":"﹐K \u0000.","length":5,"normalize":"﹐K \u0000.","inner_text_length":5,"word_count":2,"split_ws":["﹐K","\u0000."],"remove_ws":"﹐K\u0000.","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" _","trim":"_","length":2,"normalize":" _","inner_text_length":1,"word_count":2,"split_ws":["","_"],"remove_ws":"_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︐a","trim":"︐a","length":2,"normalize":"︐a","inner_text_length":2,"word_count":1,"split_ws":["︐a"],"remove_ws":"︐a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"⹁ ᠎İ ⸴\u000b𝒜　 ","trim":"⹁ ᠎İ ⸴\u000b𝒜","length":11,"normalize":"⹁ ᠎İ ⸴\u000b𝒜 ","inner_text_length":9,"word_count":5,"split_ws":["⹁","᠎İ","⸴","𝒜",""],"remove_ws":"⹁᠎İ⸴𝒜","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"︑,﹐\n⸲","trim":"︑,﹐\n⸲","length":5,"normalize":"︑,﹐\n⸲","inner_text_length":5,"word_count":2,"split_ws":["︑,﹐","⸲"],"remove_ws":"︑,﹐⸲","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":4},
+{"s":"# ","trim":"#","length":2,"normalize":"# ","inner_text_length":1,"word_count":2,"split_ws":["#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"︐​ 0ß \u0000","trim":"︐​ 0ß \u0000","length":7,"normalize":"︐​ 0ß \u0000","inner_text_length":7,"word_count":3,"split_ws":["︐​","0ß","\u0000"],"remove_ws":"︐​0ß\u0000","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\n_İ","trim":"_İ","length":3,"normalize":"\n_İ","inner_text_length":2,"word_count":2,"split_ws":["","_İ"],"remove_ws":"_İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﹐'.⁠　- ","trim":"﹐'.⁠　-","length":7,"normalize":"﹐'.⁠　- ","inner_text_length":6,"word_count":3,"split_ws":["﹐'.⁠","-",""],"remove_ws":"﹐'.⁠-","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"9⸴ \n⹁⹁a#，é","trim":"9⸴ \n⹁⹁a#，é","length":11,"normalize":"9⸴ ⹁⹁a#，é","inner_text_length":10,"word_count":2,"split_ws":["9⸴","⹁⹁a#，é"],"remove_ws":"9⸴⹁⹁a#，é","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" -","trim":"-","length":2,"normalize":" -","inner_text_length":1,"word_count":2,"split_ws":["","-"],"remove_ws":"-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#︐⁠.\fé.، ​","trim":"#︐⁠.\fé.، ​","length":10,"normalize":"#︐⁠.\fé.، ​","inner_text_length":10,"word_count":3,"split_ws":["#︐⁠.","é.،","​"],"remove_ws":"#︐⁠.é.،​","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":2},
+{"s":"﻿𝒜. '-\t#'\t_","trim":"𝒜. '-\t#'\t_","length":12,"normalize":"﻿𝒜. '-\t#'\t_","inner_text_length":11,"word_count":5,"split_ws":["","𝒜.","'-","#'","_"],"remove_ws":"𝒜.'-#'_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"_a0a","trim":"_a0a","length":4,"normalize":"_a0a","inner_text_length":4,"word_count":1,"split_ws":["_a0a"],"remove_ws":"_a0a","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\u000b \nİ\f","trim":"İ","length":5,"normalize":" İ\f","inner_text_length":1,"word_count":3,"split_ws":["","İ",""],"remove_ws":"İ","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" é，⹁　\r ⁠، ","trim":"é，⹁　\r ⁠،","length":10,"normalize":" é，⹁ ⁠، ","inner_text_length":6,"word_count":4,"split_ws":["","é，⹁","⁠،",""],"remove_ws":"é，⹁⁠،","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"︑&ß︐\tZ日; ","trim":"︑&ß︐\tZ日;","length":9,"normalize":"︑&ß︐\tZ日; ","inner_text_length":8,"word_count":3,"split_ws":["︑&ß︐","Z日;",""],"remove_ws":"︑&ß︐Z日;","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"'😀#a⸴","trim":"'😀#a⸴","length":7,"normalize":"'😀#a⸴","inner_text_length":7,"word_count":1,"split_ws":["'😀#a⸴"],"remove_ws":"'😀#a⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"日⸴，'","trim":"日⸴，'","length":4,"normalize":"日⸴，'","inner_text_length":4,"word_count":1,"split_ws":["日⸴，'"],"remove_ws":"日⸴，'","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"﻿  𝒜-،","trim":"𝒜-،","length":7,"normalize":" 𝒜-،","inner_text_length":4,"word_count":2,"split_ws":["","𝒜-،"],"remove_ws":"𝒜-،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"😀😀\n","trim":"😀😀","length":5,"normalize":"😀😀\n","inner_text_length":4,"word_count":2,"split_ws":["😀😀",""],"remove_ws":"😀😀","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":",;︐⹁\u000b.-\r ","trim":",;︐⹁\u000b.-","length":9,"normalize":",;︐⹁\u000b.- ","inner_text_length":7,"word_count":3,"split_ws":[",;︐⹁",".-",""],"remove_ws":",;︐⹁.-","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"\t، \t","trim":"،","length":4,"normalize":"\t، ","inner_text_length":1,"word_count":3,"split_ws":["","،",""],"remove_ws":"،","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"Z\r& ","trim":"Z\r&","length":4,"normalize":"Z\r& ","inner_text_length":3,"word_count":3,"split_ws":["Z","&",""],"remove_ws":"Z&","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\r","trim":"","length":1,"normalize":"\r","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"  a\u0000\u0000 İ日﹐\u000b\f","trim":"a\u0000\u0000 İ日﹐","length":11,"normalize":" a\u0000\u0000 İ日﹐ ","inner_text_length":7,"word_count":4,"split_ws":["","a\u0000\u0000","İ日﹐",""],"remove_ws":"a\u0000\u0000İ日﹐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"日𝒜0","trim":"日𝒜0","length":4,"normalize":"日𝒜0","inner_text_length":4,"word_count":1,"split_ws":["日𝒜0"],"remove_ws":"日𝒜0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⹁é日　; Z،，","trim":"⹁é日　; Z،，","length":9,"normalize":"⹁é日　; Z،，","inner_text_length":9,"word_count":3,"split_ws":["⹁é日",";","Z،，"],"remove_ws":"⹁é日;Z،，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"﻿⁠0\u000b","trim":"⁠0","length":4,"normalize":"﻿⁠0\u000b","inner_text_length":2,"word_count":3,"split_ws":["","⁠0",""],"remove_ws":"⁠0","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\né \r😀","trim":"é \r😀","length":6,"normalize":"\né 😀","inner_text_length":4,"word_count":3,"split_ws":["","é","😀"],"remove_ws":"é😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"K  \u0000\t⹁　","trim":"K  \u0000\t⹁","length":7,"normalize":"K \u0000\t⹁　","inner_text_length":5,"word_count":4,"split_ws":["K","\u0000","⹁",""],"remove_ws":"K\u0000⹁","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" 日  ","trim":"日","length":4,"normalize":" 日 ","inner_text_length":1,"word_count":3,"split_ws":["","日",""],"remove_ws":"日","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ﹐","trim":"﹐","length":2,"normalize":" ﹐","inner_text_length":1,"word_count":2,"split_ws":["","﹐"],"remove_ws":"﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"éé𝒜-","trim":"éé𝒜-","length":5,"normalize":"éé𝒜-","inner_text_length":5,"word_count":1,"split_ws":["éé𝒜-"],"remove_ws":"éé𝒜-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﹐ 😀","trim":"﹐ 😀","length":4,"normalize":"﹐ 😀","inner_text_length":4,"word_count":2,"split_ws":["﹐","😀"],"remove_ws":"﹐😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"  &\u0000ß;K K","trim":"&\u0000ß;K K","length":9,"normalize":" &\u0000ß;K K","inner_text_length":7,"word_count":3,"split_ws":["","&\u0000ß;K","K"],"remove_ws":"&\u0000ß;KK","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":1,"normalize":"","inner_text_length":1,"word_count":1,"split_ws":[""],"remove_ws":"","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\t","trim":"","length":1,"normalize":"\t","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"ßé-","trim":"ßé-","length":3,"normalize":"ßé-","inner_text_length":3,"word_count":1,"split_ws":["ßé-"],"remove_ws":"ßé-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"​، 9","trim":"​، 9","length":4,"normalize":"​، 9","inner_text_length":4,"word_count":2,"split_ws":["​،","9"],"remove_ws":"​،9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"　","trim":"","length":1,"normalize":"　","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"  & \u00009\u000b \rKa","trim":"& \u00009\u000b \rKa","length":11,"normalize":" & \u00009 Ka","inner_text_length":7,"word_count":4,"split_ws":["","&","\u00009","Ka"],"remove_ws":"&\u00009Ka","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"   # ","trim":"#","length":6,"normalize":" # ","inner_text_length":2,"word_count":3,"split_ws":["","#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"᠎ ⸴\u00009&﻿ ︑","trim":"᠎ ⸴\u00009&﻿ ︑","length":9,"normalize":"᠎ ⸴\u00009& ︑","inner_text_length":8,"word_count":3,"split_ws":["᠎","⸴\u00009&","︑"],"remove_ws":"᠎⸴\u00009&︑","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"﹐ K9\f ︐  \f","trim":"﹐ K9\f ︐","length":10,"normalize":"﹐ K9 ︐ ","inner_text_length":6,"word_count":4,"split_ws":["﹐","K9","︐",""],"remove_ws":"﹐K9︐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":" ︐a0 éK0 ","trim":"︐a0 éK0","length":9,"normalize":" ︐a0 éK0 ","inner_text_length":7,"word_count":4,"split_ws":["","︐a0","éK0",""],"remove_ws":"︐a0éK0","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"-;- ﻿& é_","trim":"-;- ﻿& é_","length":10,"normalize":"-;- & é_","inner_text_length":9,"word_count":3,"split_ws":["-;-","&","é_"],"remove_ws":"-;-&é_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"᠎-⁠　\f，⁠İ","trim":"᠎-⁠　\f，⁠İ","length":8,"normalize":"᠎-⁠ ，⁠İ","inner_text_length":7,"word_count":2,"split_ws":["᠎-⁠","，⁠İ"],"remove_ws":"᠎-⁠，⁠İ","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"😀日;","trim":"😀日;","length":4,"normalize":"😀日;","inner_text_length":4,"word_count":1,"split_ws":["😀日;"],"remove_ws":"😀日;","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︐ '﹐︐\u000b ","trim":"︐ '﹐︐","length":7,"normalize":"︐ '﹐︐ ","inner_text_length":5,"word_count":3,"split_ws":["︐","'﹐︐",""],"remove_ws":"︐'﹐︐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"，0😀a#KKß_","trim":"，0😀a#KKß_","length":10,"normalize":"，0😀a#KKß_","inner_text_length":10,"word_count":1,"split_ws":["，0😀a#KKß_"],"remove_ws":"，0😀a#KKß_","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"Z\f，éİ,","trim":"Z\f，éİ,","length":6,"normalize":"Z\f，éİ,","inner_text_length":6,"word_count":2,"split_ws":["Z","，éİ,"],"remove_ws":"Z，éİ,","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"\t0 ، ","trim":"0 ،","length":5,"normalize":"\t0 ، ","inner_text_length":3,"word_count":4,"split_ws":["","0","،",""],"remove_ws":"0،","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"، K_︑K","trim":"، K_︑K","length":7,"normalize":"، K_︑K","inner_text_length":7,"word_count":2,"split_ws":["،","K_︑K"],"remove_ws":"،K_︑K","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"﹐","trim":"﹐","length":1,"normalize":"﹐","inner_text_length":1,"word_count":1,"split_ws":["﹐"],"remove_ws":"﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"ß  ，a\n​","trim":"ß  ，a\n​","length":7,"normalize":"ß ，a\n​","inner_text_length":6,"word_count":3,"split_ws":["ß","，a","​"],"remove_ws":"ß，a​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"Z\f᠎ß","trim":"Z\f᠎ß","length":4,"normalize":"Z\f᠎ß","inner_text_length":4,"word_count":2,"split_ws":["Z","᠎ß"],"remove_ws":"Z᠎ß","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"،é𝒜","trim":"،é𝒜","length":4,"normalize":"،é𝒜","inner_text_length":4,"word_count":1,"split_ws":["،é𝒜"],"remove_ws":"،é𝒜","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"K \n😀","trim":"K \n😀","length":5,"normalize":"K 😀","inner_text_length":4,"word_count":2,"split_ws":["K","😀"],"remove_ws":"K😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"a😀,　 　","trim":"a😀,","length":7,"normalize":"a😀, ","inner_text_length":4,"word_count":2,"split_ws":["a😀,",""],"remove_ws":"a😀,","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":1},
+{"s":"& .'\r⁠0","trim":"& .'\r⁠0","length":7,"normalize":"& .'\r⁠0","inner_text_length":7,"word_count":3,"split_ws":["&",".'","⁠0"],"remove_ws":"&.'⁠0","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":",;#︑，  #","trim":",;#︑，  #","length":8,"normalize":",;#︑， #","inner_text_length":7,"word_count":2,"split_ws":[",;#︑，","#"],"remove_ws":",;#︑，#","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"᠎ ،","trim":"᠎ ،","length":3,"normalize":"᠎ ،","inner_text_length":3,"word_count":2,"split_ws":["᠎","،"],"remove_ws":"᠎،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"😀،\u000b; 　__","trim":"😀،\u000b; 　__","length":9,"normalize":"😀،\u000b; __","inner_text_length":8,"word_count":3,"split_ws":["😀،",";","__"],"remove_ws":"😀،;__","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ᠎⁠","trim":"᠎⁠","length":4,"normalize":" ᠎⁠","inner_text_length":3,"word_count":2,"split_ws":["","᠎⁠"],"remove_ws":"᠎⁠","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﹐⸴K#　，\u000b⸴","trim":"﹐⸴K#　，\u000b⸴","length":8,"normalize":"﹐⸴K#　，\u000b⸴","inner_text_length":8,"word_count":3,"split_ws":["﹐⸴K#","，","⸴"],"remove_ws":"﹐⸴K#，⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ⹁\t، ","trim":"⹁\t،","length":5,"normalize":" ⹁\t، ","inner_text_length":3,"word_count":4,"split_ws":["","⹁","،",""],"remove_ws":"⹁،","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" '\n⸲ _\n","trim":"'\n⸲ _","length":7,"normalize":" '\n⸲ _\n","inner_text_length":5,"word_count":5,"split_ws":["","'","⸲","_",""],"remove_ws":"'⸲_","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\u00009⁠.﻿​    9","trim":"\u00009⁠.﻿​    9","length":11,"normalize":"\u00009⁠.﻿​ 9","inner_text_length":8,"word_count":3,"split_ws":["\u00009⁠.","​","9"],"remove_ws":"\u00009⁠.​9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"︐, \r;","trim":"︐, \r;","length":5,"normalize":"︐, ;","inner_text_length":4,"word_count":2,"split_ws":["︐,",";"],"remove_ws":"︐,;","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":2},
+{"s":"K⸲K0 é   ","trim":"K⸲K0 é","length":9,"normalize":"K⸲K0 é ","inner_text_length":6,"word_count":3,"split_ws":["K⸲K0","é",""],"remove_ws":"K⸲K0é","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"😀،😀9","trim":"😀،😀9","length":6,"normalize":"😀،😀9","inner_text_length":6,"word_count":1,"split_ws":["😀،😀9"],"remove_ws":"😀،😀9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"᠎︐\n&\u000b  K .;","trim":"᠎︐\n&\u000b  K .;","length":11,"normalize":"᠎︐\n& K .;","inner_text_length":9,"word_count":4,"split_ws":["᠎︐","&","K",".;"],"remove_ws":"᠎︐&K.;","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"a　😀\n\f","trim":"a　😀","length":6,"normalize":"a　😀 ","inner_text_length":4,"word_count":3,"split_ws":["a","😀",""],"remove_ws":"a😀","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"K\r9😀","trim":"K\r9😀","length":5,"normalize":"K\r9😀","inner_text_length":5,"word_count":2,"split_ws":["K","9😀"],"remove_ws":"K9😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\r︐\u0000𝒜﻿ \n'","trim":"︐\u0000𝒜﻿ \n'","length":9,"normalize":"\r︐\u0000𝒜 '","inner_text_length":6,"word_count":3,"split_ws":["","︐\u0000𝒜","'"],"remove_ws":"︐\u0000𝒜'","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\f​,'a😀 ","trim":"​,'a😀","length":8,"normalize":"\f​,'a😀 ","inner_text_length":6,"word_count":3,"split_ws":["","​,'a😀",""],"remove_ws":"​,'a😀","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":1},
+{"s":"𝒜 0﹐","trim":"𝒜 0﹐","length":5,"normalize":"𝒜 0﹐","inner_text_length":5,"word_count":2,"split_ws":["𝒜","0﹐"],"remove_ws":"𝒜0﹐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" 0\ra᠎　","trim":"0\ra᠎","length":6,"normalize":" 0\ra᠎　","inner_text_length":4,"word_count":4,"split_ws":["","0","a᠎",""],"remove_ws":"0a᠎","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\f︐ ﹐ ","trim":"︐ ﹐","length":5,"normalize":"\f︐ ﹐ ","inner_text_length":3,"word_count":4,"split_ws":["","︐","﹐",""],"remove_ws":"︐﹐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":" ︑a᠎\r' ","trim":"︑a᠎\r'","length":7,"normalize":" ︑a᠎\r' ","inner_text_length":5,"word_count":4,"split_ws":["","︑a᠎","'",""],"remove_ws":"︑a᠎'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"​⁠ \u0000#Z\n","trim":"​⁠ \u0000#Z","length":7,"normalize":"​⁠ \u0000#Z\n","inner_text_length":6,"word_count":3,"split_ws":["​⁠","\u0000#Z",""],"remove_ws":"​⁠\u0000#Z","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"⸲⹁","trim":"⸲⹁","length":2,"normalize":"⸲⹁","inner_text_length":2,"word_count":1,"split_ws":["⸲⹁"],"remove_ws":"⸲⹁","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"\t0　\f \n-\u0000\rZ​","trim":"0　\f \n-\u0000\rZ​","length":11,"normalize":"\t0 -\u0000\rZ​","inner_text_length":7,"word_count":4,"split_ws":["","0","-\u0000","Z​"],"remove_ws":"0-\u0000Z​","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"ß﻿#，9،\t ","trim":"ß﻿#，9،","length":8,"normalize":"ß﻿#，9، ","inner_text_length":6,"word_count":3,"split_ws":["ß","#，9،",""],"remove_ws":"ß#，9،","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿\r日\r ،","trim":"日\r ،","length":6,"normalize":" 日 ،","inner_text_length":3,"word_count":3,"split_ws":["","日","،"],"remove_ws":"日،","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"'\u000b ","trim":"'","length":3,"normalize":"' ","inner_text_length":1,"word_count":2,"split_ws":["'",""],"remove_ws":"'","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"Z\n & .،Z︑︐⹁","trim":"Z\n & .،Z︑︐⹁","length":11,"normalize":"Z & .،Z︑︐⹁","inner_text_length":10,"word_count":3,"split_ws":["Z","&",".،Z︑︐⹁"],"remove_ws":"Z&.،Z︑︐⹁","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"日 9\u000b","trim":"日 9","length":4,"normalize":"日 9\u000b","inner_text_length":3,"word_count":3,"split_ws":["日","9",""],"remove_ws":"日9","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿日 .ßa😀᠎\t0　","trim":"日 .ßa😀᠎\t0","length":12,"normalize":"﻿日 .ßa😀᠎\t0　","inner_text_length":10,"word_count":5,"split_ws":["","日",".ßa😀᠎","0",""],"remove_ws":"日.ßa😀᠎0","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":".  ，⸲Z︐","trim":".  ，⸲Z︐","length":7,"normalize":". ，⸲Z︐","inner_text_length":6,"word_count":2,"split_ws":[".","，⸲Z︐"],"remove_ws":".，⸲Z︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":"Z\n İ ","trim":"Z\n İ","length":5,"normalize":"Z İ ","inner_text_length":3,"word_count":3,"split_ws":["Z","İ",""],"remove_ws":"Zİ","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ,K ","trim":",K","length":4,"normalize":" ,K ","inner_text_length":2,"word_count":3,"split_ws":["",",K",""],"remove_ws":",K","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":1},
+{"s":" 😀","trim":"😀","length":3,"normalize":" 😀","inner_text_length":2,"word_count":2,"split_ws":["","😀"],"remove_ws":"😀","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"日K日.é \ra ","trim":"日K日.é \ra","length":9,"normalize":"日K日.é a ","inner_text_length":7,"word_count":3,"split_ws":["日K日.é","a",""],"remove_ws":"日K日.éa","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ; ⁠9日 ","trim":"; ⁠9日","length":7,"normalize":" ; ⁠9日 ","inner_text_length":5,"word_count":4,"split_ws":["",";","⁠9日",""],"remove_ws":";⁠9日","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"0\f\té ß𝒜﹐ 9","trim":"0\f\té ß𝒜﹐ 9","length":11,"normalize":"0 é ß𝒜﹐ 9","inner_text_length":10,"word_count":4,"split_ws":["0","é","ß𝒜﹐","9"],"remove_ws":"0éß𝒜﹐9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"İ日Z ﻿#","trim":"İ日Z ﻿#","length":6,"normalize":"İ日Z #","inner_text_length":5,"word_count":2,"split_ws":["İ日Z","#"],"remove_ws":"İ日Z#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" ，;︑Z，︐","trim":"，;︑Z，︐","length":7,"normalize":" ，;︑Z，︐","inner_text_length":6,"word_count":2,"split_ws":["","，;︑Z，︐"],"remove_ws":"，;︑Z，︐","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":4},
+{"s":"😀︐.᠎\f","trim":"😀︐.᠎","length":7,"normalize":"😀︐.᠎\f","inner_text_length":6,"word_count":2,"split_ws":["😀︐.᠎",""],"remove_ws":"😀︐.᠎","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"，⸴  ⸴","trim":"，⸴  ⸴","length":5,"normalize":"，⸴ ⸴","inner_text_length":4,"word_count":2,"split_ws":["，⸴","⸴"],"remove_ws":"，⸴⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":3},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" é\t#﻿⁠᠎　⸲K9","trim":"é\t#﻿⁠᠎　⸲K9","length":11,"normalize":" é\t#﻿⁠᠎　⸲K9","inner_text_length":10,"word_count":5,"split_ws":["","é","#","⁠᠎","⸲K9"],"remove_ws":"é#⁠᠎⸲K9","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ;","trim":";","length":2,"normalize":" ;","inner_text_length":1,"word_count":2,"split_ws":["",";"],"remove_ws":";","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"-　 ⸲᠎， ","trim":"-　 ⸲᠎，","length":7,"normalize":"- ⸲᠎， ","inner_text_length":5,"word_count":3,"split_ws":["-","⸲᠎，",""],"remove_ws":"-⸲᠎，","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"᠎ ","trim":"᠎","length":2,"normalize":"᠎ ","inner_text_length":1,"word_count":2,"split_ws":["᠎",""],"remove_ws":"᠎","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"᠎éK᠎ \rK\n  #","trim":"᠎éK᠎ \rK\n  #","length":11,"normalize":"᠎éK᠎ K #","inner_text_length":8,"word_count":3,"split_ws":["᠎éK᠎","K","#"],"remove_ws":"᠎éK᠎K#","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"'\u000b😀 \u000b⸲⸲","trim":"'\u000b😀 \u000b⸲⸲","length":8,"normalize":"'\u000b😀 ⸲⸲","inner_text_length":7,"word_count":3,"split_ws":["'","😀","⸲⸲"],"remove_ws":"'😀⸲⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":" #é é'ß︑ ⸲","trim":"#é é'ß︑ ⸲","length":10,"normalize":" #é é'ß︑ ⸲","inner_text_length":9,"word_count":4,"split_ws":["","#é","é'ß︑","⸲"],"remove_ws":"#éé'ß︑⸲","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":"\r#\t","trim":"#","length":3,"normalize":"\r#\t","inner_text_length":1,"word_count":3,"split_ws":["","#",""],"remove_ws":"#","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"， \r-  K ","trim":"， \r-  K","length":8,"normalize":"， - K ","inner_text_length":5,"word_count":4,"split_ws":["，","-","K",""],"remove_ws":"，-K","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"  ","trim":"","length":2,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"﻿𝒜 ﹐,日\u0000😀， ","trim":"𝒜 ﹐,日\u0000😀，","length":12,"normalize":"﻿𝒜 ﹐,日\u0000😀， ","inner_text_length":10,"word_count":4,"split_ws":["","𝒜","﹐,日\u0000😀，",""],"remove_ws":"𝒜﹐,日\u0000😀，","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"K\t 日","trim":"K\t 日","length":4,"normalize":"K 日","inner_text_length":3,"word_count":2,"split_ws":["K","日"],"remove_ws":"K日","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"#0","trim":"#0","length":2,"normalize":"#0","inner_text_length":2,"word_count":1,"split_ws":["#0"],"remove_ws":"#0","blank":false,"has_content":true,"hash_url":true,"commas":0,"all_commas":0},
+{"s":"","trim":"","length":0,"normalize":"","inner_text_length":0,"word_count":1,"split_ws":[""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":" a﻿K&﹐\u000b","trim":"a﻿K&﹐","length":7,"normalize":" a﻿K&﹐\u000b","inner_text_length":5,"word_count":4,"split_ws":["","a","K&﹐",""],"remove_ws":"aK&﹐","blank":false,"has_content":false,"hash_url":false,"commas":0,"all_commas":1},
+{"s":" ,⹁⸴-0⁠\u000b","trim":" ,⹁⸴-0⁠","length":10,"normalize":" ,⹁⸴-0⁠\u000b","inner_text_length":9,"word_count":3,"split_ws":["",",⹁⸴-0⁠",""],"remove_ws":",⹁⸴-0⁠","blank":false,"has_content":false,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"​' ⁠⸴","trim":"​' ⁠⸴","length":5,"normalize":"​' ⁠⸴","inner_text_length":5,"word_count":2,"split_ws":["​'","⁠⸴"],"remove_ws":"​'⁠⸴","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":1},
+{"s":"\n𝒜︐İ،  ,a日","trim":"𝒜︐İ،  ,a日","length":11,"normalize":"\n𝒜︐İ، ,a日","inner_text_length":9,"word_count":3,"split_ws":["","𝒜︐İ،",",a日"],"remove_ws":"𝒜︐İ،,a日","blank":false,"has_content":true,"hash_url":false,"commas":1,"all_commas":3},
+{"s":"é︐K \u000b\u000b   ，","trim":"é︐K \u000b\u000b   ，","length":10,"normalize":"é︐K ，","inner_text_length":5,"word_count":2,"split_ws":["é︐K","，"],"remove_ws":"é︐K，","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":2},
+{"s":" ","trim":"","length":1,"normalize":" ","inner_text_length":0,"word_count":2,"split_ws":["",""],"remove_ws":"","blank":true,"has_content":false,"hash_url":false,"commas":0,"all_commas":0},
+{"s":"᠎-","trim":"᠎-","length":2,"normalize":"᠎-","inner_text_length":2,"word_count":1,"split_ws":["᠎-"],"remove_ws":"᠎-","blank":false,"has_content":true,"hash_url":false,"commas":0,"all_commas":0}
+],
+"entities": [
+{"s":"","unescaped":""},
+{"s":"plain","unescaped":"plain"},
+{"s":"&amp;","unescaped":"&"},
+{"s":"&amp;amp;","unescaped":"&amp;"},
+{"s":"&AMP;","unescaped":"&AMP;"},
+{"s":"&lt;&gt;&quot;&apos;","unescaped":"<>\"'"},
+{"s":"&nbsp;","unescaped":"&nbsp;"},
+{"s":"&copy;","unescaped":"&copy;"},
+{"s":"&amp","unescaped":"&amp"},
+{"s":"&#65;","unescaped":"A"},
+{"s":"&#x41;","unescaped":"A"},
+{"s":"&#X41;","unescaped":"A"},
+{"s":"&#x4a;","unescaped":"J"},
+{"s":"&#x4A;","unescaped":"J"},
+{"s":"&#0;","unescaped":"�"},
+{"s":"&#x0;","unescaped":"�"},
+{"s":"&#xD800;","unescaped":"�"},
+{"s":"&#xDFFF;","unescaped":"�"},
+{"s":"&#xd7ff;","unescaped":"퟿"},
+{"s":"&#x10FFFF;","unescaped":"􏿿"},
+{"s":"&#x110000;","unescaped":"�"},
+{"s":"&#1114112;","unescaped":"�"},
+{"s":"&#99999999999999999999999;","unescaped":"�"},
+{"s":"&#x1F600;","unescaped":"😀"},
+{"s":"&#128512;","unescaped":"😀"},
+{"s":"&#00065;","unescaped":"A"},
+{"s":"&#;","unescaped":"&#;"},
+{"s":"&#x;","unescaped":"&#x;"},
+{"s":"&#xg;","unescaped":"&#xg;"},
+{"s":"&#65","unescaped":"&#65"},
+{"s":"&amp;#65;","unescaped":"A"},
+{"s":"&#38;amp;","unescaped":"&amp;"},
+{"s":"a&#10;b","unescaped":"a\nb"},
+{"s":"&#xFFFE;","unescaped":"￾"},
+{"s":"&#x80;","unescaped":""},
+{"s":"&#150;","unescaped":""},
+{"s":"x &lt;y&gt; &#x26; z","unescaped":"x <y> & z"},
+{"s":"&quot;quoted&quot; &apos;s","unescaped":"\"quoted\" 's"}
+],
+"similarity": [
+{"a":"","b":"","similarity":0},
+{"a":"a","b":"","similarity":0},
+{"a":"","b":"a","similarity":0},
+{"a":"Hello World","b":"hello world","similarity":1},
+{"a":"Hello World","b":"Hello there World","similarity":0.7058823529411764},
+{"a":"The Title - Site","b":"The Title","similarity":1},
+{"a":"The Title","b":"The Title - Site","similarity":0.7142857142857143},
+{"a":"café au lait","b":"cafe au lait","similarity":0.6666666666666667},
+{"a":"a_b c","b":"a b c","similarity":0.4},
+{"a":"foo, bar; baz","b":"baz bar foo","similarity":1},
+{"a":"日本語","b":"日本語","similarity":0},
+{"a":"x","b":"y","similarity":0},
+{"a":"Kelvin K","b":"kelvin k","similarity":1},
+{"a":"İstanbul","b":"i stanbul","similarity":1},
+{"a":"one two three","b":"one one one four","similarity":0.75},
+{"a":"!!!","b":"word","similarity":0},
+{"a":"word","b":"...","similarity":0},
+{"a":"A B C D","b":"a b c d e f g h","similarity":0.5333333333333333}
+]
+}

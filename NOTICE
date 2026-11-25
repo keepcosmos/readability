@@ -1,0 +1,14 @@
+Readability (Elixir)
+Copyright (c) 2016 Jaehyun Shin and contributors
+
+This library is a port of Mozilla Readability.js
+(https://github.com/mozilla/readability), licensed under the Apache License,
+Version 2.0:
+
+    Copyright (c) 2010 Arc90 Inc
+
+    Readability.js is a modified version of the original Readability bookmarklet
+    by Arc90 Labs, maintained by Mozilla.
+
+The test pages in test/fixtures/readability_js come from the same project and
+are distributed under the same license.
