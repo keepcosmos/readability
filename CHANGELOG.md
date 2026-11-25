@@ -77,7 +77,7 @@ A rewrite: Readability is now a port of Mozilla's
 
 | 0.x | 1.0 |
 |---|---|
-| `Readability.summarize(url)` | fetch the page, then `Readability.article(html, url: url)` |
+| `Readability.summarize(url)` | fetch the page, then `Readability.article(html, url: final_url)`; the README has an example with Req |
 | `Readability.readable_html(Readability.article(html))` | `{:ok, a} = Readability.article(html)`, then `a.content` |
 | `Readability.readable_text(Readability.article(html))` | `a.text_content` |
 | `Readability.title(html)` | `a.title` |
@@ -85,7 +85,8 @@ A rewrite: Readability is now a port of Mozilla's
 | `Readability.published_at(html)` | `a.published_time` (a string) |
 | `summary.article_html` / `summary.article_text` | `a.content` / `a.text_content` |
 | options `:page_url` | `:url` |
-| other 0.x options (`:retry_length`, `:min_text_length`, `:weight_classes`, ...) | none; see `Readability` for the new ones |
+| option `:retry_length` | `:char_threshold`, roughly |
+| other 0.x options (`:min_text_length`, `:weight_classes`, ...) | none; see `Readability` for the new ones |
 | `Floki` operations on the result | parse `a.content` with `LazyHTML.from_fragment/1` (or Floki) |
 
 ## [0.13.0] - 2026-11-22

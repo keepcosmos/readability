@@ -9,7 +9,11 @@ defmodule Readability do
       article.content       #=> "<div id=\\"readability-page-1\\" class=\\"page\\">…</div>"
       article.text_content
 
-  See `Readability.Article` for the fields. Fetching the page is up to you.
+  See `Readability.Article` for the fields. Fetching the page is up to you: the README has an
+  [example with Req](readme.html#fetching-pages).
+
+  `content` is not sanitized: it keeps attributes such as `onclick` or `onerror`, and links can
+  point anywhere. Sanitize it before rendering content from untrusted pages.
 
   ## Options
 
@@ -49,33 +53,35 @@ defmodule Readability do
   """
   @type reason :: :not_readable | :too_many_elements | :too_deep | {:unsupported_charset, String.t()}
 
-  @doc """
+  @doc ~S"""
   Extracts the article from `html`, like Readability.js's `parse()`.
 
   `html` is a binary (a leading UTF-8 byte order mark is ignored) or a `%LazyHTML{}` parsed with
   `LazyHTML.from_document/2`. A binary is parsed with the `:max_depth` option as LazyHTML's depth
   limit. A `%LazyHTML{}` is used as is: parse it yourself to choose LazyHTML's limits
-  (`:max_depth`, `:max_memory`, `:timeout`, ...) for untrusted input, or to parse once for both
-  `readerable?/2` and `article/2`. If you parse it yourself, strip a leading byte order mark
-  first: LazyHTML keeps it as text, which moves everything in the `<head>` into the `<body>`.
-  Readability drops that U+FEFF, but can't move the elements back.
+  (`:max_depth`, `:max_memory`, `:timeout`, ...) for untrusted input (it raises when one is
+  exceeded), or to parse once for both `readerable?/2` and `article/2`.
 
   The HTML must be UTF-8 (a browser decodes it before Readability.js sees it). Malformed UTF-8
   becomes U+FFFD, as a decoder makes it, unless the document declares another encoding in a
   `<meta>` and most of its non-ASCII bytes aren't UTF-8: then the result is
-  `{:error, {:unsupported_charset, label}}`. Decode such a page
-  to UTF-8 first, using the encoding the HTTP `Content-Type` header or that `<meta>` names.
+  `{:error, {:unsupported_charset, label}}`. Decode such a page to UTF-8 first, using the
+  encoding the HTTP `Content-Type` header or that `<meta>` names.
 
   Options are listed in the [module documentation](#module-options). Invalid options raise
   `NimbleOptions.ValidationError`.
 
-      iex> html = "<html><body><article><p>#{String.duplicate("Some text here. ", 40)}</p></article></body></html>"
-      iex> {:ok, article} = Readability.article(html)
+      iex> text = String.duplicate("Some text here. ", 40)
+      iex> {:ok, article} = Readability.article("<html><body><article><p>#{text}</p></article></body></html>")
       iex> article.length
       640
 
       iex> Readability.article("<html><body></body></html>")
       {:error, :not_readable}
+
+  If you parse the HTML yourself, strip a leading byte order mark first: LazyHTML keeps it as
+  text, which moves everything in the `<head>` into the `<body>`. Readability drops that U+FEFF,
+  but can't move the elements back.
   """
   @spec article(input(), keyword()) :: {:ok, Article.t()} | {:error, reason()}
   def article(html, opts \\ []) do
@@ -128,7 +134,8 @@ defmodule Readability do
   A port of Readability.js's `isProbablyReaderable`.
 
   `html` is a binary or a `%LazyHTML{}`, as in `article/2`. A document nested deeper than
-  `:max_depth` isn't readerable.
+  `:max_depth`, or in an encoding `article/2` rejects, isn't readerable. It can return `false`
+  for a short article that `article/2` would extract.
 
   ## Options
 

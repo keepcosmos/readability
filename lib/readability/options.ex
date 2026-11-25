@@ -33,7 +33,10 @@ defmodule Readability.Options do
             char_threshold: [
               type: :pos_integer,
               default: 500,
-              doc: "The minimum number of characters an article must have to be returned as is."
+              doc: """
+              When the extracted text is shorter than this, extraction is retried with looser
+              rules. If every attempt is short, the longest one is returned.
+              """
             ],
             nb_top_candidates: [
               type: :pos_integer,
@@ -71,20 +74,23 @@ defmodule Readability.Options do
             link_density_modifier: [
               type: {:or, [:float, :integer]},
               default: 0.0,
-              doc: "Added to the link density threshold when deciding whether to remove a block."
+              doc: """
+              Added to the link density thresholds (0.2, or 0.5 for blocks with a high class
+              weight) above which a block is removed: positive values keep more link-heavy
+              blocks, negative values remove more.
+              """
             ],
             spawn: [
               type: :boolean,
               default: false,
               doc: """
-              Do the work in a short-lived linked process, so that the garbage collector has
-              little to do and the memory is released at once (about a fifth faster on typical pages,
-              at the cost of a process per call). For HTML up to 2 MB, the process starts with a heap
-              of two words per byte of HTML (64 KB to 16 MB on a 64-bit VM), about what the work
-              needs; larger HTML starts with the default heap and grows as needed. Results,
-              exceptions and exits are passed on to the caller, and the caller's `:max_heap_size`
-              applies to the process. The process doesn't inherit the caller's `$callers` or Logger
-              metadata.
+              Do the work in a short-lived linked process, with a heap sized for the page: about a
+              fifth faster on typical pages, and the memory is released at once instead of staying
+              in the caller's heap until its next garbage collection. Worth it when you extract
+              many pages. For HTML up to 2 MB, the heap starts at two words per byte (64 KB to 16 MB
+              on a 64-bit VM); larger HTML starts with the default heap. Results, exceptions and
+              exits reach the caller as usual, and the caller's `:max_heap_size` applies. The
+              process doesn't inherit the caller's `$callers` or Logger metadata.
               """
             ]
           )

@@ -35,7 +35,7 @@ Readability requires Elixir 1.17 or newer and OTP 27 or newer.
 
 article.title          #=> "A blog post"
 article.byline         #=> "Jane Doe"
-article.content        #=> "<div id=\"readability-page-1\" class=\"page\"><p>The first paragraph..."
+article.content        #=> "<div id=\"readability-page-1\" class=\"page\"><p>The first..."
 article.text_content   #=> "The first paragraph..."
 ```
 
@@ -43,17 +43,17 @@ article.text_content   #=> "The first paragraph..."
 there's no article, `{:error, :too_many_elements}` when the page has more elements than
 `:max_elems_to_parse`, `{:error, :too_deep}` when its elements nest deeper than `:max_depth`, or
 `{:error, {:unsupported_charset, label}}` for a page in another encoding (see
-[Fetching pages](#fetching-pages)).
-`Readability.article!/2` returns the article or raises `Readability.Error`.
+[Encodings](#encodings)). `Readability.article!/2` returns the article or raises
+`Readability.Error`.
 
 An article has these fields, the same as the result of Readability.js's `parse()`:
 
 | field | |
 |---|---|
-| `title` | the article title |
+| `title` | the article title, or `""` |
 | `byline` | the author line, or `nil` |
 | `content` | the article as HTML |
-| `text_content` | the article's text |
+| `text_content` | the text of `content`, like the DOM's `textContent`: whitespace from the HTML source is kept, and nothing is added between elements (`<p>A</p><p>B</p>` gives `"AB"`) |
 | `length` | the length of `text_content` (UTF-16 code units, like JS) |
 | `excerpt` | the page's description, or the article's first paragraph |
 | `site_name` | the name of the site, or `nil` |
@@ -61,12 +61,55 @@ An article has these fields, the same as the result of Readability.js's `parse()
 | `dir`, `lang` | the text direction and language, or `nil` |
 
 `Readability.readerable?/2` is a fast check (Readability.js's `isProbablyReaderable`) of whether
-a page probably has an article, to decide whether to run `article/2` at all.
+a page probably has an article, to decide whether to run `article/2` at all. It can say `false`
+for a short article that `article/2` would extract.
 
 Both take the HTML as a string or as a document parsed with `LazyHTML.from_document/2`. A string
 is parsed with a depth limit (`:max_depth`, 1000 by default). Parse it yourself to call both
 without parsing twice, or to set all of LazyHTML's limits (`:max_depth`, `:max_memory`,
-`:max_attributes`, `:timeout`) for untrusted input; a parsed document is used as is.
+`:max_attributes`, `:timeout`) for untrusted input; `LazyHTML.from_document/2` raises when one
+is exceeded. A parsed document is used as is.
+
+### Fetching pages
+
+Readability doesn't fetch pages. Use the HTTP client you already have. With
+[Req](https://hex.pm/packages/req):
+
+```elixir
+defmodule MyApp.Articles do
+  def fetch(url) do
+    # Req follows redirects. The request it returns has the URL the page was found at, which
+    # is what relative links and images in the article must be resolved against.
+    {request, response} = Req.run!(url, decode_body: false)
+
+    cond do
+      response.status != 200 -> {:error, {:http_status, response.status}}
+      not html?(response) -> {:error, :not_html}
+      true -> Readability.article(response.body, url: URI.to_string(request.url))
+    end
+  end
+
+  defp html?(response) do
+    case Req.Response.get_header(response, "content-type") do
+      [type | _] -> String.starts_with?(type, ["text/html", "application/xhtml+xml"])
+      [] -> false
+    end
+  end
+end
+```
+
+`decode_body: false` keeps the body a string: Req would decode a JSON response into a map.
+Sanitize `content` before you render it (see below).
+
+### Encodings
+
+The HTML must be UTF-8, as it is on almost every page today. Readability.js never sees bytes (the
+browser decodes the page first), but here a page in another encoding would come out as
+replacement characters. So when most of a page's non-ASCII bytes aren't UTF-8 and it declares
+another encoding in a `<meta>`, `article/2` returns `{:error, {:unsupported_charset, label}}`
+(with the encoding's label, such as `"shift_jis"`) and `readerable?/2` returns `false`. A page
+that names its encoding only in the HTTP `Content-Type` header isn't detected. Decode such pages
+to UTF-8 first, with an encoding library such as [encoding_rs](https://hex.pm/packages/encoding_rs).
 
 ### Output is not sanitized
 
@@ -84,35 +127,13 @@ rendering content from untrusted pages.
   rules; if every attempt is short, the longest one is returned.
 - `:max_depth` (1000) - give up on HTML whose elements nest deeper than this (parsing time is
   quadratic in the depth); `:infinity` for no limit.
-- `:spawn` (false) - do the work in a short-lived linked process, which keeps garbage
-  collection out of the way and releases the memory at once (about a fifth faster on typical
-  pages). HTML up to 2 MB gets a heap preallocated at two words per byte (16 MB at most per
-  call); larger HTML starts with the default heap. Results, exceptions and exits are passed on
-  to the caller, and the caller's `:max_heap_size` applies to the process, but its `$callers`
-  and Logger metadata don't.
+- `:spawn` (false) - do the work in a short-lived process with a heap sized for the page: about a
+  fifth faster, and the memory is released at once instead of staying in the caller's heap.
+  Worth it when you extract many pages; results and errors reach the caller as usual.
 - `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
   `:classes_to_preserve` ([]), `:keep_classes` (false), `:disable_json_ld` (false),
-  `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See the
-  [documentation](https://hexdocs.pm/readability/Readability.html#module-options).
-
-### Fetching pages
-
-Readability doesn't fetch pages. Use the HTTP client you already have, for example
-[Req](https://hex.pm/packages/req):
-
-```elixir
-url = "https://example.com/blog/post"
-html = Req.get!(url).body
-{:ok, article} = Readability.article(html, url: url)
-```
-
-The HTML must be UTF-8, as it is on almost every page today. Readability.js never sees bytes (the
-browser decodes the page first), but here a page in another encoding would come out as
-replacement characters. So when most of a page's non-ASCII bytes aren't UTF-8 and it declares
-another encoding in a `<meta>`, `article/2` returns `{:error, {:unsupported_charset, label}}`
-(with the encoding's label, such as `"shift_jis"`) and `readerable?/2` returns `false`. Decode
-such pages to UTF-8 first, with an encoding library such as
-[encoding_rs](https://hex.pm/packages/encoding_rs).
+  `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See
+  `Readability` for all of them.
 
 ## Performance
 
