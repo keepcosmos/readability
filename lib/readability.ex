@@ -56,9 +56,9 @@ defmodule Readability do
   `LazyHTML.from_document/2`. A binary is parsed with the `:max_depth` option as LazyHTML's depth
   limit. A `%LazyHTML{}` is used as is: parse it yourself to choose LazyHTML's limits
   (`:max_depth`, `:max_memory`, `:timeout`, ...) for untrusted input, or to parse once for both
-  `readerable?/2` and `article/2`. Strip a byte order mark before you parse: LazyHTML doesn't,
-  and parses the `<head>` of such a document into its `<body>`. A U+FEFF at the start of the
-  document's first text is dropped, but elements misplaced that way stay where they are.
+  `readerable?/2` and `article/2`. If you parse it yourself, strip a leading byte order mark
+  first: LazyHTML keeps it as text, which moves everything in the `<head>` into the `<body>`.
+  Readability drops that U+FEFF, but can't move the elements back.
 
   The HTML must be UTF-8 (a browser decodes it before Readability.js sees it). Malformed UTF-8
   becomes U+FFFD, as a decoder makes it, unless the document declares another encoding in a
@@ -233,7 +233,7 @@ defmodule Readability do
   defp first_p([{_, _, children, _} | rest]), do: first_p(children) || first_p(rest)
   defp first_p([_text | rest]), do: first_p(rest)
 
-  # Strings from the parser's tree keep the whole parsed document alive.
+  # Before lazy_html 0.1.15, strings from the parser's tree keep the whole parsed document alive.
   defp copy(nil), do: nil
   defp copy(bin), do: :binary.copy(bin)
 end

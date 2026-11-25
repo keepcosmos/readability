@@ -41,7 +41,9 @@ article.text_content   #=> "The first paragraph..."
 
 `Readability.article/2` returns `{:ok, %Readability.Article{}}`, `{:error, :not_readable}` when
 there's no article, `{:error, :too_many_elements}` when the page has more elements than
-`:max_elems_to_parse`, or `{:error, :too_deep}` when its elements nest deeper than `:max_depth`.
+`:max_elems_to_parse`, `{:error, :too_deep}` when its elements nest deeper than `:max_depth`, or
+`{:error, {:unsupported_charset, label}}` for a page in another encoding (see
+[Fetching pages](#fetching-pages)).
 `Readability.article!/2` returns the article or raises `Readability.Error`.
 
 An article has these fields, the same as the result of Readability.js's `parse()`:
@@ -78,7 +80,7 @@ rendering content from untrusted pages.
 - `:url` - the page's URL. Relative links and image sources in `content` are made absolute
   against it and the page's `<base href>`. Without it, they stay as they are, unless the page
   has an absolute `<base href>`.
-- `:char_threshold` - when the extracted text is shorter, extraction is retried with looser
+- `:char_threshold` (500) - when the extracted text is shorter, extraction is retried with looser
   rules; if every attempt is short, the longest one is returned.
 - `:max_depth` (1000) - give up on HTML whose elements nest deeper than this (parsing time is
   quadratic in the depth); `:infinity` for no limit.
@@ -88,7 +90,7 @@ rendering content from untrusted pages.
   call); larger HTML starts with the default heap. Results, exceptions and exits are passed on
   to the caller, and the caller's `:max_heap_size` applies to the process, but its `$callers`
   and Logger metadata don't.
-- `:char_threshold` (500), `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
+- `:nb_top_candidates` (5), `:max_elems_to_parse` (0, no limit),
   `:classes_to_preserve` ([]), `:keep_classes` (false), `:disable_json_ld` (false),
   `:allowed_video_regex`, `:link_density_modifier` (0.0): Readability.js's options. See the
   [documentation](https://hexdocs.pm/readability/Readability.html#module-options).
