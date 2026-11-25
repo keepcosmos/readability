@@ -18,7 +18,8 @@ A rewrite: Readability is now a port of Mozilla's
   with the client you already use and pass the HTML to `Readability.article/2`
   ([#64](https://github.com/keepcosmos/readability/issues/64)).
 - `Readability.article/2` returns `{:ok, %Readability.Article{}}` or
-  `{:error, :not_readable | :too_many_elements | :too_deep}` instead of a Floki tree.
+  `{:error, :not_readable | :too_many_elements | :too_deep | {:unsupported_charset, label}}`
+  instead of a Floki tree.
 - Removed `title/1`, `authors/1`, `published_at/1`, `readable_html/1`, `readable_text/1`,
   `raw_html/1`, `parse/1`, `regexes/1`, `mime/1`, `is_response_markup/1`, `default_options/0` and
   `Readability.Summary`. Their results are fields of `Readability.Article`.
